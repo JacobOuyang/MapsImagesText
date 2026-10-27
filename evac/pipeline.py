@@ -11,8 +11,13 @@ DEFAULT_RADIUS_M = 150  # no radius given: treat it as a point incident (a build
 def locate(place, near, log):
     """Geocode the incident. Nominatim misplaces intersections ('5 Av and W 47 St' lands ~550 m off),
     so for 'A and B' find where the two streets meet in the OSM road data around the rough hit."""
-    rough = geo.geocode(place, near=near)
+    # Look the place up as written first: biasing toward the reader turned "5 Av and W 47 St, Manhattan"
+    # into a 5th Ave in Los Angeles for a reader in LA. The bias is only a fallback.
     streets = re.split(r"\s+(?:and|&|at)\s+", place.split(",")[0], flags=re.I)
+    area = place.split(",", 1)[1] if "," in place else ""
+    rough = (geo.geocode(place)
+             or (len(streets) == 2 and geo.geocode(streets[0] + ("," + area if area else "")))  # "Lexington Av, Manhattan"
+             or geo.geocode(place, near=near))
     if len(streets) == 2:
         lat, lon = rough or near
         try:
