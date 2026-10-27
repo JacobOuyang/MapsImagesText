@@ -1,7 +1,7 @@
 """Turn an aerial image into per-pixel terrain masks.
 
 Backends:
-  sam3  - Meta SAM 3 with text prompts ("road", "water", ...). This is the intended path for the hackathon.
+  sam3  - Meta SAM 3 with text prompts ("road", "water", ...). This is the intended path.
           Needs `pip install transformers torch` and access to the gated facebook/sam3 weights.
   color - Crude RGB heuristic. No dependencies; lets the pipeline run end-to-end offline.
 

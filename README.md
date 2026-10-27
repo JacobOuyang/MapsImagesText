@@ -2,7 +2,7 @@
 
 Turns an emergency alert text message into a reply that tells one person whether they are affected, what to avoid, and which way to go, with a small map drawn in text that lines up inside an iPhone Messages bubble. Everything rides on SMS, so it works when data is congested or down.
 
-Built for the [Meta Global AI Developer Hackathon](https://cerebralvalley.ai/e/meta-ai-developer-hackathon) (Oct 26 to Nov 4, 2026) on the Meta Model API (Muse Spark, SAM 3.1).
+Built on the Meta Model API (Muse Spark; SAM 3.1 planned).
 
 ## What it does
 
@@ -198,6 +198,7 @@ python3 main.py samples/palisades_fire.txt --at 34.0445,-118.5300 -v
 
 | File | Role |
 | --- | --- |
+| `CLAUDE.md` | Notes for Claude Code: commands, how the pieces connect, the text-map width rules |
 | `main.py` | Command line: alert file + `--at lat,lon` |
 | `evac/pipeline.py` | Wires the steps together and composes the message |
 | `evac/notice.py` | Alert text to structured fields (Muse Spark, regex fallback); unit conversion happens here, not in the model |

@@ -3,7 +3,7 @@ import math
 
 import requests
 
-UA = {"User-Agent": "evac-ascii-prototype/0.1 (hackathon)"}
+UA = {"User-Agent": "evac-ascii-prototype/0.1"}
 EARTH_R = 6371000.0
 
 
