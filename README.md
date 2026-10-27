@@ -198,6 +198,7 @@ python3 main.py samples/palisades_fire.txt --at 34.0445,-118.5300 -v
 
 | File | Role |
 | --- | --- |
+| `CLAUDE.md` | Notes for Claude Code: commands, how the pieces connect, the text-map width rules |
 | `main.py` | Command line: alert file + `--at lat,lon` |
 | `evac/pipeline.py` | Wires the steps together and composes the message |
 | `evac/notice.py` | Alert text to structured fields (Muse Spark, regex fallback); unit conversion happens here, not in the model |
