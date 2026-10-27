@@ -30,12 +30,13 @@ TOKENS = {
     "right": ">",
     "up": "Λ",               # Λ (+6%: keep to one per row)
     "down": " v ",      # v padded with hair spaces (+0.3%)
-    "you": " • ",  # • padded (+0.3%)
+    "you": " \U0001F534 ",  # red dot emoji (17 px) padded to TWO cells (-0.4 px); see _place_you
+    "skip": "",                   # the cell the two-cell "you" marker covers
     "shelter": "S",               # +1.2%
     "avenue": " | ",     # | padded (exact)
 }
 # Width error of each token as a fraction of one cell, for the drift check.
-DRIFT = {"up": 0.063, "down": 0.003, "you": 0.003, "shelter": 0.012}
+DRIFT = {"up": 0.063, "down": 0.003, "you": -0.04, "shelter": 0.012}
 
 LEGEND = {
     "danger": "# {hazard}: AVOID",
@@ -44,7 +45,7 @@ LEGEND = {
     "road": "= open road",
     "water": "~ water",
     "route": "< > Λ v way out",
-    "you": "• you",
+    "you": "\U0001F534 you",
     "shelter": "S shelter: {shelter}",
 }
 ZONE_NOTE = {
@@ -66,7 +67,13 @@ def legend(keys, hazard, shelter=None):
 
 def drift(row_tokens):
     """Worst misalignment in a row, in cells."""
-    return sum(DRIFT.get(t, 0) for t in row_tokens)
+    return abs(sum(DRIFT.get(t, 0) for t in row_tokens))
+
+
+def _place_you(rows, r, c):
+    """The red dot is too big for one cell, so it takes this cell and the next (or the previous, at the edge)."""
+    c = min(c, len(rows[r]) - 2)
+    rows[r][c], rows[r][c + 1] = "you", "skip"
 
 
 def _join(rows, labels):
@@ -119,7 +126,7 @@ def render_raster(g, user_cell, shelter_cell, path, cols=16):
     if shelter_cell:
         rows[shelter_cell[0] // f][shelter_cell[1] // f] = "shelter"
     if user_cell:
-        rows[user_cell[0] // f][user_cell[1] // f] = "you"
+        _place_you(rows, user_cell[0] // f, user_cell[1] // f)
 
     # Name the main road crossing each row, at the row's end (words can't break alignment there).
     labels = {}
@@ -287,10 +294,10 @@ def render_grid(roads, center, user, radius, avoid=(), shelter=None, max_avenues
         rows[sr][sc] = "shelter"
     if user:
         ur, uc = cell(user)
-        rows[ur][uc] = "you"
+        _place_you(rows, ur, uc)
 
     labels = {st_row[s]: " %d St" % s for s in streets}
-    keys = {t for row in rows for t in row} - {"avenue"}
+    keys = {t for row in rows for t in row} - {"avenue", "skip"}
     footer = "Avenues left to right: " + ", ".join(AV_LABEL.get(a, a.split()[0] + " Av") for a in avs)
     return {"rows": _join(rows, labels), "keys": keys, "drift": max(drift(r) for r in rows),
             "title": "MAP (uptown is up):", "footer": footer}
