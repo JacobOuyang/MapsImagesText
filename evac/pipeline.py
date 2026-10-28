@@ -1,12 +1,15 @@
 """SMS in -> (am I affected?) -> aerial map -> ASCII map + directions out."""
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 
 from . import focus, geo, grid, imagery, laptopmap, llm, notice, osm, render, segment, textmap
 from .scene import Scene
 
+ROADS_WAIT_S = 15  # an alert reply waits at most this long for the map's street data (Overpass can take minutes)
 ALERT_BUFFER_M = 3000   # outside the zone but this close still gets a map
 DEFAULT_RADIUS_M = 150  # no radius given: treat it as a point incident (a building, an intersection)
+_BACKGROUND = ThreadPoolExecutor(4)
 ORDER_TITLE = {"mandatory": "EVACUATE NOW", "warning": "WARNING", "avoid_area": "AVOID THE AREA",
                "shelter_in_place": "SHELTER IN PLACE", "lifted": "ORDER LIFTED"}
 
@@ -22,15 +25,23 @@ def locate(place, near, log):
              or (len(streets) == 2 and geo.geocode(streets[0] + ("," + area if area else "")))  # "Lexington Av, Manhattan"
              or geo.geocode(place, near=near))
     if len(streets) == 2:
-        lat, lon = rough or near
-        try:
-            roads = osm.fetch_roads(lat - 0.01, lon - 0.013, lat + 0.01, lon + 0.013)
+        # Around the rough hit, then around the reader: when the geocoder misses "A and B" and falls back to "A",
+        # the rough hit is the middle of a long avenue (Lexington Av: 1.4 km from 51st St). The reader's
+        # area is only searched when it's in the same city, and is usually downloaded already for their map.
+        centres = [c for c in (rough, near) if c]
+        if rough and near and geo.haversine_m(rough, near) > 5000:
+            centres = [rough]
+        for lat, lon in dict.fromkeys(centres):
+            try:
+                roads = osm.fetch_roads(lat - 0.01, lon - 0.013, lat + 0.01, lon + 0.013)
+            except Exception as ex:
+                log.append("intersection lookup failed (%s)" % ex)
+                continue
             p = osm.find_intersection(roads, streets[0], streets[1])
             if p:
                 log.append("intersection %s & %s found in road data at %s (geocoder said %s)" % (streets[0], streets[1], p, rough))
                 return p
-        except Exception as ex:
-            log.append("intersection lookup failed (%s)" % ex)
+            log.append("%s and %s don't meet in the streets around %.4f, %.4f" % (streets[0], streets[1], lat, lon))
     return rough
 
 
@@ -66,6 +77,7 @@ def run(sms, user=None, cols=40, seg_backend="auto", out_dir="out", laptop=False
         half = max(half, geo.haversine_m(user, shelter[1]) * 1.15)
     g = grid.Grid(user, half, half, cols)
     s, w, nn, e = g.bbox()
+    roads_job = _BACKGROUND.submit(osm.fetch_roads, s, w, nn, e)  # started now: the aerial and SAM take a second
 
     img = imagery.fetch_aerial(s, w, nn, e)
     os.makedirs(out_dir, exist_ok=True)
@@ -74,10 +86,12 @@ def run(sms, user=None, cols=40, seg_backend="auto", out_dir="out", laptop=False
     g.add_terrain(masks)
     roads = []
     try:
-        roads = osm.fetch_roads(s, w, nn, e)
+        roads = roads_job.result(timeout=ROADS_WAIT_S)
         g.add_roads(roads, n.get("avoid_roads") or [])
         for road, spans in g.closure_spans.items():
             log.append("closure %r: %s" % (road, "segment between cross streets" if all(spans) else "whole road in view (no cross streets given, or not found)"))
+    except TimeoutError:  # the download carries on in the background and is cached for the next reply
+        log.append("street data still downloading after %d s; routing on imagery only" % ROADS_WAIT_S)
     except Exception as ex:
         log.append("roads unavailable (%s); routing on imagery only" % ex)
     g.add_hazard_circle(center, radius)

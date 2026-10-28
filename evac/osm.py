@@ -3,6 +3,7 @@ import hashlib
 import json
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import requests
 
@@ -23,9 +24,51 @@ WALKABLE = "trunk|primary|secondary|tertiary|unclassified|residential|living_str
 
 
 def fetch_roads(south, west, north, east, kinds=None):
-    """Return a list of roads: {"name", "kind", "pts": [(lat, lon), ...]}. kinds: highway regex (default DRIVABLE)."""
-    q = '[out:json][timeout:25];way["highway"~"^(%s)$"](%f,%f,%f,%f);out geom tags;' % (kinds or DRIVABLE, south, west, north, east)
-    elements = _overpass(q)
+    """Return a list of roads: {"name", "kind", "pts": [(lat, lon), ...]}. kinds: highway regex (default DRIVABLE).
+    An area inside one already downloaded is cut from it instead of downloaded again: an alert first fetches the
+    streets around the incident (to find the intersection), then the map's area, which is usually inside that."""
+    kinds = kinds or DRIVABLE
+    bbox = (south, west, north, east)
+    for done in _index():
+        if done["kinds"] == kinds and _inside(bbox, done["bbox"]) and os.path.exists(_cache_path(done["query"])):
+            return [r for r in _roads(_overpass(done["query"])) if _touches(r["pts"], bbox)]
+    q = '[out:json][timeout:25];way["highway"~"^(%s)$"](%f,%f,%f,%f);out geom tags;' % (kinds, south, west, north, east)
+    roads = _roads(_overpass(q))
+    _remember({"kinds": kinds, "bbox": bbox, "query": q})
+    return roads
+
+
+INDEX = os.path.join(CACHE_DIR, "index.json")  # which areas the road cache holds, so covered areas aren't refetched
+
+
+def _index():
+    try:
+        with open(INDEX) as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return []
+
+
+def _remember(entry):
+    done = [d for d in _index() if d["query"] != entry["query"]] + [entry]
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    with open(INDEX, "w") as f:
+        json.dump(done, f)
+
+
+def _inside(a, b):
+    """bbox a (s, w, n, e) within bbox b."""
+    return a[0] >= b[0] and a[1] >= b[1] and a[2] <= b[2] and a[3] <= b[3]
+
+
+def _touches(pts, bbox):
+    """The road's own bounding box overlaps bbox (so a road crossing it without a vertex inside is kept)."""
+    s, w, n, e = bbox
+    las, los = [la for la, _ in pts], [lo for _, lo in pts]
+    return min(las) <= n and max(las) >= s and min(los) <= e and max(los) >= w
+
+
+def _roads(elements):
     roads = []
     for el in elements:
         if "geometry" not in el:
@@ -93,27 +136,39 @@ def fetch_places(south, west, north, east):
     return sorted(out, key=lambda p: -p["pop"])
 
 
-def _overpass(q, mirrors=OVERPASS_MIRRORS, timeout=60):
-    # Cache on disk: Overpass is flaky and a live demo shouldn't depend on it.
-    cache = os.path.join(CACHE_DIR, hashlib.md5(q.encode()).hexdigest() + ".json")
+_POOL = ThreadPoolExecutor(8)  # mirror requests; a slow loser finishes in the background
+
+
+def _cache_path(q):
+    return os.path.join(CACHE_DIR, hashlib.md5(q.encode()).hexdigest() + ".json")
+
+
+def _post(url, q, timeout):
+    r = requests.post(url, data={"data": q}, headers=UA, timeout=timeout)
+    r.raise_for_status()
+    return r.json().get("elements", [])
+
+
+def _overpass(q, mirrors=OVERPASS_MIRRORS, timeout=40):
+    """Cached on disk: Overpass is flaky and a live demo shouldn't depend on it. A new query goes to every mirror
+    at once and the first answer wins: one at a time, with a 60 s timeout each, an alert once took over 2 minutes.
+    40 s: on a busy day a big-city query took 33 s, and at 25 s all three mirrors gave up."""
+    cache = _cache_path(q)
     if os.path.exists(cache):
         with open(cache) as f:
-            elements = json.load(f)
+            return json.load(f)
+    err = None
+    for fut in as_completed([_POOL.submit(_post, url, q, timeout) for url in mirrors]):
+        try:
+            elements = fut.result()
+            break
+        except Exception as e:  # public instances 429/502/time out often; wait for the others
+            err = e
     else:
-        err = None
-        for url in mirrors:  # public instances 429/502 often; try the next one
-            try:
-                r = requests.post(url, data={"data": q}, headers=UA, timeout=timeout)
-                r.raise_for_status()
-                elements = r.json().get("elements", [])
-                break
-            except Exception as e:
-                err = e
-        else:
-            raise err
-        os.makedirs(CACHE_DIR, exist_ok=True)
-        with open(cache, "w") as f:
-            json.dump(elements, f)
+        raise err
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    with open(cache, "w") as f:
+        json.dump(elements, f)
     return elements
 
 
