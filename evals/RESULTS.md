@@ -128,3 +128,35 @@ the subject on the photo vs on the recreation. Judge = Muse comparing the two (0
 4. **A receiver with an image model** should decode to grey first, then recreate with the caption.
 5. **Readability needs a human test.** Only about one drawing in five is named blind by Muse. The next experiment
    is people reading the same drawings at real phone size.
+
+## 6. "All zooms + key" as an image codec, against just sending a picture
+
+`compress_compare.py`. Ground truth: the photo in **greyscale** (colour is never sent). Every score is deterministic
+pixel similarity to it (SSIM at 256 and 64 px wide, PSNR, mean absolute error at 256 px); no model judges anything.
+The text is the exact payload: the base drawing, every zoom the greedy order sent (median 18), each with a header and
+tone legend, and the key. Medians over 36 photos:
+
+| What is sent | Bytes | SSIM 256 px | SSIM 64 px | PSNR |
+|---|---|---|---|---|
+| All zooms + key, recreated by Muse Image | 48,121 raw / 2,925 gzipped | 0.45 | 0.44 | 14.3 dB |
+| The same text, decoded to grey (no model) | same | 0.76 | 0.88 | 24.6 dB |
+| Greyscale picture (best JPEG/WebP) ≤ 300 B | 286 | 0.72 | 0.92 | 26.5 dB |
+| ≤ 600 B | 557 | 0.77 | 0.96 | 28.6 dB |
+| ≤ 1.2 KB | 1,124 | 0.88 | 0.99 | 31.4 dB |
+| ≤ 2.5 KB | 2,293 | 0.94 | 0.99 | 34.9 dB |
+| 600 B picture + Muse Image (same prompt) | 557 | 0.59 | 0.70 | 17.6 dB |
+| 2.5 KB picture + Muse Image | 2,293 | 0.70 | 0.80 | 18.7 dB |
+
+- **Matching the text's Muse recreation takes a picture of about 63 bytes** (median; SSIM at 256 px). The text is
+  about **750× larger raw, 37× larger gzipped**. The decoded text, with no model, scores higher (0.76), and a picture
+  of about 300 bytes matches that.
+- **The image model makes the pixels worse, not better.** It invents detail and texture that isn't in the photo and
+  its square output is stretched back to shape, so SSIM drops from 0.76 (decoded text) to 0.45. That happens to tiny
+  pictures too: Muse on a 2.5 KB picture scores 0.70, against 0.94 for the picture itself.
+- **A picture the size of the gzipped text (about 2.7 KB) reaches SSIM 0.96.** The text's recreation beat a same-size
+  picture in none of the 36 photos.
+- **Conclusion:** as a compressed image, text loses to any picture by one to three orders of magnitude. The case for
+  the text drawings is the channel (SMS, a WhatsApp text on a trickle of data), not compression. And if a picture of
+  a few hundred bytes can get through, it beats every text version.
+
+![Text vs picture](../docs/eval_compress_examples.jpg)
