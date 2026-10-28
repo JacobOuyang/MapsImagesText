@@ -2,10 +2,12 @@
 
     python3 sim/server.py            # http://localhost:8765
 
-POST /api/alert {"text", "lat", "lon"} -> {"message" (SMS), "text", "laptop" (WhatsApp map), "image" (picture map), ...}
-POST /api/photo {"image": data URL} -> {"sms", "text", "mono", "parts", sizes, ...}
-POST /api/radar {"lat", "lon"} -> {"sms", "text", "mono", "image", "parts", ...}
-POST /api/directions {"lat", "lon", "to"} -> {"sms", "text", "mono", "image", "parts", ...}
+POST /api/alert {"text", "lat", "lon"} -> {"message" (SMS), "text", "laptop" (WhatsApp map), "small", "image", ...}
+POST /api/photo {"image": data URL} -> {"sms", "text", "mono", "small", "parts", sizes, ...}
+POST /api/radar {"lat", "lon"} -> {"sms", "text", "mono", "small", "image", "parts", ...}
+POST /api/directions {"lat", "lon", "to"} -> {"sms", "text", "mono", "small", "image", "parts", ...}
+"small" is the slow-connection picture (~400 px WebP); "image" the full JPEG.
+POST /api/message {"text", "lat", "lon", "image"?} -> router: Muse picks tools; same versions + "tools" it called
 GET /api/find_rain, /api/samples, /api/sample?name=
 """
 import base64
@@ -23,7 +25,7 @@ from PIL import Image
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(ROOT))
 
-from evac import directions, photo, pipeline, radar  # noqa: E402
+from evac import directions, photo, pipeline, radar, router  # noqa: E402
 
 PORT = int(os.environ.get("PORT", 8765))
 WHATSAPP_COLS = 58  # widest monospace map that fits the simulated WhatsApp Desktop bubble (65% of the chat pane) unwrapped
@@ -92,8 +94,13 @@ class Handler(SimpleHTTPRequestHandler):
             if self.path == "/api/alert":
                 res = pipeline.run(body["text"], user=(float(body["lat"]), float(body["lon"])), laptop=WHATSAPP_COLS, image=True)
                 out = {"message": res["message"], "affected": res["affected"], "log": res["log"],
-                       "text": res.get("text"), "laptop": res.get("laptop"), "image": res.get("image")}
+                       "text": res.get("text"), "laptop": res.get("laptop"), "image": res.get("image"),
+                       "small": res.get("small")}
                 out["parts"] = sms_parts(out["message"]) if out.get("message") else 0
+            elif self.path == "/api/message":
+                img = base64.b64decode(body["image"].split(",", 1)[-1]) if body.get("image") else None
+                out = router.handle(body["text"], (float(body["lat"]), float(body["lon"])), image=img)
+                out["parts"] = sms_parts(out["sms"]) if out.get("sms") else 0
             elif self.path == "/api/photo":
                 out = photo.run(base64.b64decode(body["image"].split(",", 1)[-1]))
                 out["parts"] = sms_parts(out["sms"])
@@ -102,6 +109,7 @@ class Handler(SimpleHTTPRequestHandler):
                 out["parts"] = sms_parts(out["sms"])
             elif self.path == "/api/directions":
                 out = directions.run((float(body["lat"]), float(body["lon"])), body["to"])
+                out.pop("scene", None)  # the page gets the rendered versions, not the Scene object
                 if "sms" in out:
                     out["parts"] = sms_parts(out["sms"])
             else:

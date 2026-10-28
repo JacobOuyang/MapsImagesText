@@ -12,7 +12,7 @@ import io
 import numpy as np
 from PIL import Image, ImageOps
 
-from . import llm
+from . import imagemap, llm
 
 # Lightest to darkest. SF Pro 17 px: all 10.28 px wide; ink measured on a canvas (0, 24, 28, 37, 46, 52, 55).
 SMS_RAMP = " +×¤0#$"
@@ -76,13 +76,13 @@ def _where(box):
     return "across the %s" % v if box[2] - box[0] > 0.8 else "%s %s" % (v, h)
 
 
-def run(data, sms_cols=18, mono_cols=58):
+def run(data, sms_cols=18, mono_cols=58, description=None):
     img = ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB")
     small = img.copy()
     small.thumbnail((1024, 1024))
     buf = io.BytesIO()
     small.save(buf, "JPEG", quality=85)
-    d = describe(buf.getvalue())
+    d = description or describe(buf.getvalue())
 
     lines = ["Photo: " + d["caption"]] + ["- " + x for x in d["details"]]
     sms_rows = sketch(img, sms_cols, SMS_RAMP, SMS_CELL)
@@ -105,4 +105,4 @@ def run(data, sms_cols=18, mono_cols=58):
     return {"caption": d["caption"], "details": d["details"], "subjects": d["subjects"],
             "sms": sms, "text": "\n".join(lines), "mono": mono,
             "mono_bytes": len(mono.encode()), "mono_gzip": len(gzip.compress(mono.encode())),
-            "photo_bytes": len(data), "width": img.width, "height": img.height}
+            "photo_bytes": len(data), "width": img.width, "height": img.height, "small": imagemap.shrink(img)}

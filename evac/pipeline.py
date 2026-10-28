@@ -2,10 +2,13 @@
 import os
 import re
 
-from . import geo, grid, imagemap, imagery, laptopmap, llm, notice, osm, segment, textmap
+from . import geo, grid, imagery, laptopmap, llm, notice, osm, render, segment, textmap
+from .scene import Scene
 
 ALERT_BUFFER_M = 3000   # outside the zone but this close still gets a map
 DEFAULT_RADIUS_M = 150  # no radius given: treat it as a point incident (a building, an intersection)
+ORDER_TITLE = {"mandatory": "EVACUATE NOW", "warning": "WARNING", "avoid_area": "AVOID THE AREA",
+               "shelter_in_place": "SHELTER IN PLACE", "lifted": "ORDER LIFTED"}
 
 
 def locate(place, near, log):
@@ -87,33 +90,32 @@ def run(sms, user=None, cols=40, seg_backend="color", out_dir="out", laptop=Fals
     if shelter and not scell:
         km = geo.haversine_m(user, shelter[1]) / 1000
         steps.append("Continue to %s (%.1f km %s)" % (shelter[0], km, geo.compass(user, shelter[1])))
-    tm = None
-    if roads and textmap.is_grid_place(n.get("zone_center_place")):
-        tm = textmap.render_grid(roads, center, user, radius, n.get("avoid_roads") or [], shelter)
-    if not tm:
-        tm = textmap.render_raster(g, ucell, scell, path)
+    scene = Scene(you=user, half_m=half, text=instructions(n, inside, d, radius, shelter, steps), roads=roads,
+                  closures=n.get("avoid_roads") or [], hazard=n.get("hazard"), zone=(center, radius), goal=shelter,
+                  route=[g.cell_center(*c) for c in path], aerial=img, masks=masks, cols=cols,
+                  street_grid=bool(roads) and textmap.is_grid_place(n.get("zone_center_place")),
+                  title="%s  ·  %s" % ((n.get("hazard") or "hazard").upper(), ORDER_TITLE.get(n.get("order"), "ALERT")),
+                  summary=n.get("summary") or "")
+    msg, tm = render.sms(scene)
     log.append("text map: %d rows, worst row drift %.2f cells" % (len(tm["rows"]), tm["drift"]))
-
-    text = instructions(n, inside, d, radius, shelter, steps)
-    msg = compose(text, tm, n, shelter)
     wide = None
-    if laptop:  # same view and roads, drawn wide for a monospace screen; laptop=True or a column count
+    if laptop:  # same scene drawn wide for a monospace screen; laptop=True or a column count
         try:
-            wide = laptopmap.render(n, user, center, radius, roads, shelter, half,
-                                    cols=laptop if laptop is not True else laptopmap.COLS)
+            wide = render.mono(scene, laptop if laptop is not True else laptopmap.COLS)
             log.append("laptop map: %dx%d, %d m per char, %.1f KB (%.1f KB gzipped) vs %.0f KB aerial JPEG"
                        % (wide["cols"], wide["rows"], wide["m_per_char"], wide["bytes"] / 1e3, wide["gzip"] / 1e3, wide["aerial_bytes"] / 1e3))
         except Exception as ex:
             log.append("laptop map failed (%s)" % ex)
-    picture = None
+    picture = small = None
     if image:  # the high-data version: an ordinary picture map of the same view
         try:
-            picture = imagemap.render(n, g, img, masks, roads, center, radius, user, shelter, path)
-            log.append("image map: %dx%d JPEG, %.0f KB" % (picture["width"], picture["height"], picture["bytes"] / 1e3))
+            picture, small = render.picture(scene), render.small(scene)
+            log.append("image map: %dx%d JPEG, %.0f KB; small %dx%d WebP, %.1f KB" % (picture["width"], picture["height"],
+                       picture["bytes"] / 1e3, small["width"], small["height"], small["bytes"] / 1e3))
         except Exception as ex:
             log.append("image map failed (%s)" % ex)
-    return {"affected": True, "inside": inside, "map": tm, "steps": steps, "text": text, "message": msg,
-            "laptop": wide, "image": picture, "log": log}
+    return {"affected": True, "inside": inside, "map": tm, "steps": steps, "text": scene.text, "message": msg,
+            "laptop": wide, "image": picture, "small": small, "scene": scene, "log": log}
 
 
 def instructions(n, inside, d, radius, shelter, steps):
@@ -140,9 +142,3 @@ def instructions(n, inside, d, radius, shelter, steps):
             print("[compose] LLM rewrite failed (%s); using template" % e)
     return text
 
-
-def compose(text, tm, n, shelter):
-    lines = [text, "", tm["title"]] + tm["rows"] + [""] + textmap.legend(tm["keys"], n.get("hazard"), shelter and shelter[0])
-    if tm["footer"]:
-        lines.append(tm["footer"])
-    return "\n".join(lines)

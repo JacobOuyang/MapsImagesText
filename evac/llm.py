@@ -64,6 +64,16 @@ def chat(messages, json_mode=False, max_tokens=DEFAULT_MAX_TOKENS):
     return content
 
 
+def chat_tools(messages, tools, max_tokens=DEFAULT_MAX_TOKENS):
+    """One turn with function calling. Returns the assistant message dict: either "tool_calls" to run, or the
+    final "content"."""
+    r = requests.post(BASE_URL.rstrip("/") + "/chat/completions", headers={"Authorization": "Bearer " + _key()},
+                      json={"model": MODEL, "messages": messages, "tools": tools, "max_completion_tokens": max_tokens,
+                            "temperature": 0, "reasoning_effort": REASONING_EFFORT}, timeout=120)
+    r.raise_for_status()
+    return r.json()["choices"][0]["message"]
+
+
 def chat_json(messages):
     text = chat(messages, json_mode=True)
     # Some models wrap JSON in fences even in json mode; take the outermost object.
