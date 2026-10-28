@@ -126,16 +126,21 @@ def streets(ctx, radius_m=800, walking=True):
     return {"count": len(roads), "main_streets": [n for n, _ in ranked[:10]]}
 
 
-@tool("Walking route from the person to a destination along real streets and footpaths, with turn-by-turn steps.",
-      destination=("string", "Where to, e.g. 'Colosseum, Rome'", True))
-def walking_route(ctx, destination):
+@tool("Walking route along real streets and footpaths, from the person's GPS (or from `start` if they name where "
+      "they start) to a destination. Gives only the current step, as far as the next intersection, and the turn "
+      "there: the person gets the next step as they walk.",
+      destination=("string", "Where to, e.g. 'Colosseum, Rome'", True),
+      start=("string", "Where the walk starts, only if the person names a place other than where they are, "
+             "e.g. 'Pantheon, Rome'", False))
+def walking_route(ctx, destination, start=None):
     from . import directions  # directions builds the whole reply; the tool keeps it for the scene
-    res = directions.run(ctx.you, destination)
+    res = directions.run(ctx.you, destination, start=start)
     if "error" in res:
         return {"error": res["error"]}
     ctx.store["walking_route"] = res
     return {"distance_m": round(res["distance_m"]), "minutes": round(res["distance_m"] / directions.WALK_M_PER_MIN),
-            "steps": res["steps"][:8], "destination": _where(ctx, res["scene"].goal[1])}
+            "from": start or "the person's GPS", "now": res["now"], "then": res["then"],
+            "destination": _where(ctx, res["scene"].goal[1])}
 
 
 # ---------- weather ----------
@@ -166,7 +171,7 @@ def rain_radar(ctx):
 
 # ---------- photos ----------
 
-@tool("Look at the photo the person was sent (it would not load on their phone): caption, details, main subjects.")
+@tool("Look at the photo the person was sent (it would not load on their phone): caption, details, the main object.")
 def describe_photo(ctx):
     if not ctx.image:
         return {"error": "no photo attached"}

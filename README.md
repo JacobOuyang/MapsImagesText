@@ -11,14 +11,17 @@
 
 Ask it anything in one message; **Muse Spark** decides which tools to call:
 
-- "Is it going to rain on my walk to the Colosseum?" → radar + walking route → one reply with the route map
+- "Is it going to rain on my walk to the Colosseum?" → radar + walking route → one reply with the first step and its map
+- "How do I walk from the Pantheon to the Colosseum?" → a walking route from the Pantheon, not from where you are
 - an emergency alert (fire, gas leak, wildfire, flood) → the fixed, tested emergency reply: are you affected, what to avoid, which way out
 - "my friend sent me this, what is it?" + a photo that won't download → a description + the photo drawn in text
 - "How far is the Trevi Fountain?" → a one-line answer
 
-Built on the Meta Model API (Muse Spark; SAM 3.1 planned).
+Every map and drawing shows **only what the reply is about**: the route, the streets it uses, the closures and the zone's edge. Everything else is left blank, so the way to go is the first thing you see. Walking directions go one step at a time: only the current step, as far as the next intersection, which way to turn there and a landmark to look for, with a map zoomed to just that stretch. The next step comes as you move. A photo of one object becomes that object's outline, drawn as wide as the maps.
 
-Contents: [Architecture](#architecture) · [The router](#the-router-one-message-in-muse-picks-the-tools) · [Tools](#tools) · [Scene and renderers](#scene-one-description-four-drawings) · [Emergency](#emergency-alerts) · [Photo](#photos-that-wont-load) · [Radar](#weather-radar) · [Directions](#walking-directions-abroad) · [Text-map rules](#why-the-text-maps-line-up) · [Simulator](#try-it-the-simulator) · [Command line](#run-it-from-the-command-line) · [Code](#code) · [Limits](#known-limits)
+Built on the Meta Model API: Muse Spark plans and words, SAM 3.1 finds objects in photos, Muse Image made the test pictures.
+
+Contents: [Architecture](#architecture) · [The router](#the-router-one-message-in-muse-picks-the-tools) · [Tools](#tools) · [Scene and renderers](#scene-one-description-four-drawings) · [Only what matters](#showing-only-what-matters) · [Emergency](#emergency-alerts) · [Photo](#photos-that-wont-load) · [Radar](#weather-radar) · [Directions](#walking-directions-abroad) · [Text-map rules](#why-the-text-maps-line-up) · [Simulator](#try-it-the-simulator) · [Command line](#run-it-from-the-command-line) · [Code](#code) · [Limits](#known-limits)
 
 ## Architecture
 
@@ -85,7 +88,7 @@ sequenceDiagram
     T-->>R: rain here: none, nearest 31 km NE, forecast: no rain
   and
     R->>T: walking_route
-    T-->>R: 1479 m, 20 min, steps
+    T-->>R: 1479 m, 20 min, the first step and the turn after it
   end
   R->>M: tool results (short JSON)
   M-->>R: reply text (no more tool calls)
@@ -104,30 +107,54 @@ Without a model key, keyword rules pick one tool (`_run_rules`): a photo → `de
 
 ### Real runs
 
-Rome Termini, "Is it going to rain on my walk to the Colosseum?" (25.1 s; map: walking route):
+Rome Termini, "How do I walk from the Pantheon to the Colosseum?" (16.7 s). Muse passes the Pantheon as the walk's `start`; before, the tool had no start, so the route began at Termini while the reply said "from the Pantheon". Only the first step goes out:
 
 ```
-tools called: rain_radar(), walking_route(Colosseum, Rome)
+tools called: walking_route(Colosseum, Rome, Pantheon, Rome)
 
-No rain in the next 2 hours.
-Your walk is 1479 m, about 20 min.
-Colosseum is 1377 m SW.
-Head SW on Via Giovanni Giolitti ~690 m.
-Then head SW on unnamed road ~780 m.
+Walk from Pantheon to Colosseum is 1664 m, about 22 min.
+Head SE on Via della Palombella for 70 m, to Piazza della Minerva.
+Then keep straight onto Piazza della Minerva.
 
 MAP (north is up):
-== ===========
-==============
-==============
- ==== v  🔴 ===== 
-====<<========
-== S==========
-===== ========
+              
+  v  🔴           
+  v             
+  v             
+ >>>>>>>>>>   
+ =============
+              
 
 = open road
 < > Λ v route
 🔴 you
-S destination: Colosseum
+
+┌─ ↑ N ────────────────────────────────────────────────────┐
+│                                                          │
+│         🔴 YOU                                           │
+│        ←↓                                                │
+│       ←↓                                                 │
+│      ←↓                                                  │
+│      ↓                                                   │
+│      ↓                                                   │
+│      ↓                                                   │
+│      ↓                                                   │
+│      ↓                                                   │
+│      ↓→                                                  │
+│       ↓→                                                 │
+│         ↘                                                │
+│         ↓→                                               │
+│          ↓→                                              │
+│            ↘→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→      │
+│           Via della Palombella   Piazza della Minerva    │
+│      ──────────────────────────────╱──────────────────── │
+│                                  ╱╱╱   Colosseum 1.5 km ⌂│
+│                                                          │
+└─ ├────────────┤ 20 m ────────────────────────────────────┘
+
+🔴 you
+→ route
+⌂ destination
 ```
 
 Rome Termini, "How far is the Trevi Fountain?":
@@ -141,22 +168,29 @@ About a 20 min walk from you.
 1.9 s; map: None
 ```
 
-A photo attached, "my friend sent me this, what is it?":
+A photo attached, "my friend sent me this, what is it?" (5.9 s). The flamingos are a small part of the photo, so the drawing zooms in on them:
 
 ```
 tools called: describe_photo()
 
-It shows pink flamingos wading in shallow water.
-About two dozen birds standing and walking together.
-Warm golden light with light mist over the water.
-Calm wetland scene at sunrise or sunset.
+A large flock of pink flamingos wades through shallow, misty water in soft golden light.
+About two dozen standing together.
+Hazy sunrise or sunset glow with mist over the water.
 
-$#######00000000##
-#####000¤¤¤¤¤¤¤¤¤0
-000¤¤¤¤¤××××××××+×
-¤×××××¤×××××××××××
-¤¤×¤¤¤¤×¤××¤¤××××¤
-(the photo, drawn in text)
+    #
+ ###### #######
+ ###  #########
+(outline of the main subject, zoomed in: left flamingos, central flamingos, right flamingos)
+
+            ────
+  ──────────   ─╲   ─        ────
+ │╱             ╲────     ───   ─────────────────
+  ╲           ───│  ╲   ──                      ╲
+  │          ╱   ╲  ╲╲──                        │
+  ╲╲ ─────  ╱    ╲╲──│  ───────────             │
+   ╲─    ───╱        ───          ────────   ───╱
+                                         ────
+(outline of the main subject, zoomed in: left flamingos, central flamingos, right flamingos)
 ```
 
 Before building the router, Muse's tool choice was tested on seven requests: it picked the right tools every time, in 0.6 to 1.3 s per decision.
@@ -179,13 +213,13 @@ def walking_route(ctx, destination):
 | `emergency_reply(text)` | affected?, inside the zone?, the message, steps | the whole emergency reply (all four versions) | `pipeline.run` |
 | `read_alert(text)` | hazard, order, place, radius as written, shelters, closed segments | the parsed alert | `notice.parse` (Muse, regex fallback) |
 | `locate_incident(place)` | lat/lon, distance, direction | | `pipeline.locate` (intersections from road data) |
-| `walking_route(destination)` | distance, minutes, steps, where the destination is | the walking-route Scene | `directions.run` |
+| `walking_route(destination, start?)` | distance, minutes, the current step and the turn after it, where the destination is | the trip and the step's Scene | `directions.run` |
 | `streets(radius_m, walking)` | how many streets, the main ones | the street network | Overpass |
 | `geocode(query)` | lat/lon, distance, direction | | Nominatim |
 | `nearby_towns(radius_km)` | towns with distance and direction | the town list | Overpass |
 | `rain_radar()` | rain over you, nearest rain, motion, forecast summary | radar grids and its four versions | RainViewer + Open-Meteo |
 | `rain_forecast(lat, lon)` | 15-minute rain for 2 hours at one spot | the forecast | Open-Meteo |
-| `describe_photo()` | caption, details, subject boxes | the description | Muse Spark (vision) |
+| `describe_photo()` | caption, details, the main object's name | the description | Muse Spark (vision) |
 
 `tools.call(ctx, name, args)` never raises: a missing argument, an unknown tool or a failing service (Overpass timing out, for example) comes back as `{"error": ...}`, which the model reads and works around. Every call is logged in `ctx.log`.
 
@@ -195,7 +229,8 @@ def walking_route(ctx, destination):
 
 | Field | Meaning |
 | --- | --- |
-| `you` | the reader's GPS; every map is centred here |
+| `you` | the reader's GPS |
+| `center` | where the view is centred (None: on you). Walking maps are fitted to the route instead |
 | `half_m` | half the width of the view, in metres |
 | `text` | the message (instructions, directions, Muse's reply) |
 | `roads`, `closures` | OSM roads; closed segments `{road, from, to}` |
@@ -207,17 +242,58 @@ def walking_route(ctx, destination):
 | `street_grid` | a Manhattan intersection: the SMS map uses the avenue/street grid |
 | `title`, `summary` | the picture's banner |
 | `cols` | width of the canonical frame (the SMS routing grid, 40 columns) |
+| `focus` | the roads to draw, picked by `evac/focus.py` (None: every road) |
+| `marks` | `[(n, (lat, lon))]`: where step n starts, drawn as a number on the route |
 
 `evac/render.py`:
 
 | Function | Version | How |
 | --- | --- | --- |
-| `sms(scene)` | low data | `textmap.py`: Manhattan street grid, or the routing grid shrunk to 14 to 20 columns; legend; returns the full SMS |
-| `mono(scene, cols)` | medium data | `laptopmap.py`: line-drawn roads, shaded zone, labels, route arrows, 58 columns for WhatsApp |
+| `sms(scene)` | low data | `textmap.py`: Manhattan street grid, or the routing grid shrunk to 14 to 20 columns; legend; returns the full SMS. A focused scene draws only its roads and the zone's edge |
+| `mono(scene, cols)` | medium data | `laptopmap.py`: line-drawn roads, labels, route arrows and step numbers, 58 columns for WhatsApp. A focused scene: only its roads, the zone as an edge (░) and its worst part (▓), no trees, empty rows dropped |
 | `small(scene)` | slow connection | `imagemap.py` at 400 px, WebP quality 50: **drawn** at that size, so labels stay readable |
-| `picture(scene)` | high data | `imagemap.py` at 800 px, JPEG: an agency-style map |
+| `picture(scene)` | high data | `imagemap.py` at 800 px, JPEG: an agency-style map; a focused scene draws its roads in full and the rest as faint grey context, with numbered step markers |
 
 Moving the emergency and directions modes onto the Scene was checked against the previous code on five cases (NYC fire, gas leak, wildfire, flood, Lisbon walk) with the model switched off: the SMS replies and the pictures came out byte-for-byte identical. The WhatsApp maps changed only where they now draw the shared route instead of computing their own.
+
+## Showing only what matters
+
+The first versions drew every road in the frame. In Lisbon's old town the WhatsApp map had about 950 line characters and the route was hard to find; the wildfire map shaded the whole zone and every patch of trees. Someone reading a map in a hurry, or in a panic, needs three things: **where they are, which way to go, and what to avoid.** So every Scene now carries `focus`: the few roads worth drawing, chosen by `evac/focus.py`, and every version draws only those.
+
+```mermaid
+flowchart TD
+  R["Scene: route, roads, closures, you, goal"] --> W["Walked: the nearest road to each route point<br/>(kept if it is nearest to 2+ points)"]
+  R --> T["Turns: simplify the route line,<br/>heading change ≥ 35°"]
+  T --> L["Landmark at each turn: the biggest named<br/>cross street within 35 m, drawn within 90 m of the turn"]
+  R --> M["Main roads: crossed by the route (walking),<br/>or all secondary and bigger in view (alerts)"]
+  R --> C["Closures: every piece of each closed road"]
+  R --> A["Anchors: the destination's street;<br/>for alerts also the street you're on"]
+  W & L & M & C & A --> F["scene.focus"]
+  F --> S1["SMS: only these roads (side streets too when walking)<br/>zone drawn as its edge"]
+  F --> S2["WhatsApp: only these roads, step numbers on the route,<br/>zone edge ░ + worst part ▓, no trees, empty rows dropped"]
+  F --> S3["Pictures: these roads in full colour,<br/>the rest as faint grey lines for context"]
+```
+
+Choices that mattered:
+
+- **The nearest road, not every road nearby.** Old-town streets run a few metres apart, so "roads within 14 m of the route" kept 75 roads in Lisbon. Counting only the nearest road at each route point keeps 38.
+- **Streets matched by name are cut to the area that matters.** A landmark is drawn only within 90 m of its turn. Before that, "Calçada do Carmo" pulled in its whole length across the download.
+- **The view is fitted to what matters, with no fixed zoom.** A walking step's map is framed around you, the step, a third of it past the turn (15 to 80 m) and its landmarks, with a margin of 15% of what it shows. A 20 m step and a 900 m one are framed the same way; the old frame was a fixed square centred on you, half of it behind you.
+- **One step shows only its own streets.** A step map keeps only the street you're on and the one you turn into, clipped to the part near the route. Praça Dom Pedro IV is mapped as one closed loop, so without the clip the whole square was drawn around a 20 m step.
+- **Scales follow the data.** The distance at which a route point counts as "on" a street scales with how far apart the route's points are, and the routing grid targets 8 m cells. At a fixed 160 columns a 1.5 km walk in Rome had 25 × 49 m cells, the route sat 22 m off every street and the step map drew no streets at all.
+- **Alerts keep the main roads.** For orientation, an alert map keeps every secondary or bigger road in view (avenues, Sunset Blvd, PCH) and the street you're on. It drops side streets, tree dots and the zone fill. Someone inside the zone also gets a first line to act on: `GO EAST NOW toward Westwood Recreation Center.`
+
+Measured on the same inputs with the model off (non-blank characters in the 58-column WhatsApp map):
+
+| Map | Before | After |
+| --- | --- | --- |
+| Lisbon walk, Rossio → castle (first step) | 957 | 224 |
+| Rome walk, Termini → Colosseum (first step) | 1264 | 217 |
+| Wildfire, inside the zone | 1387 | 624 |
+| NYC gas leak | 742 | 586 |
+| NYC fire | 713 | 647 |
+
+The SMS maps are still within 0.04 cells of alignment (`worst row drift`) in every case.
 
 ### Choosing the version
 
@@ -259,13 +335,13 @@ Samples are in [`samples/`](samples/); the NYC alerts are fictional drills.
 python3 main.py samples/nyc_fire.txt --at 40.75491,-73.97441 --laptop 58
 ```
 
-Low data (12 SMS parts):
+Low data (12 SMS parts). The `+` area around the fire is gone; the closed avenue and the `#` are what to avoid:
 
 ```
-FDNY is on scene of a fire at 5 Av and W 47 St.
-Fire is 400 m from you.
-Avoid 5 Av between W 42 St and W 50 St.
-Roads are closed with smoke in the area.
+FDNY responding to 5-alarm fire at 5 Av and W 47 St.
+Fire incident 400 m from you.
+Avoid 5 Av (W 42 St to W 50 St).
+Expect road closures and smoke.
 
 MAP (uptown is up):
 =================== 51 St
@@ -273,13 +349,13 @@ MAP (uptown is up):
 =====×============= 50 St
   |    ×    |     |     |  
 =====×============= 49 St
-  |   +×++  |     |     |  
+  |    ×    |     |     |  
 =====×============= 48 St
-  |   +×+++ |     |     |  
+  |    ×    |     |     |  
 =====#========= 🔴 == 47 St
-  |   +×+++ |     |     |  
+  |    ×    |     |     |  
 =====×============= 46 St
-  |   +×++  |     |     |  
+  |    ×    |     |     |  
 =====×============= 45 St
   |    ×    |     |     |  
 =====×============= 44 St
@@ -287,61 +363,60 @@ MAP (uptown is up):
 =====×============= 43 St
 
 # fire: AVOID
-+ near the fire: expect smoke and crews
 × road closed: AVOID
 = open road
 🔴 you
 Avenues left to right: 6 Av, 5 Av, Madison, Park, Lex
 ```
 
-Medium data (3.7 KB, 0.6 KB compressed):
+Medium data (3.2 KB, 0.5 KB compressed). Only the avenues (main roads), your street, and the closed avenue are drawn; the zone is an edge `░` with its worst part `▓`:
 
 ```
-FDNY is on scene of a fire at 5 Av and W 47 St.
-Fire is 400 m from you.
-Avoid 5 Av between W 42 St and W 50 St.
-Roads are closed with smoke in the area.
+FDNY responding to 5-alarm fire at 5 Av and W 47 St.
+Fire incident 400 m from you.
+Avoid 5 Av (W 42 St to W 50 St).
+Expect road closures and smoke.
 
-             Vanderbilt Av  Lexington Av
+                            Lexington Av
  5th Av  Madison Av  Park Av            3rd Av        2nd Av
 ┌─ ↑ uptown ───────────────────────────────────────────────┐
-│───╋─────────╋────────╋╋─────────╋────────╋── 52nd St ──╋─│
 │   ┃         ┃        ┃┃         ┃        ┃             ┃ │
 │   ┃         ┃        ┃┃         ┃        ┃             ┃ │
-│───╋─────────╋────────╋╋─────────╋────────╋── 51st St ──╋─│
+│   ┃         ┃        ┃┃         ┃        ┃             ┃ │
+│   ┃         ┃        ┃┃         ┃        ┃             ┃ │
 │   ┃         ┃        ┃┃         ┃        ┃             ┃ │
 │━━━×━━━━━━━━━╋━━━━━━━━╋╋━━━━━━━━━╋━━━━━━━━╋━━ 50th St ━━╋━│
 │   ×         ┃        ┃┃         ┃        ┃             ┃ │
 │   ×         ┃        ┃┃         ┃        ┃             ┃ │
 │━━━×━━━━━━━━━╋━━━━━━━━╋╋━━━━━━━━━╋━━━━━━━━╋━━ 49th St ━━╋━│
 │░░░×░░░░░    ┃        ┃┃         ┃        ┃             ┃ │
-│───×─────────┃────────╋╋─────────╋──────  ┃             ┃ │
-│▒▒▒×▒▒▒▒▒░░░ ╋        ┃┃         ┃      ──╋── 48th St ──╋─│
-│▒▓▓×▓▓▒▒▒▒░░░┃        ┃┃    YOU  ┃        ┃             ┃ │
-│───◆─────────╋────┼───╋╋────🔴───╋────────╋── 47th St ──╋─│
-│▒▓▓×▓▓▒▒▒▒░░░┃    │   ┃┃         ┃        ┃             ┃ │
-│▒▒▒×━━━━━━━━━╋━━━━╋━━━┃┃         ┃        ┃             ┃ │
-│━━━×▒▒░░░░░  ┃    │  ━╋╋╋━━━━━━━━╋━━━━━━━━╋━━ 46th St ━━╋━│
-│░░░×░░░░░    ┃    │   ┃ ┃        ┃        ┃             ┃ │
-│━━━╋━━━━━━━━━╋━━━━╋╋━━━━━╲╋━━━━━━╋━━━━━━━━╋━━ 45th St ━━╋━│
-│   ×         ┃    │┃      ┃      ┃        ┃             ┃ │
-│   ×         ┃    │┃      ┃      ┃        ┃             ┃ │
-│───×─────────╋────┼┃      ┃      ╋────────╋── 44th St ──╋─│
-│   ×         ┃    │┃      ┃      ┃        ┃             ┃ │
-│───×─────────╋────╱┃      ┃      ┃        ┃── 43rd St ──╋─│
+│░  ×     ░░  ┃        ┃┃         ┃        ┃             ┃ │
+│░  ×       ░ ┃        ┃┃         ┃        ┃             ┃ │
+│░ ▓×▓       ░┃        ┃┃    YOU  ┃        ┃             ┃ │
+│░▓▓◆▓FIRE   ░┃        ┃╋────🔴───╋────────╋── 47th St ──╋ │
+│░ ▓×▓       ░┃        ┃┃         ┃        ┃             ┃ │
+│░  ×━━━━━━━━━╋━━━━━━━━┃┃         ┃        ┃             ┃ │
+│━━━×     ░░  ┃       ━╋╋╋━━━━━━━━╋━━━━━━━━╋━━ 46th St ━━╋━│
+│░░░×░░░░░    ┃        ┃ ┃        ┃        ┃             ┃ │
+│━━━╋━━━━━━━━━╋━━━━━╋━━━━━╲╋━━━━━━╋━━━━━━━━╋━━ 45th St ━━╋━│
+│   ×         ┃     ┃      ┃      ┃        ┃             ┃ │
+│   ×         ┃     ┃      ┃      ┃        ┃             ┃ │
+│   ×         ┃     ┃      ┃      ┃        ┃             ┃ │
+│   ×         ┃     ┃      ┃      ┃        ┃             ┃ │
+│   ×         ┃     ┃      ┃      ┃        ┃             ┃ │
 │   ×         ┃     ┃      ┃      ┃        ┃             ┃ │
 │   ×         ┃     ┃╲━━╋━━╋      ┃        ┃             ┃ │
 │━━━╋━━━━━━━━━╋━━━━━━━━━╋━━━━━━━━━╋━━━━━━━━╋━━ 42nd St ━━╋━│
 └─ ├───────────┤ 200 m ────────────────────────────────────┘
 
 🔴 you
-◆ incident   ░▒▓ danger zone, darker is closer
+◆ incident   ░ edge of danger zone   ▓ worst of it
 × road closed
 ━ main road   ─ street
 Avenues run up and down, streets left and right.
 ```
 
-Small picture (17 KB, drawn at 400 px) and full picture (95 KB):
+Small picture (17 KB, drawn at 400 px) and full picture (89 KB). Side streets are faint grey lines; the avenues, the closure and the zone stand out:
 
 ![Small picture map of the NYC fire](docs/alert_small_nyc_fire.webp) ![Picture map of the NYC fire](docs/alert_picture_nyc_fire.jpg)
 
@@ -350,7 +425,33 @@ Small picture (17 KB, drawn at 400 px) and full picture (95 KB):
 ```bash
 python3 main.py samples/nyc_gas_leak.txt --at 40.7560,-73.9740 -v
 ```
+notice (llm): {'hazard': 'gas', 'order': 'avoid_area', 'zone_center_place': 'Lexington Av and E 51 St, Manhattan', 'shelters': [], 'avoid_roads': [{'road': 'E 51 St', 'from': 'Park Av', 'to': '3 Av'}], 'deadline': None, 'summary': 'Avoid E 51 St between Park Av and 3 Av in Manhattan due to a gas leak at Lexington Av and E 51 St.', 'zone_radius_m': None}
+intersection Lexington Av & E 51 St found in road data at (40.7571285, -73.9719044) (geocoder said (40.756184, -73.972591))
+user (40.756, -73.974), zone center (40.7571285, -73.9719044) r=150m, distance 216m, inside=False
+closure '51 street': segment between cross streets
+107 of 132 roads drawn
+text map: 9 rows, worst row drift 0.04 cells 
 
+Gas leak at Lexington Av and E 51 St.
+You are 220 m from the incident.
+Avoid E 51 St between Park Av and 3 Av.
+
+MAP (uptown is up):
+=============== 52 St
+  |     |     |     |  
+=====××××#××××= 51 St
+  |     |     |     |  
+=============== 50 St
+  |     |     |     |  
+=============== 49 St
+  |     |   🔴  |     |  
+=============== 48 St
+
+# gas: AVOID
+× road closed: AVOID
+= open road
+🔴 you
+Avenues left to right: Madison, Park, Lex, 3 Av
 ```
 notice (llm): {'hazard': 'gas', 'order': 'avoid_area', 'zone_center_place': 'Lexington Av and E 51 St, Manhattan', 'shelters': [], 'avoid_roads': [{'road': 'E 51 St', 'from': 'Park Av', 'to': '3 Av'}], 'deadline': None, 'summary': 'Con Edison and FDNY are responding to a gas leak at Lexington Av and E 51 St, avoid E 51 St between Park Av and 3 Av and expect delays.', 'zone_radius_m': None}
 intersection Lexington Av & E 51 St found in road data at (40.7571285, -73.9719044) (geocoder said (40.7641117, -73.966817))
@@ -392,26 +493,28 @@ Avenues left to right: Madison, Park, Lex, 3 Av
 python3 main.py samples/palisades_fire.txt --at 34.0445,-118.5300 --laptop 58
 ```
 
-Low data:
+Low data (9 SMS parts). Someone inside the zone gets one line to act on first:
 
 ```
-MANDATORY EVACUATION - Wildfire near Temescal Canyon Park.
-You are within 2 miles of fire. Leave now.
-Shelter: Westwood Recreation Center.
+GO EAST NOW toward Westwood Recreation Center.
+EVACUATE NOW.
+You are within 2 miles of Temescal Canyon Park wildfire.
+Go to Westwood Recreation Center.
 Head E on unnamed road ~210 m.
 Head E on Alma Real Drive ~2.5 km.
 Head E on 17th Street ~620 m.
 Continue to Westwood Recreation Center (7.6 km E).
-Avoid Sunset Blvd, Palisades Dr.
+Avoid Sunset Blvd.
+Avoid Palisades Dr.
 
 MAP (north is up):
- ×××      === 
- ××+++++++ ××=
- +××####+××××× Sunset Blvd
-~++### 🔴 >>>+==
-~++######+++== PCH
-~~+++++++++===
-~~~~++++~  ===
+ ×××          
+ ××+++++++ ×× 
+ +××#### ××××× Sunset Blvd
+~+=### 🔴 >>>+=  PCH
+~+~######==+==
+~~++~~~~+++===
+~~~~+~~+~  ===
 
 # wildfire: AVOID
 + evacuation zone: leave
@@ -422,125 +525,233 @@ MAP (north is up):
 🔴 you
 ```
 
-Medium data (at this scale one character is 142 m, so side streets are left out):
+Medium data (3.1 KB, 0.6 KB compressed). At 142 m per character, side streets are left out; so are the tree dots and the zone's fill, leaving its edge `░`, its worst part `▓`, the closed roads and the way out:
 
 ```
-MANDATORY EVACUATION - Wildfire near Temescal Canyon Park.
-You are within 2 miles of fire. Leave now.
-Shelter: Westwood Recreation Center.
+GO EAST NOW toward Westwood Recreation Center.
+EVACUATE NOW.
+You are within 2 miles of Temescal Canyon Park wildfire.
+Go to Westwood Recreation Center.
 Head E on unnamed road ~210 m.
 Head E on Alma Real Drive ~2.5 km.
 Head E on 17th Street ~620 m.
 Continue to Westwood Recreation Center (7.6 km E).
-Avoid Sunset Blvd, Palisades Dr.
+Avoid Sunset Blvd.
+Avoid Palisades Dr.
 
 ┌─ ↑ N ────────────────────────────────────────────────────┐
-│      ××××  ··    ··  ····················     ╲╲  ·      │
-│···  ·× ××××××     ··  ·······  ·· · ···· ·     ╲─╲  ╲    │
-│···  ·××      ××   ···         ·    ···   ·       ╲╳ ╲╲│  │
-│  ·····×××  ·    ··· ··   ····  ·  ·     ···  ·   ││   ╲╲ │
-│    ·····××··   · ··░░░░░░░░░░░░░░·   ········     ╲╲·  ╲╲│
-│ · ·······×····░░░░░░░░░░░░░░░░░░░░░░░·    ··       │     │
-│····   · ·××·Palisades Dr░░░░░░Mandeville Canyon Rd │·    │
-│··  ····· ░░×░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░·       ××     │
-│·········░░░××░░░░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░░░Sunset Blvd ××××××××│
-│   ····░░░░░░×░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░░░░░░░░  ×××─╲     │
-│······░░░░░░░××▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│▒▒▒▒▒▒░░×░░░××××  ││     │
-│·     ░░░░░░░░×▒▒▒▒▒×××××××××××▒│▒▒▒▒▒▒▒×××░×░░░·· ╲╲━━━━⌂│
-│     ░░░░░░░░▒×▒▒▒▒▒×▒▓▓▓▓▓▓╱┃×××▒▒▒▒▒▒×××××░░░░░·╱╱╱╳╲╲  │
-│     ░░░░░░░▒×××▒▒▒××▓▓▓▓▓▓▓┃🔴▓×××▒▒××▒▒░░░░░░░╱╱╱    ╲╲╲│
-│╱╱━━━━━╲░░░░▒××××××▓▓▓▓▓▓▓▓┃▓│→→→→▒×××▒▒▒▒░░░░╱╳╳        ╲│
-│≈≈≈≈░░░░━━╲━╋╋━━━━━━━━╲▓▓▓◆╱▓│▓▓│↓→→→→→→→→→→→→→→→→→→    ┼╱│
-│≈≈≈≈░░░░░░░░▒▒▒▒▒▒▒▒▓▓╲╲╲╳╱▓▓│▓▓▓╳▒││▒▒▒▒▒░░┃░░╲╲ ╲╲╲ ╱┼┼ │
-│≈≈≈≈≈░░░░░░░▒▒▒▒▒▒▒▒▒▓▓▓▓╲╲╲╲▓▓▓│╱▒│▒▒▒▒▒╱┼┃┃░░░░╲╲ ╱╳╲ ╲╲│
-│≈≈≈≈≈░░░░░░░░▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓╲━╲┃╲▒│╲▒─╱╱╱╳╳░░░░  ╱╳╳ ╲╲╲ │
-│≈≈≈≈≈≈░░░░░░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒╲╲╋╳╱─░╱╳╳░░░░░╱╳╲╲╲╲╲ ╳╋│
-│≈≈≈≈≈≈≈░░░░░░░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒╲╲╋╋╳░╲╲╲░╱╳╲╲ ╲╲╲╳╳╳ │
-│≈≈≈≈≈≈≈≈░░░░░░░░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░░░╲╲╲╲░╱┼╲  ╲╲╲╱╳╳╲╳╳│
-│≈≈≈≈≈≈≈≈≈≈░░░░░░░░░░░░░▒▒▒▒▒▒▒▒░░░░░░░░░░░╲╳╳  ╲╲ ╱╳╳╲╱╳╳╱│
-│≈≈≈≈≈≈≈≈≈≈≈░░░░░░░░░░░░░░░░░░░░░░░░░░░░░PCH ╲╲╋ ╳╳╳╳╱╳╳╳╱╳│
-│≈≈≈≈≈≈≈≈≈≈≈≈≈≈░░░░░░░░░░░░░░░░░░░░░░░░░░····  ╲╳╳╳╳╳╳╳╱╳╳╳│
-│≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈░░░░░░░░░░░░░░░░░░░···Ocean Av ╲╳╳╳╳╋╋╳╱╳│
-│≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈░░░░Santa Monica Freeway ╲╋╳╳╳╳╳╱│
+│      ××××                                                │
+│      × ××××××                                            │
+│      ××      ××                                          │
+│       ×××                                                │
+│         ××         ░░░░░░░░░░░░░░                        │
+│          ×    ░░░░░              ░░░░                    │
+│          ×× ░░                       ░░░                 │
+│          ░░×                            ░░        ××     │
+│         ░  ××                        Sunset Blvd ××××××××│
+│       ░░    ×                               ░  ×××       │
+│      ░      ××                          ×   ××××         │
+│      ░       ×     ×××××××××××         ××× ×  ░     ━━━━⌂│
+│ Palisades Dr ×     ×     ▓▓╱╱×××      ×××××    ░ ╱╱╱━    │
+│     ░       ×××   ×× ▓▓▓▓▓▓┃🔴 ×××  ××         ╱╱╱       │
+│╱╱━━━━━╲     ××××××  ▓▓▓▓▓▓┃│▓→→→→ ×××        ╱╱╱         │
+│≈≈≈≈░   ━━╲━╋╋━━━━━━━━╲▓▓▓◆╱▓▓▓▓ ↓→→→→→→→→→→→→→→→→→→      │
+│≈≈≈≈░                 ╲╲╲╳╱▓▓▓▓▓            ┃   ░         │
+│≈≈≈≈≈░                 ▓▓╲╲╲╲▓             ┃┃   ░         │
+│≈≈≈≈≈░                       ╲━╲╲╲ PCH    ╱╱   ░          │
+│≈≈≈≈≈≈░                          ╲╲╋╲   ╱╱╱    ░        ╱╋│
+│≈≈≈≈≈≈≈░                            ╲╲╋╋╳     ░       ╱╱╱ │
+│≈≈≈≈≈≈≈≈░░                             ╲╲╲╲ ░░      ╱╱╱ ╱╱│
+│≈≈≈≈≈≈≈≈≈≈░                               ╲╲╳     ╱╳╳╲╱╱╱ │
+│≈≈≈≈≈≈≈≈≈≈≈░░░                          ░░  ╲╲╋ ╱╱╱ ╱╳╳╲╱╱│
+│≈≈≈≈≈≈≈≈≈≈≈≈≈≈░░░                   ░░░░      ╲╳╳ ╱╱╱ ╱╳╳╳│
+│≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈░░░░░░░░    ░░░░░░░            ╲╳╳ ╱╋╋╳╱╳│
+│≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈≈░░░░Santa Monica Freeway ╲╋╳━╳╳╳╱│
 └─ ├────────────┤ 2 km ────────────────────────────────────┘
 
 🔴 you
-◆ incident   ░▒▓ danger zone, darker is closer
+◆ incident   ░ edge of danger zone   ▓ worst of it
 × road closed
 → way out
 ⌂ shelter
 ━ main road   ─ street
 ≈ water
-· trees / park
 ```
 
 ## Photos that won't load
 
+The simplest useful case is a photo of **one thing**: what is it, and what shape is it? So the drawing is just that object's outline, cropped to it and drawn as wide as the maps (58 columns for WhatsApp, 24 for SMS), with Muse's description above it. **Muse Spark names the object, SAM 3.1 finds it and gives its exact shape.**
+
 ```mermaid
 flowchart TD
-  A["Photo a friend sent<br/>(it didn't download)"] --> B["Server shrinks it to 1024 px<br/>and sends it to Muse Spark"]
-  B --> C["Caption, up to 3 details,<br/>up to 4 subjects with boxes"]
-  A --> D["Greyscale + histogram equalisation"]
-  D --> E1["18 columns in iPhone-safe characters<br/>(blank) + × ¤ 0 # $, light to dark"]
-  D --> E2["58 columns in ASCII  .:-=+*#%@"]
-  C --> E2
-  E2 --> F["Objects boxed and numbered;<br/>regions like 'sky' only listed"]
-  E1 --> L["Low: description + small sketch"]
-  F --> M["Medium: description + sketch + key"]
+  A["Photo a friend sent<br/>(it didn't download)"] --> B["Muse Spark: caption, up to 3 details,<br/>and the main object as a short noun phrase ('teapot')"]
+  B --> S["SAM 3.1 (/v1/responses): every 'teapot' in the photo<br/>box + confidence + one_bit mask (retry with the last word: 'eight ball' → 'ball')"]
+  S --> PR["Meta's meta-sam-parser: parse the records, decode each mask"]
+  PR -- "found" --> P["The biggest confident match: its mask in its box + 12% margin,<br/>on a 240-column grid of its own (a small bird is drawn as large as a close-up)"]
+  PR -- "nothing found" --> CO["Colour method on the whole photo"]
+  P & CO --> O["Crop to the shape → WhatsApp: marching squares in ─ │ ╭ ╮ ╯ ╰ (58 columns)<br/>SMS: # silhouette with figure spaces (24 columns)"]
   A --> SM["Small: 400 px WebP"]
   A --> H["High: the photo"]
 ```
 
-Example: "Eagle & Waterfall", one of the photos macOS ships in `/Library/Desktop Pictures` (the simulator offers them as samples; they are not in this repo).
+**SAM 3.1 on the Meta Model API** (`evac/sam.py`):
+- **Endpoint:** it's served on `/v1/responses`; `/chat/completions` refuses it. The request is one user message with an `input_text` (the noun phrase) and an `input_image`, plus `metadata: {"mask_encoding": "one_bit", "include_confidence": "true"}`.
+- **Answer format:** special tokens in the output text, one record per match:
 
-```bash
-python3 main.py --photo eagle.jpg
+  ```
+  <0f>0<|box;x1=64;y1=96;x2=191;y2=159;w=256;h=256;c=0.75|><|mask;x=0;y=0;c=0.75;data=64,128,!…|>
+  ```
+
+  The mask covers the box. Its payload is compressed, and Meta's SAM License doesn't allow reverse-engineering it, so responses are parsed and masks decoded with Meta's own `meta-sam-parser`. That needs Python 3.10+, which is why the project now runs in a Python 3.12 `.venv`.
+- **Speed:** a SAM call takes 0.7 to 2.5 s, so a photo reply takes about 2 to 4 s including Muse's description. Responses are cached by image and prompt in `cache/sam/`.
+- **Fallbacks:** without the parser, SAM's box is still used and the colour method finds the shape inside it. Without a model key or a match, the colour method runs on the whole photo.
+
+**What SAM's mask fixed:** before it, the shape came from colour: background was the colours along the photo's border, and holes were filled.
+- **Busy surroundings:** the teapot came out merged with the cluttered counter.
+- **Holes:** the mug's handle came out solid.
+- **Thin parts:** the bicycle lost its frame.
+- **Black on black:** the 8-ball wasn't found at all.
+- **Wrong object:** "Eagle & Waterfall" gave the waterfall instead of the bird.
+- **A flock:** the flamingos came out as a vague scene. Now one of the birds is drawn large.
+
+**Drawing:** marching squares read the four corners of each character cell (inside or outside the mask) and pick the piece of line that joins the right edge midpoints. The six pieces are `─ │ ╭ ╮ ╯ ╰`, all one cell wide in Menlo. They always meet their neighbours, so the outline is one closed line. The SMS silhouette uses U+2007 figure spaces as blanks, because ordinary spaces are narrower in SF Pro and squash the shape.
+
+**Test pictures.** The simulator's **One object** samples come from two places:
+- **Generated:** six pictures made with **Muse Image** (`muse-image-1.0` on `/images/generations`, about 6 s each), on plain and busy backgrounds, in `sim/samples/`: an apple, a mug, a sneaker, a bicycle against bricks, a dog on grass and a teapot on a cluttered counter.
+- **Built in:** macOS's account pictures from `/Library/User Pictures` (a penguin, a fortune cookie and others), converted from HEIC with `sips`.
+
+**A teapot on a cluttered counter:** (WhatsApp text 1310 bytes (246 compressed), photo 76141 bytes). Lid knob, spout, and the handle with the hole through it; none of the counter.
+
+```
+Photo: A cozy rustic kitchen counter with a green teapot surrounded by lemon slices, a croissant, herbs, and a mug.
+- Green ceramic teapot in the center on a wooden table
+- Sliced lemons, garlic, croissant crumbs, and thyme scattered around
+- Blurred kitchen background with white cabinets and window light
+
+            #
+        ########
+  ###  ############# #
+   ################  ##
+   ###################
+    ################
+       ###########
+         #######
+(outline of teapot, found by SAM 3.1)
 ```
 
-Low data (6 SMS parts):
+```
+                           ╭───╮
+                           │   ╰╮
+                      ╭────╯    ╰───╮
+                  ╭───╯             ╰───╮
+  ╭──────╮       ╭╯                     ╰╮ ╭─────────╮
+  ╰─╮    ╰╮    ╭─╯                       ╰─╯  ╭────╮ ╰╮
+    ╰─╮   ╰─╮╭─╯                             ╭╯    ╰╮ ╰╮
+      │     ╰╯                               ╰╮     │  │
+      ╰╮                                      │     │  │
+       │                                      ╰╮   ╭╯ ╭╯
+       │                                       │ ╭─╯ ╭╯
+       ╰╮                                      ╰─╯ ╭─╯
+        ╰─╮                                     ╭──╯
+          ╰─╮                                 ╭─╯
+            ╰─╮                             ╭─╯
+              ╰─╮                          ╭╯
+                ╰─╮                      ╭─╯
+                  ╰───╮              ╭───╯
+                      ╰──────────────╯
+(outline of teapot, found by SAM 3.1)
+```
+
+**A mug:** (WhatsApp text 1575 bytes (223 compressed), photo 18261 bytes). The handle's hole is kept (the colour method filled it in).
 
 ```
-Photo: A lone bird soars in silhouette before a massive waterfall shrouded in golden mist and sunlight.
-- No readable text in the image
-- Warm golden backlight creates a hazy, glowing mist over the falls
-- Scene shows powerful cascading water on the left and a dark cliff on the right
-
-0¤×¤××××++++++   +
-000¤¤¤××××+++++ +¤
-#0#000¤¤¤××+++++×0
-###$###000¤×××××¤#
-$##$$#####00000¤0$
-(the photo, drawn in text)
+            ╭─────────────────╮
+   ╭────────╯                 ╰─────────╮
+  ╭╯                                    ╰╮
+  │                                      │
+  │                                      ╰────────╮
+  │                                               ╰──╮
+  │                                       ╭───────╮  ╰╮
+  │                                      ╭╯       ╰─╮ ╰╮
+  │                                      │          │  │
+  │                                      │          │  │
+  │                                     ╭╯          │  │
+  ╰╮                                    │          ╭╯ ╭╯
+   │                                    │         ╭╯ ╭╯
+   │                                    │       ╭─╯ ╭╯
+   │                                    │     ╭─╯  ╭╯
+   │                                    ╰─────╯  ╭─╯
+   ╰╮                                        ╭───╯
+    │                                     ╭──╯
+    ╰╮                                 ╭──╯
+     │                                ╭╯
+     ╰╮                              ╭╯
+      ╰─╮                         ╭──╯
+        ╰──────╮           ╭──────╯
+               ╰───────────╯
+(outline of mug, found by SAM 3.1)
 ```
 
-Medium data (1.3 KB, 0.45 KB compressed, against a 182 KB photo). Muse found three subjects; the bird is box 1:
+**A bicycle against a brick wall:** (WhatsApp text 2093 bytes (364 compressed), photo 114534 bytes). Both wheels and the frame; thin parts are where 58 columns run out of detail.
 
 ```
-Photo: A lone bird soars in silhouette before a massive waterfall shrouded in golden mist and sunlight.
-- No readable text in the image
-- Warm golden backlight creates a hazy, glowing mist over the falls
-- Scene shows powerful cascading water on the left and a dark cliff on the right
+        ╭──────╮
+        ╰──────╳────╮ ╭──────────╮
+               ╰──╮ ╰╮╰──────────╳─╮
+                  ╰╮╭╯          ╭╯ ╰───────╮
+                  ╭╯│           ╰──╮     ╭─╯
+                 ╭╯ ╰╮            ╭╯╭────╯
+                ╭╯   ╰────────────╯ │
+                │  ╭─────────────╮  ╰─╮
+              ╭─╯  │             │    ╰─────────────╮
+        ╭─────╯    ╰╮           ╭╯               ╭─╮│
+      ╭─╯           ╰╮         ╭╯                ╰─╳╯
+     ╭╯              ╰╮        │                   ╰╮
+    ╭╯                ╰╮      ╭╯                    ╰╮
+   ╭╯               ╭╮ ╰╮     │                      ╰╮
+   │                ╰╳╮ │    ╭╯                       │
+  ╭╯                 │╰╮╰╮  ╭╯                        ╰╮
+  │                  │ ╰╮╰╮╭╯                          │
+  │                 ╭╯  │ ╰╯                          ╭╯
+  │                 │   │                             │
+  │                ╭╯   │                             │
+  ╰╮              ╭╯    │╭╮                           │
+   │             ╭╯     ││╰─╮                        ╭╯
+   ╰╮           ╭╯ ╭────╯│  │ ╭╮                     │
+    ╰─╮        ╭╯  ╰─────╯  ╰─╯│                    ╭╯
+      ╰────────╯               ╰╮                  ╭╯
+                                ╰─╮              ╭─╯
+                                  ╰─╮          ╭─╯
+                                    ╰──────────╯
+(outline of bicycle, found by SAM 3.1)
+```
 
-┌2──────────────────┐::::::::...........              ....
-│**+=+=--====-------│-::::::::::..........                
-│+**++++==+======---│---:-::::::::....... -. .   ┌3──────┐
-│=**+++*+=++========│--------:::::::.....┌1─┐..  │     :*│
-│+=+*+*#*+++=======-│---------:::::::....└──┘....│..  .+*│
-│#*+**##%*+==+==++==│=----------::::::::.........│... -+*│
-│#****##%%*+++++++==│==----=----::::::::::.......│...:=+*│
-│##***##%%#+*****++=│+========---:::::::::::.....│..:=++*│
-│%%#*#%#%%%****#**++│++========----::--:-::::::::│..-++*#│
-│%%%####%%%##*******│*++++=++++==------:-::::::.:│::=++*#│
-│%%%%%###%%%%%##**##│***+*++***++=-----------::::│::-+***│
-│%##%%%#%#%@@%%%%##%│###**#*****+++=====--==-----│--=+**#│
-│%#%%%%%%%%@@@%%%##%│#%%#*#####****++++++++=++===│-=+*#%@│
-│%%#%%#%@@%%@@@%%%#%│%%%%##%%###*********+++++++=│==+*#%@│
-│@@%%%%%%@%@@@@%@%%%│%%@%#%%%%%########****++*+++│++**#@@│
-└───────────────────┘%@@@%%%%%%%########*******++└───────┘
+**Flamingos:** (WhatsApp text 1397 bytes (268 compressed), photo 96269 bytes). SAM found 27; the biggest confident one is drawn, cropped to it: head, curved neck, body and legs.
 
-1  soaring bird (top right)
-2  waterfall (middle left)
-3  rocky cliff (middle right)
+```
+                                             ╭────╮
+                                          ╭──╯    ╰──╮
+                                          │          ╰─╮
+                                          │    ╭─╮     │
+                                          ╰╮   │ ╰╮    │
+                   ╭─────────────────╮     ╰╮  ╰─╮╰╮   │
+              ╭────╯                 ╰──╮   │    │ ╰───╯
+            ╭─╯                         ╰───╯    │
+         ╭──╯                                   ╭╯
+      ╭──╯                                     ╭╯
+   ╭──╯                                      ╭─╯
+   │                                       ╭─╯
+   ╰─────────╮                           ╭─╯
+             ╰──╮                   ╭────╯
+                │  ╭╮         ╭─────╯
+              ╭─╯╭─╯╰──╮  ╭───╯
+           ╭──╳──╯     │  │
+         ╭─╯╭─╯        │  │
+        ╭╯ ╭╯          ╰╮╭╯
+        ╰╮ │            ││
+         │ │            ││
+         ╰─╯            ╰╯
+(outline of 1 of 27 flamingos, found by SAM 3.1)
 ```
 
 ## Weather radar
@@ -616,87 +827,238 @@ Your spot, next 2 h (15 min steps): ········
 
 For someone roaming on a capped plan. Asked directly, Muse Spark gives directions from memory: they read well, but it can't know where you are standing, some turns were wrong (for Rossio to the castle in Lisbon it sent us through the Arco da Bandeira into Praça da Figueira, which it doesn't lead to), and its sketch wasn't to scale. Here the route comes from real street data and Muse only rewords it.
 
+**One step at a time.** A list of eleven turns is useless when you're standing at the first one, and a map of the whole walk is mostly streets you don't need yet. So each message carries the minimum:
+- the current step, only as far as the next intersection;
+- which way to turn there;
+- a landmark to look for;
+- a map zoomed to just that stretch.
+
+The next step comes when the phone's position changes. The walk is a **trip**: the streets are downloaded once, and every new GPS fix re-routes on them in about a second.
+
 ```mermaid
 flowchart TD
-  A["Destination text + GPS"] --> B["Nominatim, biased to your area"]
+  A["Destination text + GPS<br/>(or a named start: 'from the Pantheon')"] --> B["Nominatim, biased to your area"]
   B --> C{"Under 4 km?"}
   C -- no --> X["'Too far to walk. Try transit.'"]
-  C -- yes --> D["Overpass: streets, pedestrian streets, footways, steps<br/>(no motorways, no service roads)"]
-  D --> E["Grid: off-street cells expensive, so the route stays on streets and paths"]
-  E --> F["Dijkstra on 40 columns → steps, distance, minutes at 4.5 km/h"]
-  E --> F2["Dijkstra on 160 columns → the route that gets drawn"]
-  F --> G["Muse rewrites the steps (one per line, nothing added)"]
-  G & F2 --> S["Scene (walk=True) → SMS, WhatsApp text, small picture, picture"]
+  C -- yes --> D["plan(): Overpass streets, pedestrian streets, footways, steps (once)<br/>+ landmarks in the background (churches, monuments, stations, pharmacies, cafés)"]
+  D --> G2["Routing grid with ~8 m cells (160-480 columns)"]
+  G2 --> R["Route from where you are → steps, each to the next change of street<br/>(an unnamed sidewalk takes its street's name)"]
+  R --> ST["Current step + the turn after it (left, right, straight)<br/>+ the most notable landmark at the turn, and one beside the step"]
+  ST --> V["Map: you, the step, a third of it past the turn, the landmarks<br/>margin 15%, only the street you're on and the one you turn into"]
+  V --> S["Scene → SMS, WhatsApp text, small picture, picture"]
+  G["New GPS fix: move()"] --> Q{"Where are you?"}
+  Q -- "within 30 m of the destination" --> AR["'You've arrived'"]
+  Q -- "same street, over 80 m to go" --> K["One line: 'Keep going E on ...: 300 m more'"]
+  Q -- "at the next intersection, or off the route" --> R
 ```
+
+- **Steps end where the street changes.** They come from a grid with ~8 m cells, not the old fixed 160 columns. At 160 columns a 1.5 km walk in Rome had 25 × 49 m cells, and the first step read "head E on unnamed road for 910 m". Sidewalks, which OpenStreetMap often maps as separate unnamed footways, take the name of the street beside them.
+- **Landmarks:**
+  - **Which ones:** from OpenStreetMap, ranked by how hard they are to miss. Churches, monuments, viewpoints, stations, theatres and fountains come first, then pharmacies, banks and supermarkets, then cafés and restaurants.
+  - **At the turn:** the most notable one within a quarter of the step (15 to 40 m) gets "at …". A very notable one right beside the step gets "past …".
+  - **Wording:** the type is added unless the name says it: "Bebedouro dos Anjinhos (fountain)", "Rossio (subway entrance)". A landmark named after the street you're on is skipped.
+  - **Download:** about 30 s the first time for an area. The reply waits at most 5 s for it, then goes without; the download finishes in the background and is cached.
+- **The zoom follows the step.** The map is fitted to you, the step, a third of it past the turn and the landmarks, with a 15% margin. Only the street you're on and the one you turn into are drawn, clipped to near the route.
+- **A named start** ("walk from the Pantheon to the Colosseum") is geocoded and used instead of GPS. The `walking_route` tool takes it as `start`, the keyword fallback reads "from X to Y", and the CLI has `--from`.
 
 ```bash
-python3 main.py --walk "Castelo de São Jorge, Lisbon" --at 38.7139,-9.1406
+python3 main.py --walk "Castelo de São Jorge, Lisbon" --at 38.7139,-9.1406 -v
 ```
 
-Low data (7 SMS parts):
+Low data (6 SMS parts):
 
 ```
-Hey! Walk to Castelo de São Jorge: about 0.7 km, 9 min.
-1. Head E on Largo do Duque do Cadaval ~40 m
-2. Head E on Praça Dom Pedro IV ~130 m
-3. Head E on Praça da Figueira ~360 m
-4. Head NE on unnamed road ~140 m
+Castelo de São Jorge: 0.7 km, about 9 min.
+Now: head E on Calçada do Carmo for 120 m, to the next corner.
+Then turn left onto the path ahead at Bebedouro dos Anjinhos (fountain).
 
 MAP (north is up):
-  ==  =====   
-== ===  ==    
- ====== ===== 
-    == 🔴 >>>S==
-====== =======
-==============
-===========   
+              
+=             
+ 🔴         === 
+=> v  =>>>>>>>Λ 
+ =>>>Λ   =¤   
+              
+              
 
 = open road
 < > Λ v route
 🔴 you
-S destination: Castelo de São Jorge
+¤ Bebedouro dos Anjinhos
 ```
 
-Medium data (4.7 KB, 1.0 KB compressed). Lisbon's old centre is a dense tangle at 27 m per character; footpaths are routed on but not drawn:
+Medium data (1732 bytes, 395 compressed, picture map 46649 bytes). The map is 140 m across: the street you're on, the square you reach, a ★ at the fountain where you turn, and the castle as an edge marker:
 
 ```
 ┌─ ↑ N ────────────────────────────────────────────────────┐
-│╱╳╲╲╱╳╱╱  ╲╳╲╲╲ ╲╳╲╳╱╲╳╲ │╱  │ │││╲╳╳╳╳╱  │╋─┼──╳╱   ││   │
-│ ╱╱╳╲     │╲╲╳╋╳╱ ╲╲╳╱╱╳┼┼╲──┼┼┼╲││╲╳╳┼    ┃╱│ ╱╱╲╳ ╱╱ │┼┼│
-│┼─────────╱┼╲│╲╲╲╲ ╲╳╳╱╱╱│  ╱╱╲╲╲╳─╲╳╱─┼─┼─╋┼││─┼┼╱╱  ╱┼ ┼│
-│            ╲│╲╳╲╲╲ ╲╳╱╱╱   │╳╱╳    ╲╲╲┼┼╱┃┃│││ ┼│ │╱╱─┼─┼│
-│               │╲╲╲╲╳╱╳╲     ││││     ╲╳┼╳┃┃│ │ ╱╲╲│╳╲ ─┼┼│
-│              ╱┼┼╳╳╳╳╲ ╲╲╲    ┼╳╳      ╳╳ ┃ │  ┼─╲ ╲──╲┼──│
-│╋       ╳───╱╳╳╲╱╳╱╳╲╲╲╱─┼─── ─╲╳╳     │╳ ┃ │╳┼─╲╳╳╱ ╲╳╱  │
-│╱━╋╱┃╲ ╳ ╲╲╳╲╲╳╳╳╳╲╱╳╳╳╲╲ ╲╲  ─╲╳╲──    ╳╳╋ │││┼─┼╲╲      │
-│─┼╳╱│╲╲╋╲╲╳──╲┼╲╲╲╲╳╲╲╲╲╲╳╱╳╳╲  ──│╲╲╱┼─┃╱╲╋┼╳┼╲ ┼╱│     ││
-││┼╱│╲  ╱╋╋╋╋   ╲╲╲╲╲╲╳╳╲╲╲╲╱─╳╳ ╲┼┼┼┼╱│┃┃ ┃│┼┼┼─╳┼┼╲│  │╱╱│
-│┼─│╲╳╳╱─┼┼┼│━╋━━━╲╲╲╳│  ╲╲╲╳╱╳╳╲╲╲╲┼╳╱┃┃ ┃┃│ ╱╳╳╳╳╲╲┼╳ ┼│││
-│╲╳│╱│──╱─┼┼┼┼┼─╳╳╳╲│╳╲    ╲╳╲│┼─┼┼┼┼╲╋╳╲━┃│╱╱╱────────╲││╲│
-│╱╱╳╳╱╱╳──┼││┼┼┼┼╲╳╋╳│ ╲╲    ╲╋╋╋╋┼┼──╋↑→→→→→→→→→→    ╲╲╲┼╲│
-│┼╱╱╱──│  ┼─┼│││┼┼┼┼╋╲  ╱╲  ┼╳🔴╋↑→→→→→→ ┃─│╱╱││ ↓⌂ │  │╳╳┼│
-│─╱┼┼──┼──┼┼│─┼┼┼┼─┼─╋━╳╱╲╲╲╲┼↓→→→╋╋╋╋╋╲╋╋ ╳┼┼┼  ╱╳─╱┼│ ╲┼┼│
-│┼┼       │╱┼┼─┼┼┼┼┼─┼╋┼╱╳╲╲╲│ │┼┼│┼││┼┼╋┃┃┼┼││    ╳╳┼┼┼┼╳╳│
-│┼┼┼      │┼ ││││┼┼┼┼┼╋╋┼  ╳╳╳ ─│╱┼┼┼┼│││╋┃┃│╲││ ╳╳┼┼╲╳╲─╳┼│
-│─│╲╲    ─┼│╱┼─┼┼┼┼┼┼┼┼╋ ┼┼╱╳╳╳ │ ┼┼┼┼┼┼┼┃┃╋┼╲│╳╲──┼ ╳╱┼─┼┼│
-│─┼─┼─┼─┼┼┼┼──┼┼┼┼─┼┼┼│┃ ┼┼╳ ╲──┼│││┼┼┼┼┼┼╋┃╋─╲┼┼╲ │───╱╱╱││
-│╳╳╳╳─┼─┼┼╱──┼┼┼┼┼┼─┼┼┼╋┼┼─┼┼─┼┼┼│┼┼┼││┼┼┼┼╋╋━┼╲╳╲╲╲╲───╱╱ │
-│╳──┼┼─┼──┼─│┼┼─┼──┼─│╋┃│││││ ││ ┼┼┼┼┼┼┼│┼┼╋╋╋┼╳╲╲╳───╳───┼│
-│───┼┼──┼─╱ ┼┼┼─┼──┼─┼╋ │┼│┼┼──┼ ─│┼┼┼┼┼┼┼┼─╋╋╋┼┼┼───┼┼┼──┼│
-│┼───┼──┼╲╲─┼┼╲╲┼─┼┼ │┃ ││││   ┼╱╱┼┼─┼─┼┼─┼─╋╋╋━━╋╋┼──┼─╱╋━│
-│││      ──╲┼─│╲╲   ─┼╋ │ │││  ┼│┼┼─┼─┼─┼┼┼┼─     ┃   ╱╱╱╱ │
-│─┼──┼──┼──┼│ │╲╳╳╲┼┼┼╋─┼─┼─┼──┼─┼─┼┼──┼┼┼││      ╋╱╱╱╱    │
-│ │  │ ┼┼  ┼─┼┼─╲│╳╲│╋╋┼─┼┼╱┼──╱       ││┼┼┼╋━━━━━╋        │
-│━╋━╋╋━╋━━━╋━╋╋━╋╋╋╋╳╋╋╋╋━╋┃         ━━━╋╋╋╋  ─┼┼┼┼        │
-└─ ├──────┤ 250 m ─────────────────────────────────────────┘
+│                                                          │
+││ Largo do Duque do Cadaval                               │
+│││                                                        │
+││││ 🔴 YOU                                       ──╲╲     │
+│ ││ ↓                                               ╲│    │
+│  ││↓→                                     │        ↑→    │
+│  │││↓→          Praça Dom Pedro IV ┃┃      ╲╲     ↑→│   ⌂│
+│   ││ ↓→                          ── ┃       ╲╲───↑→      │
+│    ││ ↓→         ││   ↑→→→→→→→→→→→→→→→→→→→→→→→→→→→       │
+│    │││ ↓→         │  ↑→─────         ┃┃                  │
+│     │││ ↓→    ────┼┼↑→           Bebedouro dos Anjinhos  │
+│     ─┼╲╲─↓→→→→→→→→→→→                       ★            │
+│       ───           │                                    │
+│ Calçada do Carmo    ││                                   │
+│                      │ Rua 1º de Dezembro                │
+│                                                          │
+└─ ├──────┤ 20 m ──────────────────────────────────────────┘
+
+🔴 you
+→ route
+⌂ destination
+★ landmark
+━ main road   ─ street
+```
+
+Small picture and full picture of the same step:
+
+![Small walking step picture](docs/walk_small_lisbon.webp) ![Walking step picture](docs/walk_picture_lisbon.jpg)
+
+**As you walk.** The same trip after three simulated GPS fixes (`directions.move`; the simulator's **Walk 60 m** and **Take a wrong turn** buttons). Updates are templates, with no model call:
+
+```
+=== GPS fix: you walked 60 m -> next step (new map, 1.3 s)
+Now: head E on Calçada do Carmo for 70 m, to the next corner.
+Then keep straight onto the path ahead.
+Castelo de São Jorge: 0.6 km, about 8 min.
+
+MAP (north is up):
+              
+         =    
+ = >>>>>>>>== 
+= 🔴 Λ=   =     
+  =           
+              
+              
+
+= open road
+< > Λ v route
+🔴 you
+
+┌─ ↑ N ────────────────────────────────────────────────────┐
+│                                                          │
+│                                          ││              │
+│                                ┃┃         ╲          ╱╱  │
+│                                 ┃┃         ╲╲╲     ╱╱╱   │
+│                            ───   ┃           ╲────╱╱     │
+│       ││     ↑→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→→     │
+│        │    ↑→ ──────             ┃┃                    ⌂│
+│        ││──↑→──                    ┃                     │
+│   ──────┼ ↑→                       ┃┃                    │
+│───  🔴→→→→→                                              │
+│     YOU  ││                                              │
+│           │                                              │
+│            │ Rua 1º de Dezembro                          │
+│            ││                                            │
+│                                                          │
+└─ ├──────────┤ 20 m ──────────────────────────────────────┘
+
+🔴 you
+→ route
+⌂ destination
+━ main road   ─ street
+
+=== GPS fix: you walked 60 m -> next step (new map, 1.0 s)
+Now: head E on unnamed road for 50 m, past Bebedouro dos Anjinhos (fountain), to Praça Dom Pedro IV.
+Then keep straight onto Praça Dom Pedro IV.
+Castelo de São Jorge: 0.6 km, about 8 min.
+
+MAP (north is up):
+              
+      =====   
+ =  = =>>>>   
+  🔴 >>>>Λ      
+  = ¤         
+              
+              
+
+= open road
+< > Λ v route
+🔴 you
+¤ Bebedouro dos Anjinhos
+
+┌─ ↑ N ────────────────────────────────────────────────────┐
+│                                                          │
+│                           ─               ┃              │
+│                            ──╲╲           ┃┃             │
+│                               ╲╲           ┃             │
+│                                ││───────   ┃┃            │
+│                 │               ↑→→→→→→→→→→→→→→→→→→      │
+│                 ││             ↑→            ┃           │
+│      ┃           ╲╲           ↑→│            ┃┃          │
+│      ┃┃           ╲╲╲        ↑→╱              ┃          │
+│       ┃             ╲╲─────╱↑→  Castelo de São J 0.5 km ⌂│
+│      ←→🔴→→→→→→→→→→→→→→→→→→→→                            │
+│        ┃┃                                                │
+│         ┃                                                │
+│          ┃                                               │
+│          ┃┃                                              │
+│ Praça Dom Pedro IV ★ Bebedouro dos Anjinhos              │
+│                                                          │
+└─ ├────────────┤ 20 m ────────────────────────────────────┘
+
+🔴 you
+→ route
+⌂ destination
+★ landmark
+━ main road   ─ street
+
+=== GPS fix: you took a wrong turn -> off route, re-routed (new map, 0.9 s)
+Off route, new way:
+Now: head NE on Praça Dom Pedro IV for 30 m, to Largo de São Domingos.
+Then turn right onto Largo de São Domingos.
+Castelo de São Jorge: 0.5 km, about 7 min.
+
+MAP (north is up):
+              
+        >==   
+    ===>Λ=    
+    = >Λ==    
+   ==>Λ  =    
+ === 🔴         
+              
+
+= open road
+< > Λ v route
+🔴 you
+
+┌─ ↑ N ────────────────────────────────────────────────────┐
+│                                                          │
+│                                            ││            │
+│                                            │             │
+│                                        ↑  ││             │
+│                                       ↑→  │              │
+│                                      ↑→  ││              │
+│                                     ↑→───┼               │
+│                                 ───↑→──                  │
+│                           ─────── ↑→                     │
+│                    ───────       ↑→                      │
+│                   ──            ↑→                       │
+│                                ↑→                        │
+│                               ↑→                         │
+│                              ↑→ Castelo de São J 0.5 km ⌂│
+│                          ━━━↑→━━━━━━━━━━━━━              │
+│                     ╱╱━━━━ ↑→                            │
+│                   ╱╱╱     ↑→                             │
+│               ╱╱╱╱       ↑→                              │
+│            ╱╱╱╱ YOU     ↑→                               │
+│          ╱╱╱    🔴→→→→→→→                                │
+│       ╱╱╱                                                │
+│      ╱╱ Praça Dom Pedro IV                               │
+│                                                          │
+└─ ├─────────────────┤ 20 m ───────────────────────────────┘
 
 🔴 you
 → route
 ⌂ destination
 ━ main road   ─ street
 ```
-
-![Walking route picture](docs/walk_picture_lisbon.jpg)
 
 ## Why the text maps line up
 
@@ -729,17 +1091,29 @@ python3 sim/server.py
 Open http://127.0.0.1:8765. In the Claude desktop app, `.claude/launch.json` starts it in the browser pane. Every tab shows the result four ways with real sizes, and the **Person's connection** picker highlights the version that would be sent.
 
 - **Emergency:** the left phone is **Emergency Response (555) 010-0911**. Type an alert or pick a sample (NYC fire, NYC gas leak, LA wildfire, Pasadena flood) and choose who gets it: **Bob the Builder**, **Wendy** or **Farmer Pickles**, each with their own GPS. Move someone and press **Text MAP** for a fresh reply. The pipeline log shows what Muse parsed and the alignment check.
-- **Photo:** pick a sample photo or upload one.
 - **Weather radar:** pick a city, type coordinates, or press **Find heavy rain right now**.
-- **Directions abroad:** pick a starting station (Lisbon, Paris, Rome, Tokyo) and a destination.
+- **Directions abroad:** pick a starting station (Lisbon, Paris, Rome, Tokyo) and a destination; type a place in **From** to start somewhere other than your GPS. Then simulate the phone's GPS: **Walk 60 m along the route** or **Take a wrong turn**. Each update joins the thread, and the status line says whether the next step (with its map) was sent or just a line of text.
+- **Photo:** the **One object** samples (a penguin, a fortune cookie, a gingerbread man... macOS's account pictures, converted with `sips`) are the case the outline is built for; the **Scenes** are macOS desktop pictures.
 - **Ask anything:** the router. Pick where you are (Rome, Lisbon, NYC), type anything or pick an example, optionally attach a photo; the tools Muse called are listed under the box.
 - **Clear** empties every thread, result and the log.
 
 ## Run it from the command line
 
+Python 3.10 or newer: Meta's SAM 3.1 parser (`meta-sam-parser`) needs it. A virtual environment keeps it separate:
+
 ```bash
-pip install requests pillow numpy
+python3.12 -m venv .venv
 ```
+
+```bash
+.venv/bin/pip install -r requirements.txt
+```
+
+```bash
+source .venv/bin/activate
+```
+
+Without `meta-sam-parser`, SAM still finds objects (their boxes), but outlines inside the boxes come from colour.
 
 Put your Meta Model API key in `.env` (git-ignored):
 
@@ -747,7 +1121,7 @@ Put your Meta Model API key in `.env` (git-ignored):
 LLAMA_API_KEY=...
 ```
 
-Optional settings in `.env`: `LLM_BASE_URL` (default `https://api.meta.ai/v1`), `LLM_MODEL` (default `muse-spark-1.3`), `LLM_REASONING_EFFORT` (default `minimal`). Without a key: keyword routing, regex alert parsing, no photo descriptions, template text.
+Optional settings in `.env`: `LLM_BASE_URL` (default `https://api.meta.ai/v1`), `LLM_MODEL` (default `muse-spark-1.3`), `SAM_MODEL` (default `sam-3.1`), `LLM_REASONING_EFFORT` (default `minimal`). Without a key: keyword routing, regex alert parsing, no photo descriptions, template text.
 
 ```bash
 python3 main.py --ask "Is it going to rain on my walk to the Colosseum?" --at 41.9010,12.5016   # the router
@@ -768,23 +1142,25 @@ python3 main.py --walk "Castelo de São Jorge, Lisbon" --at 38.7139,-9.1406 -v  
 | `evac/router.py` | One entry point: Muse picks tools (parallel, up to 3 rounds), writes the reply; the kept results become the versions |
 | `evac/tools.py` | The 10 tools, their JSON descriptions, the per-request `Context`, `call()` that never raises |
 | `evac/scene.py` | The `Scene`: what to draw, shared by every renderer |
+| `evac/focus.py` | Which roads a map draws (walked, turn landmarks, main roads, closures, anchors) and the view fitted to them |
 | `evac/render.py` | Scene → `sms`, `mono`, `small`, `picture` |
 | `evac/textmap.py` | SMS maps aligned for SF Pro (Manhattan street grid, raster elsewhere) |
 | `evac/laptopmap.py` | Monospace maps for WhatsApp: line-drawn roads, shading, labels, route arrows |
 | `evac/imagemap.py` | Picture maps (JPEG, or WebP drawn small) in the style of agency alert maps; `shrink()` for photos and radar |
 | `evac/pipeline.py` | The fixed emergency reply: parse, locate, route, word, build the Scene |
-| `evac/directions.py` | Walking route on street data → Scene |
+| `evac/directions.py` | A walk as a `Trip`: streets and landmarks downloaded once, re-routed at every GPS fix (`move`); one step at a time, to the next intersection, with its turn, a landmark and a map of just that stretch; optional named start |
 | `evac/radar.py` | RainViewer tiles → rain levels, motion, Open-Meteo forecast, its four versions |
-| `evac/photo.py` | Muse description and subject boxes, text sketches |
+| `evac/photo.py` | Muse description; the one object's outline (found by SAM 3.1, shaped by its mask or by colour inside its box; cropped; marching squares) or the borders of the main regions |
+| `evac/sam.py` | SAM 3.1 client on `/v1/responses`: records parsed and masks decoded with Meta's `meta-sam-parser`; boxes only without it; cached in `cache/sam/` |
 | `evac/notice.py` | Alert text → fields (Muse, regex fallback); unit conversion in code |
-| `evac/grid.py` | Grid: terrain, roads, closures, hazard, Dijkstra, turn-by-turn directions |
-| `evac/osm.py` | Overpass queries (roads, walkable paths, towns) cached in `cache/`; street-name matching ("5 Av" = "Fifth Avenue"); intersections |
+| `evac/grid.py` | Grid: terrain, roads, closures, hazard, Dijkstra, turn-by-turn directions (`legs` also gives where each step starts) |
+| `evac/osm.py` | Overpass queries (roads, walkable paths, towns, landmarks) cached in `cache/`; street-name matching ("5 Av" = "Fifth Avenue"); intersections |
 | `evac/geo.py` | Geocoding, distance, local projection |
 | `evac/imagery.py` | XYZ tile stitching (Esri aerial, Esri grey basemap, RainViewer radar) |
-| `evac/segment.py` | Aerial image → terrain masks (SAM 3 path, or a colour heuristic) |
+| `evac/segment.py` | Aerial image → terrain masks: SAM 3.1 for water, a colour heuristic for trees and buildings |
 | `evac/llm.py` | Meta Model API client (`chat`, `chat_json`, `chat_tools`); loads `.env`; `reasoning_effort` minimal |
-| `main.py` | Command line: `--ask`, alerts, `--photo`, `--radar`, `--walk`, `--laptop N` |
-| `sim/server.py` | Simulator server: `/api/message` (router), `/api/alert`, `/api/photo`, `/api/radar`, `/api/directions`, `/api/find_rain`, sample photos |
+| `main.py` | Command line: `--ask`, alerts, `--photo`, `--radar`, `--walk` (+ `--from`), `--laptop N` |
+| `sim/server.py` | Simulator server: `/api/message` (router), `/api/alert`, `/api/photo`, `/api/radar`, `/api/directions`, `/api/directions/move` (simulated GPS), `/api/find_rain`, sample photos |
 | `sim/index.html` | The tabs, the four-way result cards, the connection picker |
 | `CLAUDE.md` | Notes for Claude Code: commands, how the pieces connect, the text-map width rules |
 
@@ -795,10 +1171,13 @@ Roads, paths and towns © OpenStreetMap contributors (via Overpass); geocoding b
 ## Known limits
 
 - Not yet checked on a real iPhone or in real WhatsApp (fonts, emoji widths, Bold Text, text size).
-- The free Overpass servers are the slow, flaky part: a new area takes 30 s to 2 minutes or times out (a first walking route from Rome Termini timed out; Muse retried and the second call worked). When the intersection lookup fails, an incident falls back to the geocoder, which once put the gas leak 1.7 km away on the middle of Lexington Avenue. The cache makes repeat runs fast and reliable.
+- The free Overpass servers are the slow, flaky part: a new area takes 30 s to 2 minutes or times out. A new query now goes to all three mirrors at once (first answer wins, 40 s limit), an area already inside an earlier download is cut from it, and an alert waits at most 15 s for its map's streets: after that it is routed on the aerial image alone, and the download finishes in the background for the next reply. Before, the mirrors were tried one by one at 60 s each and an alert in the simulator took over 2 minutes. The intersection lookup still waits (a wrong location is worse than a slow one); when the geocoder misses "Lexington Av and E 51 St" and falls back to the middle of Lexington Avenue, it now also searches around the reader instead of placing the leak 1.9 km away.
 - Radar town names often time out and are then skipped. "Find heavy rain" works on a coarse world view, so the spot it picks can sit in a gap between storms.
 - Radar and photos still produce their own versions; the next step makes them Scenes (a grid of values) so the router can, for example, draw the rain on the walking-route map.
 - Muse's wording isn't checked against the tool results; the prompt asks it to keep every number and name. It sometimes adds an estimate (the Trevi Fountain reply guessed a 20-minute walk).
-- Walking maps of dense old centres are busy at 58 columns.
-- Terrain comes from a colour heuristic; SAM 3.1 on the Meta Model API is not wired in yet (Muse's subject boxes stand in for it in photo mode).
+- Photo outlines draw one object: of several matches (a flock), only the biggest confident one. At 58 columns very thin parts (spokes, a bicycle's cables) are lost. If Muse doesn't name a main object (a landscape), the drawing falls back to the borders of the photo's main colour regions.
+- SAM is weak on top-down aerial tiles: it outlined the ocean cleanly but found almost no trees or buildings (45 of Manhattan's buildings covering 16% of a 1 km view; nothing for "forest" or "town" over the Palisades). So the maps take only **water** from SAM and keep the colour heuristic for trees and buildings.
+- Steps run to the next intersection where the street *name* changes, so in an old town some are only 20 m long, and a square counts as a street. Landmarks come from OpenStreetMap names: sometimes the square you're already in, or a local name a visitor won't know (the place type is added, e.g. "(subway entrance)"). The first landmark download for an area takes about 30 s, so that first reply goes without landmarks.
+- Walking updates need the phone to send its position. The simulator moves "you" along the route or onto a nearby street off it; a real deployment needs the person to share their location, or reply with it. The wrong-turn button sometimes picks a street behind you.
+- Trees and buildings in the aerial terrain come from a colour heuristic (only water comes from SAM). Walking maps don't use terrain at all, so they make no SAM call per step.
 - SMS replies are long: 6 to 12 parts.

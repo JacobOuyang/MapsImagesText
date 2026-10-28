@@ -11,14 +11,20 @@ from . import imagemap, laptopmap, textmap
 def sms(scene):
     """Returns (message, text map dict). Manhattan intersections use the avenue/street grid, everything else the
     routing grid shrunk to a phone-width raster."""
-    tm = None
+    tm, focused = None, scene.focus is not None
     if scene.street_grid and scene.roads and scene.zone:
-        tm = textmap.render_grid(scene.roads, scene.zone[0], scene.you, scene.zone[1], scene.closures, scene.goal)
+        tm = textmap.render_grid(scene.roads, scene.zone[0], scene.you, scene.zone[1], scene.closures, scene.goal,
+                                 **({"halo": False, "pad": 1} if focused else {}))
     if not tm:
         g = scene.frame()
         goal = g.cell_of(scene.goal[1]) if scene.goal else None
-        tm = textmap.render_raster(g, g.cell_of(scene.you), goal, g.cells_along(scene.route, interpolate=False))
+        # A walking step is zoomed in further than its route's grid: join the points up.
+        tm = textmap.render_raster(g, g.cell_of(scene.you), goal, g.cells_along(scene.route, interpolate=scene.walk),
+                                   min_rank=1 if focused and scene.walk else 2, outline=focused,
+                                   landmark_cells=[c for c in (g.cell_of(p) for _, p in scene.landmarks) if c])
     legend = textmap.legend(tm["keys"], scene.hazard, scene.goal and scene.goal[0])
+    if "landmark" in tm["keys"]:
+        legend.append("¤ " + ", ".join(name for name, _ in scene.landmarks))
     if not scene.alert:  # directions: a destination and a route, not a shelter and a way out
         legend = [l.replace("way out", "route").replace("shelter:", "destination:") for l in legend]
     lines = [scene.text, "", tm["title"]] + tm["rows"] + [""] + legend

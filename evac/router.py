@@ -23,7 +23,8 @@ SYSTEM = ("You help someone on a very slow or text-only connection; replies go o
           "short sentence per line. Summarise: never list every forecast value, give when rain starts and stops (or that "
           "none is expected). Keep the numbers, times, distances, directions and names you use exactly as the tools "
           "gave them. Don't invent places or facts, and don't mention maps or pictures (the app adds them when it "
-          "can). For any emergency alert, call emergency_reply with the alert text and nothing else.")
+          "can). For walking directions give only the current step and the turn after it, as the tool gave them; the "
+          "app sends the next step by itself when their position changes, so don't ask them to reply or send anything. For any emergency alert, call emergency_reply with the alert text and nothing else.")
 
 
 def handle(message, you, image=None):
@@ -66,8 +67,13 @@ def _run_rules(ctx, message):
         name, args = "emergency_reply", {"text": message}
     elif "rain" in m or "radar" in m or "weather" in m:
         name, args = "rain_radar", {}
-    elif re.search(r"\b(walk|get|directions?) to\b", m):
-        name, args = "walking_route", {"destination": re.split(r"\bto\b", message, 1)[1].strip(" ?.")}
+    elif re.search(r"\b(walk|get|directions?)\b.*\bto\b", m):
+        route = re.search(r"(?:\bfrom\s+(?P<start>.+?)\s+)?\bto\s+(?P<dest>.+?)(?:\s+from\s+(?P<start2>.+?))?[?.!]*$",
+                          message, re.I)
+        args = {"destination": route.group("dest").strip()}
+        if route.group("start") or route.group("start2"):
+            args["start"] = (route.group("start") or route.group("start2")).strip()
+        name = "walking_route"
     else:
         return [], "Sorry, I can only help with alerts, photos, rain and walking directions without the model."
     res = tools.call(ctx, name, args)

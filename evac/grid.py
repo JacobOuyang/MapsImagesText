@@ -205,11 +205,26 @@ class Grid:
     # --- output ---
     def directions(self, path):
         """Collapse a cell path into 'Head NE on Sunset Blvd ~0.8 km' steps."""
+        return [leg[0] for leg in self.legs(path)]
+
+    def _name_near(self, cell):
+        """The cell's street name; an unnamed path (often a sidewalk, mapped as its own footway) takes the name of
+        a named road in a neighbouring cell."""
+        r, c = cell
+        if self.road_name[r][c]:
+            return self.road_name[r][c]
+        for rr, cc in ((r, c - 1), (r, c + 1), (r - 1, c), (r + 1, c)):
+            if 0 <= rr < self.rows and 0 <= cc < self.cols and self.road_name[rr][cc]:
+                return self.road_name[rr][cc]
+        return ""
+
+    def legs(self, path):
+        """The steps as (text, start cell, metres, end cell, heading)."""
         if len(path) < 2:
             return []
         legs, cur = [], None
         for a, b in zip(path, path[1:]):
-            name = self.road_name[b[0]][b[1]] or ("unnamed road" if self.terrain[b] == ROAD else "off-road")
+            name = self._name_near(b) or ("unnamed road" if self.terrain[b] == ROAD else "off-road")
             step = math.hypot((b[0] - a[0]) * self.ch, (b[1] - a[1]) * self.cw)
             if cur and cur["name"] == name:
                 cur["m"] += step
@@ -217,7 +232,8 @@ class Grid:
             else:
                 cur = {"name": name, "m": step, "start": a, "end": b}
                 legs.append(cur)
-        # Merge tiny legs (rasterization noise at intersections) into the previous one.
+        # Merge tiny legs (rasterization noise at intersections) into the previous one, a tiny first one into the
+        # next, and then neighbours that ended up on the same street.
         merged = []
         for leg in legs:
             if merged and leg["m"] < 1.5 * self.ch:
@@ -225,11 +241,18 @@ class Grid:
                 merged[-1]["end"] = leg["end"]
             else:
                 merged.append(leg)
+        if len(merged) > 1 and merged[0]["m"] < 1.5 * self.ch:
+            merged[1].update(start=merged[0]["start"], m=merged[1]["m"] + merged[0]["m"])
+            merged.pop(0)
+        for i in range(len(merged) - 1, 0, -1):
+            if merged[i]["name"] == merged[i - 1]["name"]:
+                merged[i - 1].update(end=merged[i]["end"], m=merged[i - 1]["m"] + merged[i]["m"])
+                merged.pop(i)
         out = []
         for leg in merged:
             (r0, c0), (r1, c1) = leg["start"], leg["end"]
             ang = math.degrees(math.atan2((c1 - c0) * self.cw, (r0 - r1) * self.ch)) % 360
             heading = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][int((ang + 22.5) // 45) % 8]
             dist = "%.1f km" % (leg["m"] / 1000) if leg["m"] >= 1000 else "%d m" % round(leg["m"], -1)
-            out.append("Head %s on %s ~%s" % (heading, leg["name"], dist))
+            out.append(("Head %s on %s ~%s" % (heading, leg["name"], dist), leg["start"], leg["m"], leg["end"], ang))
         return out

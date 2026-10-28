@@ -17,12 +17,14 @@ def main():
     ap.add_argument("notice", nargs="?", help="path to a text file with the alert SMS, or '-' for stdin")
     ap.add_argument("--at", help="lat,lon to use instead of device/IP location")
     ap.add_argument("--cols", type=int, default=40, help="map width in characters (~40 fits a phone)")
-    ap.add_argument("--seg", choices=["color", "sam3"], default="color", help="aerial segmentation backend")
+    ap.add_argument("--seg", choices=["auto", "sam", "color"], default="auto",
+                    help="aerial terrain: SAM 3.1 on the Meta Model API, or a colour heuristic (auto: SAM if available)")
     ap.add_argument("--laptop", nargs="?", type=int, const=100, help="also print the wide monospace map (default 100 "
                     "columns; the simulator's WhatsApp view uses 58)")
     ap.add_argument("--photo", help="photo file: print the SMS and WhatsApp text versions")
     ap.add_argument("--radar", help="lat,lon: print the weather radar as text")
-    ap.add_argument("--walk", help="destination: print walking directions from --at")
+    ap.add_argument("--walk", help="destination: print walking directions from --at (or --from)")
+    ap.add_argument("--from", dest="start", help="with --walk: a place to start from instead of --at")
     ap.add_argument("--ask", help="any message: Muse picks the tools (add --photo to attach a photo)")
     ap.add_argument("-v", "--verbose", action="store_true")
     a = ap.parse_args()
@@ -44,7 +46,7 @@ def main():
         print(r["sms"], "\n\n" + r["mono"])
         return print("\nWhatsApp text %d bytes (%d gzipped), radar picture %d bytes" % (r["mono_bytes"], r["mono_gzip"], r["image"]["bytes"]))
     if a.walk:
-        r = directions.run(at, a.walk)
+        r = directions.run(at, a.walk, start=a.start)
         if a.verbose:
             print("\n".join(r["log"]), "\n")
         if "error" in r:

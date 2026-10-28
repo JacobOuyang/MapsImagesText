@@ -59,6 +59,7 @@
   .gps input { width: 50%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; font: 13px ui-monospace, monospace; }
   select { padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line); font: 13px system-ui; }
   .hint { color: var(--quiet); font-size: 12px; margin-top: 6px; }
+  [hidden] { display: none !important; }
   /* tabs + clear */
   .bar { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
   .tab { border: 1px solid var(--line); background: #fff; padding: 6px 14px; border-radius: 8px; cursor: pointer; font: 13px system-ui; }
@@ -176,7 +177,7 @@
 <section class="tabsec" id="sec-photo">
   <div class="panel controls">
     <h3>A friend sends you a photo, but your connection can't load it</h3>
-    <p>The server looks at it with Muse Spark and sends back what's in it, plus the photo drawn in text.</p>
+    <p>The server looks at it with Muse Spark and sends back what's in it, plus the outline of the one object it shows, cropped to it and drawn as wide as the maps.</p>
     <div class="chips" id="photoSamples"></div>
     <div class="row2"><label class="inline">Or your own: <input type="file" id="photoFile" accept="image/*"></label>
       <span class="status-line" id="photoStatus"></span></div>
@@ -205,10 +206,18 @@
     <p>Asked directly, Muse Spark answers from memory: it can't see where you're standing, some turns are wrong and its sketch isn't to scale. Here the route comes from real street and footpath data around your GPS, and Muse only rewords it.</p>
     <div class="chips" id="walkFrom"></div>
     <div class="row2">
+      <input type="text" id="walkFromText" aria-label="Start" placeholder="From (blank: your GPS)">
       <input type="text" id="walkTo" aria-label="Destination" placeholder="Where to?">
       <button class="go" id="walkGo">Text directions</button>
       <span class="status-line" id="walkStatus"></span>
     </div>
+    <div class="row2" id="walkMove" hidden>
+      <span class="status-line">Simulate the phone's GPS:</span>
+      <button class="chip" id="walk150">Walk 60 m along the route</button>
+      <button class="chip" id="walkAstray">Take a wrong turn</button>
+      <span class="status-line" id="moveStatus"></span>
+    </div>
+    <p class="hint">Each message is only the current step, as far as the next intersection, and which way to turn there; its map shows just that stretch. As you move, the server sends a one-line update while you're on the same street, and the next step (with its map) at each intersection or after a wrong turn.</p>
   </div>
   <div class="triple" id="walkOut"></div>
 </section>
@@ -406,8 +415,17 @@ function showResult(kind) {
   if (x.pending) items.push({kind: 'typing'});
   else if (x.res.error) items.push({kind: 'meta', text: 'Failed: ' + x.res.error});
   else items.push({dir: 'in', sms: x.res.sms, plain: x.res.text, mono: x.res.mono});
+  // Later updates (a walk as the person moves): a text-only update has no map in the SMS or WhatsApp version.
+  let last = x.res;
+  for (const u of x.more || []) {
+    items.push({kind: 'meta', text: u.meta});
+    if (u.pending) { items.push({kind: 'typing'}); continue; }
+    if (u.res.error) { items.push({kind: 'meta', text: 'Failed: ' + u.res.error}); continue; }
+    items.push(u.res.map ? {dir: 'in', sms: u.res.sms, plain: u.res.text, mono: u.res.mono} : {dir: 'in', text: u.res.text, sms: u.res.text});
+    last = Object.assign({}, u.res, u.res.image ? {} : {image: last && last.image, small: last && last.small});
+  }
   const r = x.pending || x.res.error ? (x.res && x.res.error ? {error: x.res.error} : null) :
-    {parts: x.res.parts, plain: x.res.text, monoBytes: x.res.mono_bytes, monoGzip: x.res.mono_gzip, img: x.img || x.res.image, small: x.res.small, imgLabel: x.imgLabel};
+    {parts: last.parts, plain: last.text, monoBytes: last.mono_bytes, monoGzip: last.mono_gzip, img: x.img || last.image, small: last.small, imgLabel: x.imgLabel};
   triple(box, items, r, LABELS[kind]);
 }
 async function sendPhoto(dataUrl, name, bytes, w, h) {
@@ -416,7 +434,7 @@ async function sendPhoto(dataUrl, name, bytes, w, h) {
   showResult('photo'); $('photoStatus').textContent = 'Working…';
   const res = await post('/api/photo', {image: dataUrl});
   Object.assign(results.photo, {pending: false, res});
-  $('photoStatus').textContent = res.error ? '' : `Done in ${res.seconds} s`;
+  $('photoStatus').textContent = res.error ? '' : `Done in ${res.seconds} s` + (res.shape_from ? ` · outline from: ${res.shape_from}` + (res.object ? ` ("${res.object}")` : '') : '');
   showResult('photo');
 }
 function loadPhoto(blob, name) {
@@ -437,11 +455,26 @@ async function sendRadar() {
 async function sendWalk() {
   const to = $('walkTo').value.trim();
   if (!to) { $('walkStatus').textContent = 'Type a destination first.'; return; }
-  results.walk = {request: `You are at ${walkFrom[0].toFixed(4)}, ${walkFrom[1].toFixed(4)} (from GPS)`, out: 'Walk to ' + to, pending: true};
+  const from = $('walkFromText').value.trim();
+  results.walk = {request: `You are at ${walkFrom[0].toFixed(4)}, ${walkFrom[1].toFixed(4)} (from GPS)`, out: (from ? `Walk from ${from} to ` : 'Walk to ') + to, pending: true};
   showResult('walk'); $('walkStatus').textContent = 'Routing on street data (a new city can take a minute)…';
-  const res = await post('/api/directions', {lat: walkFrom[0], lon: walkFrom[1], to});
-  Object.assign(results.walk, {pending: false, res});
+  $('walkMove').hidden = true; $('moveStatus').textContent = '';
+  const res = await post('/api/directions', {lat: walkFrom[0], lon: walkFrom[1], to, from});
+  Object.assign(results.walk, {pending: false, res, more: []});
   $('walkStatus').textContent = res.error ? '' : `Done in ${res.seconds} s`;
+  $('walkMove').hidden = !res.trip;
+  showResult('walk');
+}
+async function moveWalk(astray) {
+  const x = results.walk;
+  if (!x || !x.res || !x.res.trip) return;
+  const u = {meta: astray ? 'GPS: you took a wrong turn' : 'GPS: you walked 60 m', pending: true};
+  x.more.push(u); showResult('walk'); $('moveStatus').textContent = 'Sending the new position…';
+  const res = await post('/api/directions/move', {trip: x.res.trip, metres: 60, astray});
+  Object.assign(u, {pending: false, res});
+  if (res.you) u.meta += ` (now at ${res.you[0].toFixed(5)}, ${res.you[1].toFixed(5)})`;
+  $('moveStatus').textContent = res.error ? '' : `${res.state}: ${res.map ? 'new map sent' : 'text only, no map'} (${res.seconds} s)`;
+  if (res.state === 'arrived' || res.state === 'lost') $('walkMove').hidden = true;
   showResult('walk');
 }
 
@@ -481,8 +514,12 @@ $('erSend').onclick = sendAlert; $('textMap').onclick = textMap;
 $('erInput').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAlert(); } };
 
 fetch('/api/samples').then(r => r.json()).then(d => {
-  if (!d.photos.length) $('photoSamples').appendChild(el('span', 'status-line', 'No sample photos on this machine; upload one.'));
-  for (const name of d.photos) chip('photoSamples', name, () => fetch('/api/sample?name=' + encodeURIComponent(name)).then(r => r.blob()).then(b => loadPhoto(b, name)));
+  if (!d.photos.length && !d.objects.length) $('photoSamples').appendChild(el('span', 'status-line', 'No sample photos on this machine; upload one.'));
+  const send = name => () => fetch('/api/sample?name=' + encodeURIComponent(name)).then(r => r.blob()).then(b => loadPhoto(b, name));
+  if (d.objects.length) $('photoSamples').appendChild(el('span', 'status-line', 'One object:'));
+  for (const name of d.objects) chip('photoSamples', name, send(name));
+  if (d.photos.length) $('photoSamples').appendChild(el('span', 'status-line', 'Scenes:'));
+  for (const name of d.photos) chip('photoSamples', name, send(name));
 });
 $('photoFile').onchange = e => { const f = e.target.files[0]; if (f) loadPhoto(f, f.name); };
 for (const [name, ll] of Object.entries(RADAR_PLACES)) chip('radarPlaces', name, () => { $('radarAt').value = ll.join(', '); sendRadar(); });
@@ -500,6 +537,8 @@ for (const [name, [ll, dest]] of Object.entries(WALK_FROM)) chip('walkFrom', nam
 });
 document.querySelector('#walkFrom .chip').classList.add('on'); $('walkTo').value = WALK_FROM['Lisbon: Rossio station'][1];
 $('walkGo').onclick = sendWalk;
+$('walk150').onclick = () => moveWalk(false);
+$('walkAstray').onclick = () => moveWalk(true);
 const ASK_FROM = {'Rome: Termini': [41.9010, 12.5016], 'Lisbon: Rossio': [38.7139, -9.1406], 'NYC: 47 St & Park Av': [40.75491, -73.97441]};
 for (const [name, ll] of Object.entries(ASK_FROM)) chip('askFrom', name, c => {
   askAt = ll; document.querySelectorAll('#askFrom .chip').forEach(x => x.classList.toggle('on', x === c)); });
@@ -522,6 +561,7 @@ $('clear').onclick = () => {
   $('log').textContent = 'Nothing sent yet.';
   for (const k of Object.keys(results)) { results[k] = null; showResult(k); }
   for (const id of ['photoStatus', 'radarStatus', 'walkStatus', 'askStatus', 'askTools']) $(id).textContent = '';
+  $('walkMove').hidden = true;
   refresh();
 };
 refresh();

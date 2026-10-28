@@ -3,8 +3,10 @@
   "configurations": [
     {
       "name": "simulator",
-      "runtimeExecutable": "/opt/anaconda3/bin/python3",
-      "runtimeArgs": ["sim/server.py"],
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": [
+        "sim/server.py"
+      ],
       "port": 8765,
       "url": "http://127.0.0.1:8765"
     }

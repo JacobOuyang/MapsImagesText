@@ -33,6 +33,7 @@ TOKENS = {
     "you": " \U0001F534 ",  # red dot emoji (17 px) padded to TWO cells (-0.4 px); see _place_you
     "skip": "",                   # the cell the two-cell "you" marker covers
     "shelter": "S",               # +1.2%
+    "landmark": "¤",              # exactly one digit wide
     "avenue": " | ",     # | padded (exact)
 }
 # Width error of each token as a fraction of one cell, for the drift check.
@@ -82,7 +83,7 @@ def _join(rows, labels):
 
 # ---------- raster layout ----------
 
-PRIORITY = ["you", "shelter", "route", "danger", "closed", "zone", "water", "road", "blank"]
+PRIORITY = ["you", "shelter", "landmark", "route", "danger", "closed", "zone", "water", "road", "blank"]
 
 
 BUBBLE_PT = 255   # usable text width of an iPhone Messages bubble at 17 pt (~264 minus slack)
@@ -94,8 +95,10 @@ def _fits(label, cells):
     return cells * CELL_PT + len(label) * AVG_CHAR_PT <= BUBBLE_PT
 
 
-def render_raster(g, user_cell, shelter_cell, path, cols=16):
-    """Downsample the routing grid to `cols` columns (2 routing cells -> 1 text cell, etc.)."""
+def render_raster(g, user_cell, shelter_cell, path, cols=16, min_rank=2, outline=False, landmark_cells=()):
+    """Downsample the routing grid to `cols` columns (2 routing cells -> 1 text cell, etc.).
+    min_rank=1 also draws side streets (a focused walking map has only a few); outline=True draws only the
+    zone's edge, not its whole area."""
     f = max(1, int(math.ceil(g.cols / cols)))
     R, C = int(math.ceil(g.rows / f)), int(math.ceil(g.cols / f))
     kinds = [[set() for _ in range(C)] for _ in range(R)]
@@ -104,12 +107,19 @@ def render_raster(g, user_cell, shelter_cell, path, cols=16):
             k = kinds[r // f][c // f]
             if g.blocked[r, c]:
                 k.add("closed")
-            elif g.terrain[r, c] == gridmod.ROAD and g.road_rank[r, c] >= 2:
+            elif g.terrain[r, c] == gridmod.ROAD and g.road_rank[r, c] >= min_rank:
                 k.add("road")
             if g.hazard[r, c]:
                 k.add("danger" if g.hazard_depth[r, c] > 0.5 else "zone")
             if g.terrain[r, c] == gridmod.WATER:
                 k.add("water")
+    if outline:  # keep a zone cell only where it borders a cell outside the zone
+        inz = [[bool(kinds[r][c] & {"zone", "danger"}) for c in range(C)] for r in range(R)]
+        for r in range(R):
+            for c in range(C):
+                if "zone" in kinds[r][c] and all(inz[rr][cc] for rr, cc in ((r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1))
+                                                 if 0 <= rr < R and 0 <= cc < C):
+                    kinds[r][c].discard("zone")
     rows = [[next((p for p in PRIORITY if p in kinds[r][c]), "blank") for c in range(C)] for r in range(R)]
 
     # Route as arrows: collapse the path to coarse cells, arrow points to the next coarse cell.
@@ -123,6 +133,17 @@ def render_raster(g, user_cell, shelter_cell, path, cols=16):
             rows[r0][c0] = "right" if c1 > c0 else "left"
         else:
             rows[r0][c0] = "down" if r1 > r0 else "up"
+    # Λ is 6% wider than a cell, so a zigzag route can't have two in a row: an extra one takes the arrow of the
+    # step after it (where the route turns sideways), or plain road.
+    ups = {}
+    for i, (r, c) in enumerate(coarse[:-1]):
+        if rows[r][c] == "up":
+            ups[r] = ups.get(r, 0) + 1
+            if ups[r] > 1:
+                nxt = rows[coarse[i + 1][0]][coarse[i + 1][1]] if i + 2 < len(coarse) else None
+                rows[r][c] = nxt if nxt in ("left", "right") else "road"
+    for r, c in landmark_cells:
+        rows[r // f][c // f] = "landmark"
     if shelter_cell:
         rows[shelter_cell[0] // f][shelter_cell[1] // f] = "shelter"
     if user_cell:
@@ -132,7 +153,7 @@ def render_raster(g, user_cell, shelter_cell, path, cols=16):
     labels = {}
     for r in range(R):
         names = [g.road_name[rr][cc] for rr in range(r * f, min(g.rows, (r + 1) * f)) for cc in range(g.cols)
-                 if g.road_name[rr][cc] and g.road_rank[rr, cc] >= 2]
+                 if g.road_name[rr][cc] and g.road_rank[rr, cc] >= min_rank]
         if names:
             top = max(set(names), key=names.count)
             label = " " + _short(top)
@@ -182,8 +203,9 @@ def is_grid_place(place):
     return (a in AVENUES and _street_num(b)) or (b in AVENUES and _street_num(a))
 
 
-def render_grid(roads, center, user, radius, avoid=(), shelter=None, max_avenues=5, max_streets=9):
-    """Schematic street-grid map, or None if the roads around `center` don't form the grid."""
+def render_grid(roads, center, user, radius, avoid=(), shelter=None, max_avenues=5, max_streets=9, halo=True, pad=2):
+    """Schematic street-grid map, or None if the roads around `center` don't form the grid.
+    halo=False leaves out the '+' area around the incident; pad = streets kept beyond the incident, you and closures."""
     proj = LocalProjection(center)
     th = math.radians(GRID_BEARING)
 
@@ -224,7 +246,7 @@ def render_grid(roads, center, user, radius, avoid=(), shelter=None, max_avenues
         for x in (seg.get("from"), seg.get("to")):
             if x and _street_num(_canon(x)) in st_v:
                 want.append(_street_num(_canon(x)))
-    s_lo, s_hi = min(want) - 2, max(want) + 2
+    s_lo, s_hi = min(want) - pad, max(want) + pad
     mid = near_st(uv(center)[1])
     while s_hi - s_lo + 1 > max_streets:  # trim the end farther from the incident
         if s_hi - mid >= mid - s_lo:
@@ -263,7 +285,7 @@ def render_grid(roads, center, user, radius, avoid=(), shelter=None, max_avenues
     cu, cv = uv(center)
     for r in range(nrows):
         for c in range(ncols):
-            if rows[r][c] == "blank":
+            if halo and rows[r][c] == "blank":
                 u, v = cell_uv(r, c)
                 if math.hypot(u - cu, v - cv) <= radius:
                     rows[r][c] = "zone"

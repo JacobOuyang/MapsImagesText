@@ -20,7 +20,7 @@ ANY = " ·░▒▓≈"  # what the YOU / hazard / shelter labels may cover
 YOU = "\U0001F534"  # red dot, the same "you" as the SMS map. Emoji are the only way to get colour in a WhatsApp
 # monospace block. In Menlo it is 1.66 cells wide, so it takes two cells and leaves its row ~1/3 cell short.
 LEGEND = [("you", YOU + " you"), ("danger", "◆ incident   ░▒▓ danger zone, darker is closer"), ("closed", "× road closed"),
-          ("route", "→ way out"), ("shelter", "⌂ shelter"), ("major", "━ main road   ─ street"),
+          ("route", "→ way out"), ("shelter", "⌂ shelter"), ("landmark", "★ landmark"), ("major", "━ main road   ─ street"),
           ("water", "≈ water"), ("veg", "· trees / park")]
 
 
@@ -57,18 +57,19 @@ def _line_char(bins):
 def render(scene, cols=COLS):
     """Scene -> {"lines": [[[cls, text], ...], ...], "text", "bytes", "gzip", "aerial_bytes", "m_per_char"}.
     Draws the scene's own route; a scene with no zone is plain directions (goal = destination)."""
-    user, roads, shelter, half, walk = scene.you, scene.roads, scene.goal, scene.half_m, scene.walk
+    user, roads, shelter, half, walk = scene.you, scene.shown, scene.goal, scene.half_m, scene.walk
+    focused = scene.focus is not None  # only the roads the reply is about: draw all of them, nothing else
     center = scene.zone[0] if scene.zone else None
     rotated = scene.street_grid
     aspect = ASPECT if cols >= 90 else 0.9  # narrow maps (a chat bubble) grow down instead of losing area
     # A rotated frame has to fit inside the north-up area the roads were fetched for.
     hw = half / (math.cos(math.radians(textmap.GRID_BEARING)) + aspect * math.sin(math.radians(textmap.GRID_BEARING))) if rotated else half
-    g = grid.Grid(user, hw, hw * aspect, cols)
+    g = grid.Grid(scene.center or user, hw, hw * aspect, cols)
     jpg = io.BytesIO()
     if scene.aerial is not None:  # only to report what a photo of the same area would cost
         scene.aerial.convert("RGB").save(jpg, "JPEG", quality=70)
     if rotated:
-        g.proj = _RotProj(user, textmap.GRID_BEARING)  # imagery is north-up, so no terrain on a rotated frame
+        g.proj = _RotProj(scene.center or user, textmap.GRID_BEARING)  # imagery is north-up, so no terrain on a rotated frame
     elif scene.masks is not None and not walk:
         g.add_terrain_at(scene.masks, scene.bbox())
     g.add_roads(roads, scene.closures)
@@ -82,7 +83,7 @@ def render(scene, cols=COLS):
     min_rank = 1 if g.cw <= 25 or walk else 2  # zoomed out, side streets are just noise (unless walking them)
     for rd in roads:
         rank = grid.ROAD_RANK.get(rd["kind"].replace("_link", ""), 1)
-        if rank < min_rank or (walk and rd["kind"] in PATHS):
+        if not focused and (rank < min_rank or (walk and rd["kind"] in PATHS)):
             continue
         xy = [g.proj.to_xy(p) for p in rd["pts"]]
         key = norm_road(rd["name"]) if rd["name"] else None
@@ -117,11 +118,16 @@ def render(scene, cols=COLS):
                         named.get(norm_road(g.road_name[r][c]), {})["closed"] = True
                 else:
                     cells[r][c] = (ch, ("major" if major else "road") + (" hot" if hot else ""))
+            elif hot and focused:  # the zone's edge, and its worst part, but not a fill over everything
+                edge = any(not (0 <= rr < rows and 0 <= cc < cols) or not g.hazard[rr, cc]
+                           for rr, cc in ((r - 1, c), (r + 1, c), (r, c - 1), (r, c + 1)))
+                if edge or g.hazard_depth[r, c] > 0.75:
+                    cells[r][c] = ("░" if edge else "▓", "zone")
             elif hot:
                 cells[r][c] = (SHADE[min(2, int(g.hazard_depth[r, c] * 3))], "zone")
             elif g.terrain[r, c] == grid.WATER:
                 cells[r][c] = ("≈", "water")
-            elif g.terrain[r, c] == grid.VEG:
+            elif g.terrain[r, c] == grid.VEG and not focused:
                 cells[r][c] = ("·", "veg")
 
     # The scene's route, as arrows.
@@ -130,8 +136,16 @@ def render(scene, cols=COLS):
     path = g.cells_along(scene.route)
     for (r0, c0), (r1, c1) in zip(path, path[1:]):
         cells[r1][c1] = (ARROW[((r1 > r0) - (r1 < r0), (c1 > c0) - (c1 < c0))], "route")
+    for n, p in scene.marks:  # where each numbered step starts, on the route line
+        mc = g.cell_of(p)
+        if mc and n < 10:
+            cells[mc[0]][mc[1]] = (str(n), "mark")
 
     taken = [[False] * cols for _ in range(rows)]
+    for n, p in scene.marks:
+        mc = g.cell_of(p)
+        if mc:
+            taken[mc[0]][mc[1]] = True
     def put(r, c, text, cls):
         for i, ch in enumerate(text):
             cells[r][c + i] = (ch, cls)
@@ -166,6 +180,12 @@ def render(scene, cols=COLS):
             cells[edge[0]][edge[1]] = ("⌂", "shelter")
             taken[edge[0]][edge[1]] = True
             place(edge, "%s %.1f km" % (shelter[0][:16].rstrip(), km), "shelter label", ANY)
+    for name, p in scene.landmarks:  # things to look out for: a star and the name beside it
+        lc = g.cell_of(p)
+        if lc:
+            cells[lc[0]][lc[1]] = ("★", "landmark")
+            taken[lc[0]][lc[1]] = True
+            place(lc, name[:26], "landmark label", ANY + "─━│┃╱╲┼╋╳")
     if ucell:
         r, c = ucell[0], min(ucell[1], cols - 2)
         cells[r][c], cells[r][c + 1] = (YOU, "you"), ("", "you")
@@ -187,6 +207,12 @@ def render(scene, cols=COLS):
             if place(a, info["label"], cls):
                 break
 
+    if focused:  # a focused map has nothing above or below its route: drop the empty rows, keep one of margin
+        busy = [i for i, row in enumerate(cells) if any(ch != " " for ch, _ in row)]
+        if busy:
+            lo, hi = max(0, busy[0] - 1), min(rows, busy[-1] + 2)
+            cells, rows = cells[lo:hi], hi - lo
+
     # Frame, scale bar, legend.
     used = {cls.split()[0] for row in cells for _, cls in row if cls}
     nice = next((m for m in (20, 50, 100, 200, 250, 500, 1000, 2000, 5000, 10000) if m / g.cw >= 8), 10000)
@@ -207,6 +233,10 @@ def render(scene, cols=COLS):
     out.append([["", ""]])
     for key, text in LEGEND:
         if key in used or (key == "danger" and "zone" in used):
+            if focused and key == "danger":
+                text = "◆ incident   ░ edge of danger zone   ▓ worst of it"
+            if key == "route" and scene.marks:
+                text += "   1 2 3 steps"
             if not scene.alert:  # directions, not an alert
                 text = text.replace("way out", "route").replace("shelter", "destination")
             out.append([["legend", text]])
