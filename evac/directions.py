@@ -152,7 +152,7 @@ def _scene(trip, you, text, legs, route, log, maps=True):
     scene.focus = focus.select(scene, minimal=True)
     log.append("view %.0f m across, %d of %d roads drawn" % (2 * half, len(scene.focus), len(trip.roads)))
     scene.aerial = imagery.fetch_aerial(*scene.bbox())
-    scene.masks = segment.segment(scene.aerial)
+    scene.masks = segment.segment(scene.aerial, "color")  # walking maps don't draw terrain; no SAM call per step
     out = {"text": text, "image": render.picture(scene), "small": render.small(scene), "scene": scene, "map": maps}
     if maps:
         sms, tm = render.sms(scene)

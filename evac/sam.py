@@ -7,9 +7,10 @@ text, one line per frame (an image is always `<0f>`):
 
     <0f>7<|box;x1=42;y1=65;x2=243;y2=255;w=256;h=256;c=0.91|><|mask;x=0;y=0;c=0.91;data=191,202,!<payload>|>
 
-Boxes are in the pixels of the image sent (corners inclusive); the mask is the box's rows x columns. Its payload
-is compressed, and Meta's SAM License does not allow reverse-engineering it, so masks are decoded with Meta's own
-`meta-sam-parser` (pip; Python 3.10+). Without it, `mask` is None and callers use the box.
+Boxes are in the pixels of the image sent; the mask covers the box. Its payload is compressed, and Meta's SAM
+License does not allow reverse-engineering it, so responses are parsed and masks decoded with Meta's own
+`meta-sam-parser` (pip; Python 3.10+, installed in the project's .venv). Without it, a minimal reader of the box
+tokens keeps the boxes, `mask` is None and callers use the box.
 Responses are cached by image and prompt in cache/sam/, like the road data.
 """
 import base64
@@ -21,6 +22,7 @@ import re
 
 import numpy as np
 import requests
+from PIL import Image
 
 from . import llm
 
@@ -29,10 +31,10 @@ MAX_SIDE = 1024  # images are sent at most this big; boxes come back in these pi
 CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", "cache", "sam")
 RECORD = re.compile(r"(\d+)<\|box;([^|]*)\|><\|mask;([^|]*)\|>")
 
-try:  # Meta's decoder for the mask payload; optional
-    from meta_sam_parser import decode_mask_to_raster
+try:  # Meta's parser and mask decoder; optional
+    import meta_sam_parser
 except ImportError:
-    decode_mask_to_raster = None
+    meta_sam_parser = None
 
 
 def available():
@@ -40,7 +42,7 @@ def available():
 
 
 def masks_available():
-    return decode_mask_to_raster is not None
+    return meta_sam_parser is not None
 
 
 def _fields(s):
@@ -76,25 +78,42 @@ def segment(img, prompt):
     img = img.convert("RGB")
     scale = min(1.0, MAX_SIDE / max(img.size))
     sent = img.resize((round(img.width * scale), round(img.height * scale))) if scale < 1 else img
-    out = []
-    for oid, box_s, mask_s in RECORD.findall(_request(sent, prompt)):
-        b, m = _fields(box_s), _fields(mask_s)
-        x1, y1, x2, y2 = (int(b[k]) / scale for k in ("x1", "y1", "x2", "y2"))
-        rec = {"id": int(oid), "box": (x1, y1, x2, y2), "score": float(b.get("c", 1)), "mask": None}
-        if decode_mask_to_raster is not None and "data" in m:
-            rec["mask"] = _place(m, b, img.size, scale)
-        out.append(rec)
+    text = _request(sent, prompt)
+    out = _parse(text, sent.size) if meta_sam_parser else _boxes_only(text)
+    for rec in out:
+        rec["box"] = tuple(v / scale for v in rec["box"])
+        if rec["mask"] is not None and scale < 1:
+            rec["mask"] = np.asarray(Image.fromarray(rec["mask"].astype(np.uint8) * 255).resize(img.size)) > 127
     return sorted(out, key=lambda r: -r["score"])
 
 
-def _place(m, b, size, scale):
-    """The decoded mask (box-sized, in sent pixels) pasted into a full-size bool image."""
-    h, w = (int(v) for v in m["data"].split(",", 2)[:2])
-    raster = np.asarray(decode_mask_to_raster(m["data"]), np.uint8).reshape(h, w)
-    full = np.zeros((round(size[1] * scale), round(size[0] * scale)), bool)
-    x1, y1 = int(b["x1"]), int(b["y1"])
-    full[y1:y1 + h, x1:x1 + w] = raster[:full.shape[0] - y1, :full.shape[1] - x1] > 0
-    if scale < 1:
-        from PIL import Image
-        full = np.asarray(Image.fromarray(full.astype(np.uint8) * 255).resize(size)) > 127
-    return full
+def _parse(text, size):
+    """Meta's parser: box and mask records keyed by object id; each mask pasted into a full-size bool image."""
+    parser = meta_sam_parser.image_segmentation_format().create_parser()
+    parser.push(text)
+    result = parser.finish(meta_sam_parser.CompletedOutcome()).result
+    out = {}
+    for r in result.records:
+        rec = out.setdefault(r.object_id, {"id": r.object_id, "box": None, "score": 1.0, "mask": None})
+        if r.confidence is not None:
+            rec["score"] = float(r.confidence)
+        if isinstance(r, meta_sam_parser.SegmentationBoxRecord):
+            rec["box"] = (r.left, r.top, r.right, r.bottom)
+        elif isinstance(r, meta_sam_parser.SegmentationMaskRecord):
+            b, m = r.bounds, r.mask
+            raster = np.frombuffer(meta_sam_parser.decode_mask_to_raster(m), np.uint8).reshape(m.height, m.width)
+            full = np.zeros((size[1], size[0]), bool)
+            full[b.top:b.top + m.height, b.left:b.left + m.width] = raster[:size[1] - b.top, :size[0] - b.left] > 0
+            rec["mask"] = full
+            rec["box"] = rec["box"] or (b.left, b.top, b.right, b.bottom)
+    return [r for r in out.values() if r["box"]]
+
+
+def _boxes_only(text):
+    """Without Meta's parser: just the box tokens."""
+    out = []
+    for oid, box_s, _ in RECORD.findall(text):
+        b = _fields(box_s)
+        out.append({"id": int(oid), "box": tuple(int(b[k]) for k in ("x1", "y1", "x2", "y2")),
+                    "score": float(b.get("c", 1)), "mask": None})
+    return out

@@ -38,7 +38,7 @@ def fmt_dist(m):
     return "%d m" % round(m, -1) if m < 1000 else "%.1f km" % (m / 1000)
 
 
-def run(sms, user=None, cols=40, seg_backend="color", out_dir="out", laptop=False, image=False):
+def run(sms, user=None, cols=40, seg_backend="auto", out_dir="out", laptop=False, image=False):
     n = notice.parse(sms)
     user = geo.current_location(user)
     log = ["notice (%s): %s" % (n.get("_parser"), {k: v for k, v in n.items() if not k.startswith("_")})]
