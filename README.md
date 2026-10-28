@@ -858,6 +858,29 @@ The flamingos: SAM found 27, the biggest is drawn, and Muse recognised it straig
 (Muse, shown only this drawing, recognised: flamingo)
 ```
 
+### Two levels of detail: low first, high when it's ready (WhatsApp)
+
+The outline above is the **low-detail** drawing: quick, but in most photos it keeps only the main object, and small things and the background are lost. The **high-detail** drawing (`evac/tonal.py`) segments everything and shades it. The viewer shows the low version as soon as it's ready, then the high one a few seconds later, with a switch between them.
+
+```mermaid
+flowchart TD
+  A["Muse: every part of the photo, subjects and backgrounds<br/>('eagle', 'waterfall', 'mist', 'cliff')"] --> B["SAM 3.1 on each (colour-refined, small ones zoomed)<br/>smaller parts on top of larger ones; leftovers = brightness bands"]
+  B --> R["Recursion: a region whose grey values vary a lot (std > 24) is split<br/>in two by brightness, twice at most; specks merge into neighbours<br/>unless they stand out by 55+ grey levels (a duck on pale water)"]
+  R --> S["Each region shaded by its mean grey: blank (lightest half) · ░ ▒ ▓<br/>a small region that stands out from its cell's main one: █ or blank<br/>outline on the main subject only; parts numbered in a key"]
+  S --> C["Muse checks it blind"]
+  S --> Z["ZOOM n: the same, on part n's crop of the full-size photo<br/>(each zoom can be zoomed again)"]
+```
+
+- **The high level is about scene and tone.** In "Eagle & Waterfall" it shows the dark waterfall on the left, the bright mist, the cliff on the right and the eagle as a dark mark in the sky. Muse, blind, read an earlier version as "body of water, land on left and right, small boat". That's the layout right, with the eagle as the boat.
+- **Zoom recurses into one part.** "ZOOM 2" redraws the flying bird from its crop of the full-size photo: a dark wing shape with feathered edges, against the mist.
+- **Cost:** the high level takes about 10 to 15 s after the low one; a zoom takes about 5 to 15 s. The text is about 4 KB (0.5 KB compressed).
+- **Limits:**
+  - Busy photos still come out noisy (grass and fur split into many regions).
+  - Muse doesn't yet recognise the subject from the high drawing alone.
+  - The zoom box can clip the edge of a thin part.
+
+**In the simulator:** after a photo, the **WhatsApp drawing: Low / High** switch and the **Zoom in** buttons (one per numbered part) appear under the samples. Each zoom joins the thread as a reply, as it would in WhatsApp.
+
 ## Weather radar
 
 ```mermaid
@@ -1254,6 +1277,7 @@ python3 main.py --walk "Castelo de São Jorge, Lisbon" --at 38.7139,-9.1406 -v  
 | `evac/pipeline.py` | The fixed emergency reply: parse, locate, route, word, build the Scene |
 | `evac/directions.py` | A walk as a `Trip`: streets and landmarks downloaded once, re-routed at every GPS fix (`move`); one step at a time, to the next intersection, with its turn, a landmark and a map of just that stretch; optional named start |
 | `evac/radar.py` | RainViewer tiles → rain levels, motion, Open-Meteo forecast, its four versions |
+| `evac/tonal.py` | The high-detail WhatsApp photo drawing: every part segmented, split recursively by brightness, shaded by grey value; zoom into a part |
 | `evac/sketch.py` | The WhatsApp photo drawing: everything Muse lists, outlined by SAM, drawn together, checked by Muse from a rendered image, repaired up to 3 times |
 | `evac/photo.py` | Muse description; the one object's outline (found by SAM 3.1, shaped by its mask or by colour inside its box; cropped; marching squares) or the borders of the main regions |
 | `evac/sam.py` | SAM 3.1 client on `/v1/responses`: records parsed and masks decoded with Meta's `meta-sam-parser`; boxes only without it; cached in `cache/sam/` |
@@ -1265,7 +1289,7 @@ python3 main.py --walk "Castelo de São Jorge, Lisbon" --at 38.7139,-9.1406 -v  
 | `evac/segment.py` | Aerial image → terrain masks: SAM 3.1 for water, a colour heuristic for trees and buildings |
 | `evac/llm.py` | Meta Model API client (`chat`, `chat_json`, `chat_tools`); loads `.env`; `reasoning_effort` minimal |
 | `main.py` | Command line: `--ask`, alerts, `--photo`, `--radar`, `--walk` (+ `--from`), `--laptop N` |
-| `sim/server.py` | Simulator server: `/api/message` (router), `/api/alert`, `/api/photo`, `/api/radar`, `/api/directions`, `/api/directions/move` (simulated GPS), `/api/find_rain`, sample photos |
+| `sim/server.py` | Simulator server: `/api/message` (router), `/api/alert`, `/api/photo`, `/api/radar`, `/api/directions`, `/api/directions/move` (simulated GPS), `/api/photo/high` and `/api/photo/zoom` (photo detail levels), `/api/find_rain`, sample photos |
 | `sim/index.html` | The tabs, the four-way result cards, the connection picker |
 | `CLAUDE.md` | Notes for Claude Code: commands, how the pieces connect, the text-map width rules |
 

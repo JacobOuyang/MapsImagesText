@@ -177,10 +177,17 @@
 <section class="tabsec" id="sec-photo">
   <div class="panel controls">
     <h3>A friend sends you a photo, but your connection can't load it</h3>
-    <p>The server looks at it with Muse Spark and sends back what's in it, plus the outline of the one object it shows, cropped to it and drawn as wide as the maps.</p>
+    <p>The server looks at it with Muse Spark and sends back what's in it, drawn in text. The WhatsApp drawing comes in two levels: <b>low</b> (the main object's outline, quick) and <b>high</b> (every part segmented and shaded by its grey value, a few seconds later). Each is shown as soon as it's ready.</p>
     <div class="chips" id="photoSamples"></div>
     <div class="row2"><label class="inline">Or your own: <input type="file" id="photoFile" accept="image/*"></label>
       <span class="status-line" id="photoStatus"></span></div>
+    <div class="row2" id="photoDetail" hidden>
+      <span class="status-line">WhatsApp drawing:</span>
+      <button class="chip" id="detailLow">Low detail</button>
+      <button class="chip" id="detailHigh">High detail</button>
+      <span class="status-line" id="highStatus"></span>
+    </div>
+    <div class="row2" id="photoZoom" hidden><span class="status-line">Zoom in (reply ZOOM n):</span><span class="chips" id="zoomChips"></span></div>
   </div>
   <div class="triple" id="photoOut"></div>
 </section>
@@ -414,7 +421,10 @@ function showResult(kind) {
   if (x.out) items.push({dir: 'out', text: x.out});
   if (x.pending) items.push({kind: 'typing'});
   else if (x.res.error) items.push({kind: 'meta', text: 'Failed: ' + x.res.error});
-  else items.push({dir: 'in', sms: x.res.sms, plain: x.res.text, mono: x.res.mono});
+  else {
+    const mono = kind === 'photo' && x.view === 'high' && x.high ? x.high.mono : x.res.mono;
+    items.push({dir: 'in', sms: x.res.sms, plain: x.res.text, mono});
+  }
   // Later updates (a walk as the person moves): a text-only update has no map in the SMS or WhatsApp version.
   let last = x.res;
   for (const u of x.more || []) {
@@ -424,20 +434,55 @@ function showResult(kind) {
     items.push(u.res.map ? {dir: 'in', sms: u.res.sms, plain: u.res.text, mono: u.res.mono} : {dir: 'in', text: u.res.text, sms: u.res.text});
     last = Object.assign({}, u.res, u.res.image ? {} : {image: last && last.image, small: last && last.small});
   }
+  const sized = kind === 'photo' && x.view === 'high' && x.high && !(x.more || []).length ? x.high : last;
   const r = x.pending || x.res.error ? (x.res && x.res.error ? {error: x.res.error} : null) :
-    {parts: last.parts, plain: last.text, monoBytes: last.mono_bytes, monoGzip: last.mono_gzip, img: x.img || last.image, small: last.small, imgLabel: x.imgLabel};
+    {parts: last.parts, plain: last.text, monoBytes: sized.mono_bytes, monoGzip: sized.mono_gzip, img: x.img || last.image, small: last.small, imgLabel: x.imgLabel};
   triple(box, items, r, LABELS[kind]);
 }
 async function sendPhoto(dataUrl, name, bytes, w, h) {
   results.photo = {request: `Friend sent a photo (${name}, ${kb(bytes)}). It didn't download.`, pending: true,
     img: {data_url: dataUrl, bytes, width: w, height: h}, imgLabel: 'The photo'};
   showResult('photo'); $('photoStatus').textContent = 'Working…';
+  $('photoDetail').hidden = true; $('photoZoom').hidden = true;
   const res = await post('/api/photo', {image: dataUrl});
-  Object.assign(results.photo, {pending: false, res});
+  Object.assign(results.photo, {pending: false, res, view: 'low', high: null, more: []});
+  if (res.photo_id) loadHigh(results.photo);
   $('photoStatus').textContent = res.error ? '' : `Done in ${res.seconds} s` + (res.attempts && res.attempts.length
     ? ' · Muse checked the drawing: ' + res.attempts.map((x, i) => `try ${i + 1} drew ${x.items.join(', ')}, saw ${x.seen.join(', ') || 'nothing'}`).join('; ')
     : res.shape_from ? ` · outline from: ${res.shape_from}` + (res.object ? ` ("${res.object}")` : '') : '');
   showResult('photo');
+}
+function setView(v) {
+  const x = results.photo; if (!x) return;
+  x.view = v;
+  $('detailLow').classList.toggle('on', v === 'low'); $('detailHigh').classList.toggle('on', v === 'high');
+  showResult('photo');
+}
+async function loadHigh(x) {
+  $('photoDetail').hidden = false; $('detailHigh').disabled = true; setView('low');
+  $('highStatus').textContent = 'High detail: segmenting every part…';
+  const hi = await post('/api/photo/high', {photo_id: x.res.photo_id});
+  if (results.photo !== x) return;  // a newer photo was sent meanwhile
+  if (hi.error) { $('highStatus').textContent = 'High detail failed: ' + hi.error; return; }
+  x.high = hi; $('detailHigh').disabled = false;
+  $('highStatus').textContent = `High detail ready in ${hi.seconds} s: ${hi.regions} regions` + (hi.seen && hi.seen.length ? `; Muse, blind, made out: ${hi.seen.join(', ')}` : '');
+  setView('high');
+  zoomChips(x, hi);
+}
+function zoomChips(x, from) {
+  const box = $('zoomChips'); box.innerHTML = '';
+  for (const [n, name] of Object.entries(from.key || {})) {
+    const b = el('button', 'chip', `${n} ${name}`);
+    b.onclick = async () => {
+      const u = {meta: `You: ZOOM ${n} (${name})`, pending: true}; x.more.push(u); showResult('photo');
+      const z = await post('/api/photo/zoom', {photo_id: from.photo_id, n});
+      Object.assign(u, {pending: false, res: z.error ? {error: z.error} : {map: true, text: '', sms: '(zoom is a WhatsApp feature: the drawing is too wide for SMS)', mono: z.mono, mono_bytes: z.mono_bytes, mono_gzip: z.mono_gzip}});
+      showResult('photo');
+      if (!z.error) zoomChips(x, z);  // zoom again from here
+    };
+    box.appendChild(b);
+  }
+  $('photoZoom').hidden = !Object.keys(from.key || {}).length;
 }
 function loadPhoto(blob, name) {
   const fr = new FileReader();
@@ -460,7 +505,7 @@ async function sendWalk() {
   const from = $('walkFromText').value.trim();
   results.walk = {request: `You are at ${walkFrom[0].toFixed(4)}, ${walkFrom[1].toFixed(4)} (from GPS)`, out: (from ? `Walk from ${from} to ` : 'Walk to ') + to, pending: true};
   showResult('walk'); $('walkStatus').textContent = 'Routing on street data (a new city can take a minute)…';
-  $('walkMove').hidden = true; $('moveStatus').textContent = '';
+  $('walkMove').hidden = true; $('photoDetail').hidden = true; $('photoZoom').hidden = true; $('moveStatus').textContent = '';
   const res = await post('/api/directions', {lat: walkFrom[0], lon: walkFrom[1], to, from});
   Object.assign(results.walk, {pending: false, res, more: []});
   $('walkStatus').textContent = res.error ? '' : `Done in ${res.seconds} s`;
@@ -539,6 +584,8 @@ for (const [name, [ll, dest]] of Object.entries(WALK_FROM)) chip('walkFrom', nam
 });
 document.querySelector('#walkFrom .chip').classList.add('on'); $('walkTo').value = WALK_FROM['Lisbon: Rossio station'][1];
 $('walkGo').onclick = sendWalk;
+$('detailLow').onclick = () => setView('low');
+$('detailHigh').onclick = () => setView('high');
 $('walk150').onclick = () => moveWalk(false);
 $('walkAstray').onclick = () => moveWalk(true);
 const ASK_FROM = {'Rome: Termini': [41.9010, 12.5016], 'Lisbon: Rossio': [38.7139, -9.1406], 'NYC: 47 St & Park Av': [40.75491, -73.97441]};
@@ -563,7 +610,7 @@ $('clear').onclick = () => {
   $('log').textContent = 'Nothing sent yet.';
   for (const k of Object.keys(results)) { results[k] = null; showResult(k); }
   for (const id of ['photoStatus', 'radarStatus', 'walkStatus', 'askStatus', 'askTools']) $(id).textContent = '';
-  $('walkMove').hidden = true;
+  $('walkMove').hidden = true; $('photoDetail').hidden = true; $('photoZoom').hidden = true;
   refresh();
 };
 refresh();
