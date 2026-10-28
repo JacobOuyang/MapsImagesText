@@ -17,10 +17,10 @@ import io
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from . import llm, sam
-from .photo import MONO_CELL, WORK_COLS, contour
+from .photo import MONO_CELL, WORK_COLS, _components, _kmeans, _otsu, contour
 
 MAX_THINGS = 5
 MAX_ROUNDS = 3  # the first drawing and up to two repairs
@@ -35,10 +35,15 @@ MATCH = ("Someone made a drawing of these things: %s. Looking at the drawing wit
 
 
 BACKGROUND = 0.35  # a thing whose mask covers more of the photo than this is a background, not an object
+AGREE = 0.85       # the colour-refined mask must overlap SAM's this much (IoU), or SAM's is kept: eagle 0.90,
+                   # dog 0.95 kept; bicycle 0.76, flamingo 0.54 (background pulled in) not
+REFINE_PX = 480     # the colour refinement works on the object's crop at most this wide
+TINY = 0.03        # a main object smaller than this share of the photo is drawn in its scene, plus a close-up
+HEAVY = {"─": "━", "│": "┃", "╭": "┏", "╮": "┓", "╯": "┛", "╰": "┗", "╳": "╋"}  # objects; the scene stays light
 SMALL = 0.3        # a thing narrower or shorter than this share of the photo is segmented again, zoomed in
 
 
-def find(img, things):
+def find(img, things, fallback=""):
     """[(name, full-size mask)] for the things SAM finds: one match each, the biggest confident one. Small ones are
     segmented a second time on a crop around them, so their outline isn't a few blocky pixels."""
 
@@ -53,6 +58,8 @@ def find(img, things):
     def one(name):
         try:
             f = best(img, name)
+            if f is None and name == things[0] and fallback:  # SAM didn't know "fortune cookie"; it knows "food"
+                f = best(img, fallback)
             if f is None:
                 return None
             m = f["mask"]
@@ -66,12 +73,115 @@ def find(img, things):
                     m[box[1]:box[3], box[0]:box[2]] = z["mask"]
         except Exception:
             return None
-        return m
+        return refine(img, m)
 
     with ThreadPoolExecutor(len(things)) as pool:
         masks = list(pool.map(one, things))
     return [(n, m) for i, (n, m) in enumerate(zip(things, masks))
             if m is not None and m.any() and (i == 0 or m.mean() <= BACKGROUND)]
+
+
+def refine(img, m):
+    """SAM says which pixels are the object; colour contrast says exactly where its edge is. SAM 3.1's masks are
+    smooth blobs (an eagle's feathered wing tips and white head were lost), while the colour method alone can't tell
+    the bird from the dark waterfall behind it. So: the colour-contrast pixels inside a slightly grown SAM mask,
+    plus the eroded core of the SAM mask (parts colour misses, like the white head, and no holes)."""
+    ys, xs = np.nonzero(m)
+    if len(ys) < 20:
+        return m
+    y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
+    my, mx = max(4, (y1 - y0) // 4), max(4, (x1 - x0) // 4)
+    Y0, Y1, X0, X1 = max(0, y0 - my), min(m.shape[0], y1 + my), max(0, x0 - mx), min(m.shape[1], x1 + mx)
+    # Work at most REFINE_PX wide: the grow/shrink filters are slow on a full-size crop (one photo took 6 minutes).
+    w = min(REFINE_PX, X1 - X0)
+    h = max(4, round(w * (Y1 - Y0) / (X1 - X0)))
+    colour = _sharp_colour(img.crop((X0, Y0, X1, Y1)).resize((w, h), Image.BOX))
+    part = Image.fromarray(m[Y0:Y1, X0:X1].astype(np.uint8) * 255).resize((w, h), Image.BOX)
+    k = min(9, max(3, (min(w, h) // 12) | 1))
+    grown = part
+    for _ in range(2):  # reach ~1/6 of the object beyond SAM's edge: feathered wing tips, legs, antennae
+        grown = grown.filter(ImageFilter.MaxFilter(min(15, max(3, (min(w, h) // 12) | 1))))
+    grown = np.asarray(grown) > 127
+    core = np.asarray(part.filter(ImageFilter.MinFilter(k))) > 127
+    sam_px = np.asarray(part) > 127
+    edge = colour & grown
+    if edge.sum() < 0.4 * sam_px.sum():  # colour sees little of it (a white mug on white): keep SAM's
+        return m
+    refined = edge | core
+    if (refined & sam_px).sum() / max(1, (refined | sam_px).sum()) < AGREE:
+        return m  # colour pulled in background (a brick wall behind a bicycle, water around a flamingo)
+    both = Image.fromarray((refined * 255).astype(np.uint8)).resize((X1 - X0, Y1 - Y0), Image.NEAREST)
+    out = m.copy()
+    out[Y0:Y1, X0:X1] = np.asarray(both) > 127
+    return out
+
+
+def _sharp_colour(crop):
+    """Pixels unlike the crop's main border colours, unblurred and unclosed (photo.subject_mask smooths the edge
+    away; here the edge is the point)."""
+    A = np.asarray(crop.convert("YCbCr"), float) * np.array([0.7, 1.2, 1.2])
+    C, a = _kmeans(np.concatenate([A[0], A[-1], A[:, 0], A[:, -1]]), 3)
+    share = np.bincount(a, minlength=len(C)) / len(a)
+    bg = C[(share >= 0.15) | (share == share.max())]
+    d = np.sqrt(((A[:, :, None] - bg[None, None]) ** 2).sum(3)).min(2)
+    return d > max(_otsu(d.ravel()), 18)
+
+
+def background(img, cols, rows, k=3):
+    """The scene's big shapes from brightness alone: borders between k bands (sky, tree line, water...), heavily
+    smoothed so fog gradients and ripples don't become lines."""
+    W = WORK_COLS
+    H = max(8, round(W * img.height / img.width))
+    g = img.convert("L").filter(ImageFilter.GaussianBlur(max(img.size) / 80)).resize((W, H), Image.BOX)
+    C, a = _kmeans(np.asarray(g, float).reshape(-1, 1), k)
+    L = a.reshape(H, W)
+    for _ in range(2):
+        for j in range(k):
+            for comp in _components(L == j):
+                if len(comp) < W * H // 40:
+                    nb = [L[yy, xx] for y, x in comp[:500] for yy, xx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1))
+                          if 0 <= yy < H and 0 <= xx < W and L[yy, xx] != j]
+                    if nb:
+                        t = max(set(nb), key=nb.count)
+                        for y, x in comp:
+                            L[y, x] = t
+    grid = [[" "] * cols for _ in range(rows)]
+    for j in range(k):
+        for r, line in enumerate(contour(L == j, cols, rows)):
+            for c, ch in enumerate(line):
+                if ch != " " and grid[r][c] == " ":
+                    grid[r][c] = ch
+    return grid
+
+
+def scene(img, items, cols):
+    """-> (rows without numbers, rows with numbers): the whole photo. Objects in heavy lines where they're big enough
+    to outline, as solid blocks where they're a few cells; the scene's big shapes in light lines underneath."""
+    rows = max(4, round(cols * img.height / img.width / MONO_CELL))
+    grid = background(img, cols, rows)
+    marks = []
+    for i, (_, m) in enumerate(items):
+        cover = np.asarray(Image.fromarray(m.astype(np.uint8) * 255).resize((cols, rows), Image.BOX)) / 255.0
+        if (cover > 0.5).sum() >= 15:
+            small = np.asarray(Image.fromarray(m.astype(np.uint8) * 255).resize((WORK_COLS * 2, max(8, round(
+                WORK_COLS * 2 * img.height / img.width))), Image.BOX)) > 100
+            for r, line in enumerate(contour(small, cols, rows)):
+                for c, ch in enumerate(line):
+                    if ch != " ":
+                        grid[r][c] = HEAVY.get(ch, ch)
+        cells = list(zip(*np.nonzero(cover > 0.12))) or [np.unravel_index(cover.argmax(), cover.shape)]
+        if (cover > 0.5).sum() < 15:
+            for r, c in cells:
+                grid[r][c] = "█"
+        marks.append(cells)
+    numbered = [row[:] for row in grid]
+    for i, cells in enumerate(marks):  # the number just right of each object, on a blank cell
+        r, c = max(cells, key=lambda rc: rc[1])
+        for cc in range(c + 1, min(cols, c + 3)):
+            if numbered[r][cc] == " ":
+                numbered[r][cc] = str(i + 1)
+                break
+    return ["".join(r).rstrip() for r in grid], ["".join(r).rstrip() for r in numbered]
 
 
 def compose(items, cols):
@@ -120,24 +230,35 @@ def picture(rows):
 
 def check(rows, names):
     """-> (what Muse sees in the drawing, which of `names` that covers)."""
-    seen = llm.chat_json([{"role": "user", "content": [{"type": "text", "text": SEE},
-                                                       {"type": "image_url", "image_url": {"url": picture(rows)}}]}])
-    seen = [str(x) for x in seen.get("things") or []]
-    if not seen:
-        return [], []
-    got = llm.chat_json([{"role": "user", "content": MATCH % (names, seen)}]).get("recognised") or []
+    try:
+        seen = llm.chat_json([{"role": "user", "content": [{"type": "text", "text": SEE},
+                                                           {"type": "image_url", "image_url": {"url": picture(rows)}}]}])
+        seen = seen.get("things") or []
+        seen = [str(x) for x in (seen if isinstance(seen, list) else [seen])]
+        if not seen:
+            return [], []
+        got = llm.chat_json([{"role": "user", "content": MATCH % (names, seen)}]).get("recognised") or []
+        got = [str(x) for x in (got if isinstance(got, list) else [got])]
+    except Exception as ex:  # a malformed or failed reply counts as "not recognised", never as an error
+        return ["(check failed: %s)" % type(ex).__name__], []
     return seen, [n for n in names if n in got]
 
 
-def draw(img, things, cols=58):
+def draw(img, things, cols=58, fallback=""):
     """The loop. -> {"rows", "items", "recognised", "seen", "attempts"} for the best attempt, or None if SAM found
     none of the things."""
-    items = find(img, things[:MAX_THINGS])
+    items = find(img, things[:MAX_THINGS], fallback)
     attempts = []
+    tiny = bool(items) and items[0][1].mean() < TINY
     for _ in range(MAX_ROUNDS):
         if not items:
             break
-        plain, numbered = compose(items, cols)
+        if tiny:  # a small subject in a big scene: the scene with it marked, then a close-up of it
+            sp, sn = scene(img, items, cols)
+            cp, cn = compose(items[:1], cols)
+            plain, numbered = sp + [""] + cp, sn + ["", "1 close up:"] + cn
+        else:
+            plain, numbered = compose(items, cols)
         names = [n for n, _ in items]
         seen, recognised = check(plain, names)
         attempts.append({"items": names, "rows": numbered, "seen": seen, "recognised": recognised})
@@ -148,6 +269,8 @@ def draw(img, things, cols=58):
             items = kept  # drop what wasn't recognised; the crop zooms in on the rest
         elif not kept and len(items) > 1:
             items = items[:1]  # nothing recognised: the main thing alone
+        elif not kept and tiny:
+            tiny = False  # still nothing: the close-up alone
         else:
             break
     if not attempts:

@@ -10,6 +10,7 @@ import base64
 import gzip
 import io
 import math
+import traceback
 
 import numpy as np
 from PIL import Image, ImageFilter, ImageOps
@@ -25,7 +26,8 @@ PROMPT = ("Describe this photo for someone whose phone could not load it. Reply 
           '{"caption": one sentence, "details": [up to 3 short facts a person would want to know, including any '
           'readable text], "object": the one main thing the photo shows, as a short noun phrase an image '
           'segmentation model could find (e.g. "penguin", "fortune cookie", "flamingo"), or "" for a scene with '
-          'no main thing, "things": [up to 5 separate objects you can see, most important first, each a short noun '
+          'no main thing, "category": one broad word for the main object that a segmentation model would surely know '
+          '(e.g. "food", "animal", "bird", "vehicle", "furniture"), "things": [up to 5 separate objects you can see, most important first, each a short noun '
           'phrase a segmentation model could find; the main object first; objects only, not surfaces or backgrounds '
           'such as sky, water, grass, ground, walls or floors]}')
 
@@ -35,16 +37,21 @@ def describe(jpeg):
     if not llm.available():
         return {"caption": "A photo (no description: model not configured).", "details": [], "object": "", "things": []}
     part = {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(jpeg).decode()}}
-    try:
-        d = llm.chat_json([{"role": "user", "content": [{"type": "text", "text": PROMPT}, part]}])
-    except Exception as e:
-        return {"caption": "A photo (description failed: %s)." % e, "details": [], "object": "", "things": []}
+    for attempt in range(2):  # an occasional empty or malformed reply: ask once more
+        try:
+            d = llm.chat_json([{"role": "user", "content": [{"type": "text", "text": PROMPT}, part]}])
+            break
+        except Exception as e:
+            if attempt:
+                return {"caption": "A photo (description failed: %s)." % e, "details": [], "object": "", "things": []}
     obj = str(d.get("object") or "").strip()
-    things = [str(t).strip() for t in d.get("things") or [] if str(t).strip()]
+    things = d.get("things") or []
+    things = [str(t.get("name", "") if isinstance(t, dict) else t).strip() for t in (things if isinstance(things, list) else [things])]
+    things = [t for t in things if t]
     if obj and obj not in things:
         things.insert(0, obj)
     return {"caption": d.get("caption") or "", "details": [str(x) for x in d.get("details") or []][:3],
-            "object": obj, "things": list(dict.fromkeys(things))}
+            "object": obj, "category": str(d.get("category") or "").strip(), "things": list(dict.fromkeys(things))}
 
 
 # ---------- outlines: the bare minimum of a photo ----------
@@ -199,7 +206,7 @@ def find_object(img):
     return m[max(0, ys.min() - pad_y): ys.max() + pad_y + 1, max(0, xs.min() - pad_x): xs.max() + pad_x + 1]
 
 
-def sam_object(img, name):
+def sam_object(img, name, category=""):
     """SAM 3.1 finds `name` -> (the object's mask on a working grid, cropped to it; how many SAM found; where the
     shape came from), or None if SAM found nothing (after retrying with the name's last word: "eight ball" ->
     "ball"). Of several matches (a flock), the biggest confident one is drawn, at the full working resolution of its
@@ -209,7 +216,7 @@ def sam_object(img, name):
     object is: the colour method runs on that box plus a margin, whose edges really are background, and an ellipse
     in the box stands in when even that fails (a black ball on black)."""
     found = []
-    for prompt in dict.fromkeys([name, name.split()[-1]]):
+    for prompt in dict.fromkeys(p for p in [name, name.split()[-1], category] if p):  # "fortune cookie" → "cookie" → "food"
         try:
             found = sam.segment(img, prompt)
         except Exception:
@@ -254,7 +261,7 @@ def run(data, sms_cols=24, mono_cols=58, description=None):  # the widths the ma
 
     lines = ["Photo: " + d["caption"]] + ["- " + x for x in d["details"]]
     name = d.get("object") or ""
-    found = sam_object(img, name) if name and sam.available() else None
+    found = sam_object(img, name, d.get("category", "")) if name and sam.available() else None
     if found:
         obj, total, how = found
     else:
@@ -280,7 +287,10 @@ def run(data, sms_cols=24, mono_cols=58, description=None):  # the widths the ma
     checked = None
     if d.get("things") and sam.available() and sam.masks_available():
         from . import sketch  # WhatsApp: the several things, drawn together and checked by Muse
-        checked = sketch.draw(img, d["things"], mono_cols)
+        try:
+            checked = sketch.draw(img, d["things"], mono_cols, fallback=d.get("category", ""))
+        except Exception:  # the plain single-object drawing above is the fallback, never an error
+            traceback.print_exc()
     if checked:
         names = checked["items"]
         mono = "\n".join(checked["rows"] + ["", " · ".join("%d %s" % (i + 1, n) for i, n in enumerate(names)),

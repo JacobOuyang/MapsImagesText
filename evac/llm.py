@@ -59,6 +59,8 @@ def chat(messages, json_mode=False, max_tokens=DEFAULT_MAX_TOKENS):
     r.raise_for_status()
     choice = r.json()["choices"][0]
     content = choice["message"].get("content")
+    if isinstance(content, list):  # some replies come as content parts
+        content = "".join(p.get("text", "") if isinstance(p, dict) else str(p) for p in content)
     if not content:
         raise RuntimeError("empty reply (finish_reason=%s); raise max_tokens" % choice.get("finish_reason"))
     return content
@@ -77,7 +79,10 @@ def chat_tools(messages, tools, max_tokens=DEFAULT_MAX_TOKENS):
 def chat_json(messages):
     text = chat(messages, json_mode=True)
     # Some models wrap JSON in fences even in json mode; take the outermost object.
-    return json.loads(text[text.find("{"): text.rfind("}") + 1])
+    out = json.loads(text[text.find("{"): text.rfind("}") + 1])
+    if not isinstance(out, dict):
+        raise ValueError("expected a JSON object, got %s" % type(out).__name__)
+    return out
 
 
 def image_part(png_bytes):

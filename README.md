@@ -760,8 +760,9 @@ The WhatsApp drawing goes one step further: Muse lists everything it sees, SAM o
 
 ```mermaid
 flowchart TD
-  A["Muse: up to 5 separate objects, main one first<br/>(no backgrounds: sky, water, grass, walls)"] --> B["SAM 3.1 on each, in parallel<br/>small ones segmented again on a zoomed crop"]
-  B --> C["One drawing: every outline, main object on top,<br/>cropped to all of them, a number in each + key"]
+  A["Muse: up to 5 separate objects, main one first<br/>(no backgrounds: sky, water, grass, walls) + a broad category"] --> B["SAM 3.1 on each, in parallel<br/>small ones segmented again on a zoomed crop"]
+  B --> RF["Shape = colour-contrast edge inside the SAM mask + SAM's core<br/>(kept only if it overlaps SAM's ≥ 0.85)"]
+  RF --> C["One drawing: every outline, main object on top, a number in each + key<br/>tiny subject: the whole scene (brightness bands, light lines) + a close-up"]
   C --> D["Check: the drawing (no numbers, no key) rendered as an image in Menlo<br/>Muse, fresh and without the caption: what can you make out?"]
   D --> E["Text-only Muse call: which of the drawn things did that name?"]
   E -- "all recognised" --> S["Send it"]
@@ -771,11 +772,33 @@ flowchart TD
 ```
 
 - **The check uses a picture of the drawing.** Read as raw characters, Muse recognised 1 of 6 outlines; shown as an image, 4 of 6. People see the rendered drawing, so that's what the check looks at, with the numbers and key removed so they can't give the answer away.
-- **Results on the 14 test photos:**
-  - **7 of the 13 checked drawings were recognised:** mug, sneaker ("shoe"), bicycle, dog, teapot, penguin ("bird") and flamingo.
-  - **Drawings of several things were never recognised.** The extras Muse lists are mostly parts of the main object (a collar, a beak, a pickguard) or small clutter, and at 58 columns they only add lines. The repair then drew the main object alone, which passed for the bicycle, dog and teapot.
-  - **Honest misses:** the apple and 8-ball are circles; close-ups lose their outline (the owl's face, the guitar's body); a back-lit soaring bird reads as a "boot".
-- **Cost:** a photo takes 6 to 14 s this way instead of 2 to 4 s: Muse's description, SAM in parallel, then two Muse calls per attempt.
+- **Shape = SAM + colour contrast.** SAM 3.1's masks are smooth blobs: an eagle's feathered wing tips and white head were lost. The colour method alone can't tell the bird from the dark waterfall behind it. So each object's shape is:
+  - **from colour:** the colour-contrast pixels (unblurred) inside a slightly grown SAM mask;
+  - **from SAM:** plus the eroded core of SAM's mask, which keeps parts colour misses and fills holes.
+
+  The combined shape is kept only if it overlaps SAM's own by at least 0.85 (IoU):
+
+  | Photo | Overlap | Result |
+  |---|---|---|
+  | Eagle | 0.90 | kept |
+  | Dog | 0.95 | kept |
+  | Penguin | 0.97 | kept |
+  | Bicycle | 0.76 | SAM's mask used: colour pulled in the brick wall |
+  | Flamingo | 0.54 | SAM's mask used: colour pulled in the water |
+- **A tiny subject in a big scene** (under 3% of the photo: ducks on a lake, an eagle in front of a waterfall) gets two drawings:
+  - **the whole scene:** its big shapes (tree line, shore, water edge) from brightness bands in light lines, with the subject marked in heavy lines or solid blocks;
+  - **a close-up** of the subject underneath.
+- **If SAM doesn't know the name,** it falls back to a broad category from Muse: "fortune cookie" and "cookie" found nothing, "food" found it with 0.93.
+- **Results on 15 test photos:** 8 recognised.
+  - **Recognised:** mug, sneaker ("shoe"), bicycle, dog, teapot, penguin ("bird"), gingerbread man ("person") and flamingo.
+  - **Drawings of several things were never recognised.** The extras are mostly parts of the main object or clutter, so the repair falls back to the main object.
+  - **Honest misses:** the apple is a "circle", the cookie a "pac-man". Close-ups lose their outline (the owl's face, the guitar's body). The back-lit eagle reads as a "boot". The ducks are about 15 pixels each, so even with the scene drawn, Muse saw "crocodile, dog".
+- **Robustness:** a malformed or empty reply from Muse no longer fails the photo:
+  - **Chat replies:** a reply split into parts is joined, and a JSON reply that isn't an object is rejected.
+  - **The description** retries once.
+  - **A failed check** counts as "not recognised".
+  - **Any error in the loop** falls back to the single-object drawing.
+- **Cost:** a photo takes 6 to 16 s this way instead of 2 to 4 s: Muse's description, SAM in parallel, then two Muse calls per attempt.
 
 The teapot on the counter: the first attempt drew the teapot, a mug, a cutting board, a croissant and a glass jar, and Muse made out nothing. The repair drew the teapot alone, and Muse named it:
 
