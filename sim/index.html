@@ -434,7 +434,9 @@ async function sendPhoto(dataUrl, name, bytes, w, h) {
   showResult('photo'); $('photoStatus').textContent = 'Working…';
   const res = await post('/api/photo', {image: dataUrl});
   Object.assign(results.photo, {pending: false, res});
-  $('photoStatus').textContent = res.error ? '' : `Done in ${res.seconds} s` + (res.shape_from ? ` · outline from: ${res.shape_from}` + (res.object ? ` ("${res.object}")` : '') : '');
+  $('photoStatus').textContent = res.error ? '' : `Done in ${res.seconds} s` + (res.attempts && res.attempts.length
+    ? ' · Muse checked the drawing: ' + res.attempts.map((x, i) => `try ${i + 1} drew ${x.items.join(', ')}, saw ${x.seen.join(', ') || 'nothing'}`).join('; ')
+    : res.shape_from ? ` · outline from: ${res.shape_from}` + (res.object ? ` ("${res.object}")` : '') : '');
   showResult('photo');
 }
 function loadPhoto(blob, name) {

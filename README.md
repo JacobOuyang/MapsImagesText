@@ -754,6 +754,87 @@ Photo: A cozy rustic kitchen counter with a green teapot surrounded by lemon sli
 (outline of 1 of 27 flamingos, found by SAM 3.1)
 ```
 
+### Several things, checked by Muse (WhatsApp)
+
+The WhatsApp drawing goes one step further: Muse lists everything it sees, SAM outlines all of it, and before anything is sent, **Muse checks the drawing**: shown only the drawing, does it recognise what was drawn? SMS keeps the single-object silhouette.
+
+```mermaid
+flowchart TD
+  A["Muse: up to 5 separate objects, main one first<br/>(no backgrounds: sky, water, grass, walls)"] --> B["SAM 3.1 on each, in parallel<br/>small ones segmented again on a zoomed crop"]
+  B --> C["One drawing: every outline, main object on top,<br/>cropped to all of them, a number in each + key"]
+  C --> D["Check: the drawing (no numbers, no key) rendered as an image in Menlo<br/>Muse, fresh and without the caption: what can you make out?"]
+  D --> E["Text-only Muse call: which of the drawn things did that name?"]
+  E -- "all recognised" --> S["Send it"]
+  E -- "some" --> R1["Drop the rest, redraw (the crop zooms in)"] --> D
+  E -- "none" --> R2["Main object alone"] --> D
+  R1 & R2 -. "after 3 attempts" .-> B2["Send the attempt with the most recognised"]
+```
+
+- **The check uses a picture of the drawing.** Read as raw characters, Muse recognised 1 of 6 outlines; shown as an image, 4 of 6. People see the rendered drawing, so that's what the check looks at, with the numbers and key removed so they can't give the answer away.
+- **Results on the 14 test photos:**
+  - **7 of the 13 checked drawings were recognised:** mug, sneaker ("shoe"), bicycle, dog, teapot, penguin ("bird") and flamingo.
+  - **Drawings of several things were never recognised.** The extras Muse lists are mostly parts of the main object (a collar, a beak, a pickguard) or small clutter, and at 58 columns they only add lines. The repair then drew the main object alone, which passed for the bicycle, dog and teapot.
+  - **Honest misses:** the apple and 8-ball are circles; close-ups lose their outline (the owl's face, the guitar's body); a back-lit soaring bird reads as a "boot".
+- **Cost:** a photo takes 6 to 14 s this way instead of 2 to 4 s: Muse's description, SAM in parallel, then two Muse calls per attempt.
+
+The teapot on the counter: the first attempt drew the teapot, a mug, a cutting board, a croissant and a glass jar, and Muse made out nothing. The repair drew the teapot alone, and Muse named it:
+
+```
+╭────╮
+                           │    │
+                      ╭────╯    ╰───╮
+     ╭╮           ╭───╯             ╰────╮     ╭──╮
+  ╭──╯╰─╮        ╭╯                      ╰╮╭───╯  ╰──╮
+  ╰─╮   ╰─╮    ╭─╯                        ╰╯  ╭─────╮╰─╮
+    ╰─╮   ╰─╮╭─╯                             ╭╯     │  │
+      │     ╰╯                               ╰╮     │  │
+      │                                       │     │  │
+      ╰╮                                      ╰╮   ╭╯ ╭╯
+       │                     1                 │ ╭─╯ ╭╯
+       ╰╮                                      ╰─╯ ╭─╯
+        ╰╮                                      ╭──╯
+         ╰──╮                                 ╭─╯
+            ╰─╮                              ╭╯
+              ╰─╮                          ╭─╯
+                ╰─╮                      ╭─╯
+                  ╰───╮               ╭──╯
+                      ╰───────────────╯
+
+1 teapot
+(Muse, shown only this drawing, recognised: teapot)
+```
+
+The flamingos: SAM found 27, the biggest is drawn, and Muse recognised it straight away:
+
+```
+╭───────╮
+                                           ╭╯       ╰──╮
+                                          ╭╯  ╭──╮     ╰╮
+                                          ╰╮  ╰╮ ╰─╮    │
+                                           │   │   ╰╮  ╭╯
+                  ╭──────────────────╮     ╰╮  ╰╮   ╰──╯
+              ╭───╯                  ╰──╮   │   ╰╮
+           ╭──╯                         ╰─╮╭╯    │
+        ╭──╯                              ╰╯     │
+     ╭──╯                    1                  ╭╯
+  ╭──╯                                        ╭─╯
+  │                                        ╭──╯
+  ╰──────────╮                           ╭─╯
+             ╰──╮                   ╭────╯
+                │ ╭──╮        ╭─────╯
+              ╭─╳─╯  ╰─╮ ╭────╯
+           ╭──╳─╯      │ │
+         ╭─╯╭─╯        │ │
+        ╭╯╭─╯          ╰╮│
+        │ │             ││
+        ╰╮│             ││
+         ││             ││
+         ╰╯             ╰╯
+
+1 flamingo
+(Muse, shown only this drawing, recognised: flamingo)
+```
+
 ## Weather radar
 
 ```mermaid
@@ -1150,6 +1231,7 @@ python3 main.py --walk "Castelo de São Jorge, Lisbon" --at 38.7139,-9.1406 -v  
 | `evac/pipeline.py` | The fixed emergency reply: parse, locate, route, word, build the Scene |
 | `evac/directions.py` | A walk as a `Trip`: streets and landmarks downloaded once, re-routed at every GPS fix (`move`); one step at a time, to the next intersection, with its turn, a landmark and a map of just that stretch; optional named start |
 | `evac/radar.py` | RainViewer tiles → rain levels, motion, Open-Meteo forecast, its four versions |
+| `evac/sketch.py` | The WhatsApp photo drawing: everything Muse lists, outlined by SAM, drawn together, checked by Muse from a rendered image, repaired up to 3 times |
 | `evac/photo.py` | Muse description; the one object's outline (found by SAM 3.1, shaped by its mask or by colour inside its box; cropped; marching squares) or the borders of the main regions |
 | `evac/sam.py` | SAM 3.1 client on `/v1/responses`: records parsed and masks decoded with Meta's `meta-sam-parser`; boxes only without it; cached in `cache/sam/` |
 | `evac/notice.py` | Alert text → fields (Muse, regex fallback); unit conversion in code |

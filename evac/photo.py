@@ -25,20 +25,26 @@ PROMPT = ("Describe this photo for someone whose phone could not load it. Reply 
           '{"caption": one sentence, "details": [up to 3 short facts a person would want to know, including any '
           'readable text], "object": the one main thing the photo shows, as a short noun phrase an image '
           'segmentation model could find (e.g. "penguin", "fortune cookie", "flamingo"), or "" for a scene with '
-          'no main thing}')
+          'no main thing, "things": [up to 5 separate objects you can see, most important first, each a short noun '
+          'phrase a segmentation model could find; the main object first; objects only, not surfaces or backgrounds '
+          'such as sky, water, grass, ground, walls or floors]}')
 
 
 def describe(jpeg):
     """Muse Spark's caption, details and the main object's name (SAM's prompt). Falls back to an empty description."""
     if not llm.available():
-        return {"caption": "A photo (no description: model not configured).", "details": [], "object": ""}
+        return {"caption": "A photo (no description: model not configured).", "details": [], "object": "", "things": []}
     part = {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(jpeg).decode()}}
     try:
         d = llm.chat_json([{"role": "user", "content": [{"type": "text", "text": PROMPT}, part]}])
     except Exception as e:
-        return {"caption": "A photo (description failed: %s)." % e, "details": [], "object": ""}
+        return {"caption": "A photo (description failed: %s)." % e, "details": [], "object": "", "things": []}
+    obj = str(d.get("object") or "").strip()
+    things = [str(t).strip() for t in d.get("things") or [] if str(t).strip()]
+    if obj and obj not in things:
+        things.insert(0, obj)
     return {"caption": d.get("caption") or "", "details": [str(x) for x in d.get("details") or []][:3],
-            "object": str(d.get("object") or "").strip()}
+            "object": obj, "things": list(dict.fromkeys(things))}
 
 
 # ---------- outlines: the bare minimum of a photo ----------
@@ -271,7 +277,17 @@ def run(data, sms_cols=24, mono_cols=58, description=None):  # the widths the ma
            if kind == "object" else "(outlines of the main shapes)")
     sms = "\n".join(lines + [""] + [r.rstrip(BLANK) or BLANK for r in _trim(sms_rows)] + [key])
     mono = "\n".join([r.rstrip() for r in _trim(mono_rows)] + [key])
+    checked = None
+    if d.get("things") and sam.available() and sam.masks_available():
+        from . import sketch  # WhatsApp: the several things, drawn together and checked by Muse
+        checked = sketch.draw(img, d["things"], mono_cols)
+    if checked:
+        names = checked["items"]
+        mono = "\n".join(checked["rows"] + ["", " · ".join("%d %s" % (i + 1, n) for i, n in enumerate(names)),
+                                             "(Muse, shown only this drawing, recognised: %s)" % (", ".join(checked["recognised"]) or "nothing")])
     return {"caption": d["caption"], "details": d["details"], "object": name, "outline": kind, "shape_from": how,
+            "things": d.get("things", []), "check": checked and {k: checked[k] for k in ("items", "recognised", "seen")},
+            "attempts": checked and [{k: a[k] for k in ("items", "seen", "recognised")} for a in checked["attempts"]],
             "sms": sms, "text": "\n".join(lines), "mono": mono,
             "mono_bytes": len(mono.encode()), "mono_gzip": len(gzip.compress(mono.encode())),
             "photo_bytes": len(data), "width": img.width, "height": img.height, "small": imagemap.shrink(img)}
