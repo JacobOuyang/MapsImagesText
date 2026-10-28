@@ -14,8 +14,6 @@ from .osm import norm_road
 WIDTH = 800
 SS = 2  # draw at 2x and shrink, for smooth lines
 FONT = "/System/Library/Fonts/Helvetica.ttc"
-ORDER_TITLE = {"mandatory": "EVACUATE NOW", "warning": "WARNING", "avoid_area": "AVOID THE AREA",
-               "shelter_in_place": "SHELTER IN PLACE", "lifted": "ORDER LIFTED"}
 # rank -> (casing width, fill width, fill colour) at SS scale
 ROAD_STYLE = {1: (7, 5, "#ffffff"), 2: (10, 7, "#ffffff"), 3: (13, 10, "#fcd68a"), 4: (13, 10, "#fcd68a"),
               5: (15, 12, "#f9b26b"), 6: (15, 12, "#f9b26b")}
@@ -28,11 +26,16 @@ def _font(size, bold=False):
         return ImageFont.load_default()
 
 
-def render(n, g, img, masks, roads, center, radius, user, shelter, path, title=None):
-    """g: the pipeline's routing Grid (north-up); img/masks: its aerial image and terrain masks; path: route cells.
-    center=None draws no hazard (plain directions, with `shelter` as the destination); title overrides the banner."""
+def render(scene, width=WIDTH, fmt="JPEG", quality=82):
+    """Scene -> a picture map. A scene with no zone is plain directions (goal = destination).
+    A small `width` draws the map for that size (same text and line sizes in pixels, so fewer but readable labels)
+    instead of shrinking a big one, which turns labels into mush."""
+    g = grid.Grid(scene.you, scene.half_m, scene.half_m, scene.cols)  # the frame the aerial masks cover
+    g.set_closures(scene.roads, scene.closures)
+    masks, roads, user, shelter = scene.masks or {}, scene.roads, scene.you, scene.goal
+    center, radius = scene.zone if scene.zone else (None, 0)
     w_m, h_m = g.cols * g.cw, g.rows * g.ch
-    W = WIDTH * SS
+    W = width * SS
     H = int(W * h_m / w_m)
     s = W / w_m
     m_per_px = 1 / (s / SS)
@@ -91,9 +94,9 @@ def render(n, g, img, masks, roads, center, radius, user, shelter, path, title=N
         im.paste(zone, (0, 0), zone)
     d = ImageDraw.Draw(im)
 
-    # Route out.
-    if len(path) > 1:
-        rpts = [px(g.cell_center(*c)) for c in path]
+    # Route.
+    if len(scene.route) > 1:
+        rpts = [px(p) for p in scene.route]
         d.line(rpts, fill="#ffffff", width=20, joint="curve")
         d.line(rpts, fill="#1a73e8", width=12, joint="curve")
         (x0, y0), (x1, y1) = rpts[-2], rpts[-1]
@@ -155,11 +158,13 @@ def render(n, g, img, masks, roads, center, radius, user, shelter, path, title=N
     d.text((ux + 24, uy), "You", font=f_pin, fill="#1a73e8", anchor="lm", stroke_width=4, stroke_fill="#ffffff")
 
     # Banner, north arrow, scale, legend, credits.
-    hazard = (n.get("hazard") or "hazard").upper()
-    title = title or "%s  ·  %s" % (hazard, ORDER_TITLE.get(n.get("order"), "ALERT"))
+    title = scene.title
     d.rectangle([0, 0, W, 62 * SS], fill="#c62828")
-    d.text((16 * SS, 10 * SS), title, font=_font(20, bold=True), fill="#ffffff")
-    sub = (n.get("summary") or "")[:110]
+    f_title = _font(20, bold=True)
+    while title and d.textbbox((0, 0), title, font=f_title)[2] > W - 32 * SS:  # fit the banner at any width
+        title = title[:-2].rstrip() + "…"
+    d.text((16 * SS, 10 * SS), title, font=f_title, fill="#ffffff")
+    sub = (scene.summary or "")[:int(width / 7.2)]
     d.text((16 * SS, 38 * SS), sub, font=_font(11), fill="#ffe1e1")
     d.polygon([(W - 30 * SS, 76 * SS), (W - 38 * SS, 98 * SS), (W - 22 * SS, 98 * SS)], fill="#333333")
     d.text((W - 30 * SS, 106 * SS), "N", font=_font(11, bold=True), fill="#333333", anchor="mm")
@@ -170,7 +175,7 @@ def render(n, g, img, masks, roads, center, radius, user, shelter, path, title=N
     d.text((sx0 + nice * s / 2, sy0 - 4 * SS), "%d m" % nice if nice < 1000 else "%g km" % (nice / 1000),
            font=_font(10), fill="#333333", anchor="md")
     items = [("you", "You")] + ([("zone", "Danger zone")] if center else []) + ([("closed", "Road closed")] if spans else [])
-    if len(path) > 1:
+    if len(scene.route) > 1:
         items.append(("route", "Way out" if center else "Route"))
     if shelter:
         items.append(("shelter", "Shelter" if center else "Destination"))
@@ -192,9 +197,25 @@ def render(n, g, img, masks, roads, center, radius, user, shelter, path, title=N
     d.text((W - 12 * SS, H - 4 * SS), "Roads © OpenStreetMap contributors · imagery Esri", font=_font(8),
            fill="#777777", anchor="rd")
 
-    out = im.resize((WIDTH, H // SS), Image.LANCZOS)
+    out = im.resize((width, H // SS), Image.LANCZOS)
     buf = io.BytesIO()
-    out.save(buf, "JPEG", quality=82)
+    out.save(buf, fmt, quality=quality)
     data = buf.getvalue()
-    return {"data_url": "data:image/jpeg;base64," + base64.b64encode(data).decode(), "bytes": len(data),
-            "width": WIDTH, "height": H // SS}
+    return {"data_url": "data:image/%s;base64,%s" % (fmt.lower(), base64.b64encode(data).decode()), "bytes": len(data),
+            "width": width, "height": H // SS, "format": fmt}
+
+
+SMALL = {"width": 400, "fmt": "WEBP", "quality": 50}  # the "small picture" tier: ~5-15 KB
+
+
+def shrink(data_or_img, width=400, quality=50):
+    """For pictures that can't be redrawn (a photo, the radar): resize to `width` and save as WebP."""
+    im = data_or_img if isinstance(data_or_img, Image.Image) else Image.open(io.BytesIO(data_or_img))
+    im = im.convert("RGB")
+    if im.width > width:
+        im = im.resize((width, round(im.height * width / im.width)), Image.LANCZOS)
+    buf = io.BytesIO()
+    im.save(buf, "WEBP", quality=quality)
+    data = buf.getvalue()
+    return {"data_url": "data:image/webp;base64," + base64.b64encode(data).decode(), "bytes": len(data),
+            "width": im.width, "height": im.height, "format": "WEBP"}

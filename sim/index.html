@@ -67,7 +67,7 @@
   .clear:hover { border-color: #c4271b; }
   .tabsec { display: none; gap: 20px 28px; padding: 16px 24px 24px; flex-wrap: wrap; align-items: flex-start; }
   body[data-tab="emergency"] #sec-emergency, body[data-tab="photo"] #sec-photo,
-  body[data-tab="radar"] #sec-radar, body[data-tab="walk"] #sec-walk { display: flex; }
+  body[data-tab="radar"] #sec-radar, body[data-tab="walk"] #sec-walk, body[data-tab="ask"] #sec-ask { display: flex; }
   .controls { width: auto; flex-basis: 100%; }
   .controls p { margin: 0 0 8px; color: var(--quiet); }
   .row2 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
@@ -100,6 +100,13 @@
   .hi .hbody { padding: 14px; font: 14px/20px system-ui; white-space: pre-wrap; }
   .hi img { width: 100%; display: block; border-radius: 8px; margin-top: 10px; border: 1px solid var(--line); }
   .hi .empty { color: var(--quiet); padding: 40px 14px; text-align: center; }
+  .stack { display: flex; flex-direction: column; gap: 14px; }
+  .stack .hi { height: auto; max-height: 420px; }
+  .hi.small { width: 440px; }
+  .hi.small img { width: auto; max-width: 100%; image-rendering: auto; }  /* shown at its real pixel size */
+  .ccard.chosen h2::after { content: "  ← sent on this connection"; color: #1a8f3c; font-size: 12px; font-weight: 600; }
+  .ccard.chosen .phone, .ccard.chosen .wa-pane, .ccard.chosen .hi { outline: 3px solid #34c759; outline-offset: 2px; }
+  .conn { margin-left: 16px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--quiet); }
 
   pre.log { margin: 0; max-height: 220px; overflow: auto; font: 11px/15px ui-monospace, monospace; white-space: pre-wrap; color: #333; }
 </style>
@@ -113,6 +120,14 @@
     <button class="tab" data-tab="photo">Photo</button>
     <button class="tab" data-tab="radar">Weather radar</button>
     <button class="tab" data-tab="walk">Directions abroad</button>
+    <button class="tab" data-tab="ask">Ask anything</button>
+    <label class="conn">Person's connection:
+      <select id="conn">
+        <option value="0">No data (SMS only)</option>
+        <option value="2000">A trickle (~2 KB per message)</option>
+        <option value="25000" selected>Slow (~25 KB)</option>
+        <option value="Infinity">Good</option>
+      </select></label>
     <button class="clear" id="clear" title="Clear every thread, result and the log">Clear</button>
   </div>
 </header>
@@ -198,6 +213,23 @@
   <div class="triple" id="walkOut"></div>
 </section>
 
+<section class="tabsec" id="sec-ask">
+  <div class="panel controls">
+    <h3>Ask anything: Muse picks the tools</h3>
+    <p>One message in; Muse Spark decides which tools to call (alert reader, walking route, radar, photo, places...), and the results come back in every version. Alerts always go through the fixed, tested emergency reply.</p>
+    <div class="chips" id="askFrom"></div>
+    <div class="chips" id="askExamples" style="margin-top:8px"></div>
+    <div class="row2">
+      <input type="text" id="askText" aria-label="Message" placeholder="Type a message…" style="width:520px">
+      <button class="go" id="askGo">Send</button>
+      <label class="inline"><input type="checkbox" id="askPhoto"> attach the Flamingos photo</label>
+      <span class="status-line" id="askStatus"></span>
+    </div>
+    <div class="status-line" id="askTools" style="margin-top:6px"></div>
+  </div>
+  <div class="triple" id="askOut"></div>
+</section>
+
 <script>
 const TEMPLATES = {
   'NYC fire': 'NotifyNYC (DRILL - fictional sample): FDNY is on scene of a 5-alarm fire at 5 Av and W 47 St, Manhattan. Expect road closures and smoke in the area. Avoid 5 Av between W 42 St and W 50 St.',
@@ -264,24 +296,39 @@ function renderWa(box, items) {
   box.scrollTop = box.scrollHeight;
 }
 
-// One result, three ways. r: {sms, parts, plain, mono, monoBytes, monoGzip, img: {data_url, bytes, width, height}, imgLabel}
+// One result, four ways. r: {sms, parts, plain, monoBytes, monoGzip, img, small, imgLabel}; each picture is
+// {data_url, bytes, width, height, format}. The card the person's connection can afford is highlighted.
 function triple(box, items, r, labels) {
   box.innerHTML = '';
-  const card = (title, em, sub) => { const c = el('div', 'ccard'), h = el('h2', '', title); h.appendChild(el('em', '', ' · ' + em));
-    c.append(h, el('div', 'sub', sub)); box.appendChild(c); return c; };
-  const low = card('Low data', 'SMS on an iPhone', r && r.parts ? `${r.parts} SMS part${r.parts === 1 ? '' : 's'} (about ${kb(r.parts * 140)}). Works with no mobile data at all; the iPhone joins the parts into one bubble.` : 'Works with no mobile data at all.');
+  const card = (parent, title, em, sub) => { const c = el('div', 'ccard'), h = el('h2', '', title); h.appendChild(el('em', '', ' · ' + em));
+    c.append(h, el('div', 'sub', sub)); parent.appendChild(c); return c; };
+  const low = card(box, 'Low data', 'SMS on an iPhone', r && r.parts ? `${r.parts} SMS part${r.parts === 1 ? '' : 's'} (about ${kb(r.parts * 140)}). Works with no mobile data at all; the iPhone joins the parts into one bubble.` : 'Works with no mobile data at all.');
   const phone = el('div', 'phone'); phone.innerHTML = `<div class="status"><span>9:41</span><span>●●● ▮</span></div><div class="contact"><div class="avatar alert">${labels.initials}</div><div class="name">${labels.from}</div></div>`;
   const th = el('div', 'thread'); phone.appendChild(th); low.appendChild(phone);
-  const mid = card('Medium data', 'WhatsApp on a laptop', r && r.monoBytes ? `${labels.what} is ${kb(r.monoBytes)} of text (${kb(r.monoGzip)} compressed). Needs only a trickle of data, like free in-flight messaging.` : 'Needs only a trickle of data, like free in-flight messaging.');
+  const mid = card(box, 'Medium data', 'WhatsApp text', r && r.monoBytes ? `${labels.what} is ${kb(r.monoBytes)} of text (${kb(r.monoGzip)} compressed). Needs only a trickle of data, like free in-flight messaging.` : 'Needs only a trickle of data, like free in-flight messaging.');
   const pane = el('div', 'wa-pane'); pane.innerHTML = `<div class="wa-head"><div class="avatar alert">${labels.initials}</div><div><b>${labels.from}</b><small>${labels.sub}</small></div></div>`;
   const wt = el('div', 'lthread'); pane.appendChild(wt); mid.appendChild(pane);
-  const ratio = r && r.img && r.monoGzip ? `, ${Math.round(r.img.bytes / r.monoGzip)}× the compressed text` : '';
-  const high = card('High data', labels.hiName, r && r.img ? `${r.imgLabel || 'Picture'} is ${kb(r.img.bytes)} (${r.img.width}×${r.img.height} JPEG)${ratio}. Needs a working connection.` : 'Needs a working connection to load a picture.');
-  const hi = el('div', 'hi'); hi.appendChild(el('div', 'hbar', labels.hiBar)); high.appendChild(hi);
   render(th, items.map(it => it.mono !== undefined ? {dir: 'in', text: it.sms} : it));
   renderWa(wt, items);
-  if (r && r.img) { const b = el('div', 'hbody', r.plain); const im = el('img'); im.src = r.img.data_url; im.alt = labels.alt; b.appendChild(im); hi.appendChild(b); }
-  else hi.appendChild(el('div', 'empty', r && r.error ? r.error : labels.empty));
+
+  const stack = el('div', 'stack'); box.appendChild(stack);
+  const pic = (c, p, cls, empty) => {
+    const hi = el('div', 'hi' + (cls ? ' ' + cls : '')); hi.appendChild(el('div', 'hbar', labels.hiBar)); c.appendChild(hi);
+    if (p) { const b = el('div', 'hbody', r.plain); const im = el('img'); im.src = p.data_url; im.alt = labels.alt; b.appendChild(im); hi.appendChild(b); }
+    else hi.appendChild(el('div', 'empty', r && r.error ? r.error : empty));
+  };
+  const ratio = (p) => r && r.monoGzip ? `, ${Math.round(p.bytes / r.monoGzip)}× the compressed text` : '';
+  const sm = card(stack, 'Small picture', labels.smallName, r && r.small ? `${kb(r.small.bytes)} (${r.small.width}×${r.small.height} ${r.small.format})${ratio(r.small)}. ${labels.smallHow} For a slow connection.` : 'For a slow connection.');
+  pic(sm, r && r.small, 'small', labels.empty);
+  const high = card(stack, 'High data', labels.hiName, r && r.img ? `${r.imgLabel || 'Picture'} is ${kb(r.img.bytes)} (${r.img.width}×${r.img.height} JPEG)${ratio(r.img)}. Needs a working connection.` : 'Needs a working connection to load a picture.');
+  pic(high, r && r.img, '', labels.empty);
+
+  // Richest version that fits the person's connection (the medium tier counts its compressed size).
+  const budget = Number($('conn').value);
+  const tiers = [[low, 0], [mid, r && r.monoGzip], [sm, r && r.small && r.small.bytes], [high, r && r.img && r.img.bytes]];
+  let pick = low;
+  for (const [c, size] of tiers) if (size !== undefined && size !== null && size <= budget) pick = c;
+  pick.classList.add('chosen');
 }
 
 // ---------- Emergency ----------
@@ -289,9 +336,10 @@ function refresh() {
   render($('erThread'), erThread);
   const items = people[current].thread.map(it => it.dir === 'in' && it.parts ? {dir: 'in', text: it.text, sms: it.text, plain: it.plain, mono: it.laptop ? it.laptop.text : undefined} : it);
   const r = [...people[current].thread].reverse().find(it => it.dir === 'in' && it.parts);
-  triple($('emTriple'), items, r && {parts: r.parts, plain: r.plain, monoBytes: r.laptop && r.laptop.bytes, monoGzip: r.laptop && r.laptop.gzip, img: r.image, imgLabel: 'Picture map'},
+  triple($('emTriple'), items, r && {parts: r.parts, plain: r.plain, monoBytes: r.laptop && r.laptop.bytes, monoGzip: r.laptop && r.laptop.gzip, img: r.image, small: r.small, imgLabel: 'Picture map'},
     {initials: 'ER', from: 'Emergency Response', sub: 'Business account · alerts for your area', what: 'Map', hiName: 'picture map',
-     hiBar: 'Emergency alert · map for your location', alt: 'Map of the incident, closed roads and your way out', empty: 'Send an alert to see the picture map.'});
+     hiBar: 'Emergency alert · map for your location', alt: 'Map of the incident, closed roads and your way out', empty: 'Send an alert to see the picture map.',
+     smallName: 'map drawn at 400 px', smallHow: 'Drawn at this size, not shrunk, so labels stay readable.'});
   $('userWho').textContent = people[current].name + ' · the same reply three ways (below)';
   $('lat').value = people[current].gps[0]; $('lon').value = people[current].gps[1];
   document.querySelectorAll('#places .chip').forEach(c => c.classList.toggle('on',
@@ -308,7 +356,7 @@ async function deliver(key, alertText) {
   const res = await post('/api/alert', {text: alertText, lat: p.gps[0], lon: p.gps[1]});
   const i = p.thread.indexOf(typing); if (i >= 0) p.thread.splice(i, 1);
   if (res.message) {
-    p.thread.push({dir: 'in', text: res.message, plain: res.text || res.message, laptop: res.laptop, image: res.image, parts: res.parts});
+    p.thread.push({dir: 'in', text: res.message, plain: res.text || res.message, laptop: res.laptop, image: res.image, small: res.small, parts: res.parts});
     erThread.push({kind: 'meta', text: `Reply to ${p.name}: ${res.parts} SMS part${res.parts === 1 ? '' : 's'}, ${res.seconds} s`});
   } else {
     p.thread.push({kind: 'meta', text: 'Reply failed: ' + res.error});
@@ -335,14 +383,20 @@ function textMap() {
 }
 
 // ---------- Photo, radar, directions ----------
-const results = {photo: null, radar: null, walk: null};
+const results = {photo: null, radar: null, walk: null, ask: null};
 const LABELS = {
   photo: {initials: 'Fr', from: 'Friend', sub: 'Photo sent to you', what: 'Text version of the photo', hiName: 'the photo itself',
-          hiBar: 'The original photo', alt: 'The photo your friend sent', empty: 'Pick a sample photo or upload one.'},
+          hiBar: 'The original photo', alt: 'The photo your friend sent', empty: 'Pick a sample photo or upload one.',
+          smallName: 'photo at 400 px', smallHow: 'The photo shrunk and saved as WebP.'},
   radar: {initials: 'WX', from: 'Weather by text', sub: 'Text RADAR for rain near you', what: 'Radar map', hiName: 'radar picture',
-          hiBar: 'Weather radar · around your location', alt: 'Weather radar around your location', empty: 'Pick a place and text RADAR.'},
+          hiBar: 'Weather radar · around your location', alt: 'Weather radar around your location', empty: 'Pick a place and text RADAR.',
+          smallName: 'radar at 400 px', smallHow: 'The radar picture shrunk and saved as WebP.'},
+  ask: {initials: 'AI', from: 'Ask by text', sub: 'Muse Spark with tools', what: 'Text version', hiName: 'picture',
+        hiBar: 'Picture', alt: 'Picture for the reply', empty: 'Send a message.', smallName: '400 px picture',
+        smallHow: 'Maps are drawn at this size; photos and radar are shrunk.'},
   walk: {initials: 'Go', from: 'Directions by text', sub: 'Walking directions from your GPS', what: 'Map', hiName: 'picture map',
-         hiBar: 'Walking directions · map', alt: 'Walking route on a street map', empty: 'Pick a starting point and a destination.'},
+         hiBar: 'Walking directions · map', alt: 'Walking route on a street map', empty: 'Pick a starting point and a destination.',
+         smallName: 'map drawn at 400 px', smallHow: 'Drawn at this size, not shrunk, so labels stay readable.'},
 };
 function showResult(kind) {
   const x = results[kind], box = $(kind + 'Out');
@@ -353,7 +407,7 @@ function showResult(kind) {
   else if (x.res.error) items.push({kind: 'meta', text: 'Failed: ' + x.res.error});
   else items.push({dir: 'in', sms: x.res.sms, plain: x.res.text, mono: x.res.mono});
   const r = x.pending || x.res.error ? (x.res && x.res.error ? {error: x.res.error} : null) :
-    {parts: x.res.parts, plain: x.res.text, monoBytes: x.res.mono_bytes, monoGzip: x.res.mono_gzip, img: x.img || x.res.image, imgLabel: x.imgLabel};
+    {parts: x.res.parts, plain: x.res.text, monoBytes: x.res.mono_bytes, monoGzip: x.res.mono_gzip, img: x.img || x.res.image, small: x.res.small, imgLabel: x.imgLabel};
   triple(box, items, r, LABELS[kind]);
 }
 async function sendPhoto(dataUrl, name, bytes, w, h) {
@@ -389,6 +443,22 @@ async function sendWalk() {
   Object.assign(results.walk, {pending: false, res});
   $('walkStatus').textContent = res.error ? '' : `Done in ${res.seconds} s`;
   showResult('walk');
+}
+
+let askAt = [41.9010, 12.5016];
+async function sendAsk() {
+  const text = $('askText').value.trim();
+  if (!text) { $('askStatus').textContent = 'Type a message first.'; return; }
+  let image = null;
+  if ($('askPhoto').checked) image = await fetch('/api/sample?name=Flamingos').then(r => r.blob())
+    .then(b => new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.readAsDataURL(b); })).catch(() => null);
+  results.ask = {request: `You are at ${askAt[0].toFixed(4)}, ${askAt[1].toFixed(4)}` + (image ? ' · photo attached' : ''), out: text, pending: true};
+  showResult('ask'); $('askStatus').textContent = 'Muse is choosing tools…'; $('askTools').textContent = '';
+  const res = await post('/api/message', {text, lat: askAt[0], lon: askAt[1], image});
+  Object.assign(results.ask, {pending: false, res});
+  $('askStatus').textContent = res.error ? '' : `Done in ${res.seconds} s`;
+  $('askTools').textContent = res.tools ? 'Tools called: ' + (res.tools.map(c => c.tool + '(' + Object.values(c.args).join(', ') + ')').join(', ') || 'none') : '';
+  showResult('ask');
 }
 
 // ---------- wire up ----------
@@ -430,8 +500,18 @@ for (const [name, [ll, dest]] of Object.entries(WALK_FROM)) chip('walkFrom', nam
 });
 document.querySelector('#walkFrom .chip').classList.add('on'); $('walkTo').value = WALK_FROM['Lisbon: Rossio station'][1];
 $('walkGo').onclick = sendWalk;
+const ASK_FROM = {'Rome: Termini': [41.9010, 12.5016], 'Lisbon: Rossio': [38.7139, -9.1406], 'NYC: 47 St & Park Av': [40.75491, -73.97441]};
+for (const [name, ll] of Object.entries(ASK_FROM)) chip('askFrom', name, c => {
+  askAt = ll; document.querySelectorAll('#askFrom .chip').forEach(x => x.classList.toggle('on', x === c)); });
+document.querySelector('#askFrom .chip').classList.add('on');
+for (const q of ['Will it rain on me in the next hour?', 'How do I walk to the Colosseum?', 'Is it going to rain on my walk to the Colosseum?',
+                 'How far is the Trevi Fountain?', TEMPLATES['NYC fire']])
+  chip('askExamples', q.length > 50 ? 'NYC fire alert (pick NYC first)' : q, () => { $('askText').value = q; });
+$('askGo').onclick = sendAsk;
+$('askText').onkeydown = e => { if (e.key === 'Enter') sendAsk(); };
 $('walkTo').onkeydown = e => { if (e.key === 'Enter') sendWalk(); };
 
+$('conn').onchange = () => { refresh(); for (const k of Object.keys(results)) showResult(k); };
 document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
   document.body.dataset.tab = t.dataset.tab;
   document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
@@ -441,7 +521,7 @@ $('clear').onclick = () => {
   for (const p of Object.values(people)) p.thread = p.thread.filter(it => it.kind === 'typing');  // replies still on their way stay
   $('log').textContent = 'Nothing sent yet.';
   for (const k of Object.keys(results)) { results[k] = null; showResult(k); }
-  for (const id of ['photoStatus', 'radarStatus', 'walkStatus']) $(id).textContent = '';
+  for (const id of ['photoStatus', 'radarStatus', 'walkStatus', 'askStatus', 'askTools']) $(id).textContent = '';
   refresh();
 };
 refresh();

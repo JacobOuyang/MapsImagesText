@@ -1,115 +1,271 @@
 # MapsImagesText
 
-Pictures for people who can only receive text. A server with a good connection does the heavy work (reading an alert, looking at a photo, reading the weather radar, routing on street data) and sends the result back as text that still works as a picture: a map or sketch drawn in characters. It comes in three sizes, one for each kind of connection:
+**Pictures for people who can only receive text.** A server with a good connection does the heavy work (reading an emergency alert, looking at a photo, reading the weather radar, routing on street data) and sends the result back as text that still works as a picture: a map or sketch drawn in characters. The same reply exists in four sizes, and the person gets the richest one their connection can carry.
 
-| | Channel | What arrives | Typical size |
+| Version | Channel | What arrives | Typical size |
 | --- | --- | --- | --- |
-| **Low data** | SMS on an iPhone | instructions + a small text map in characters that line up in iPhone Messages | 6 to 12 SMS parts (~1 to 1.7 KB) |
-| **Medium data** | WhatsApp (or any app that shows monospace text) | instructions + a 58-column monospace map | 2 to 5 KB of text, 0.3 to 1 KB compressed |
-| **High data** | anything that loads images | an ordinary picture map or the photo itself | 55 to 180 KB |
+| **Low data** | SMS on an iPhone | the message + a small map in characters that line up in iPhone Messages | 6 to 12 SMS parts (~1 to 1.7 KB) |
+| **Medium data** | WhatsApp (any app that shows monospace text) | the message + a 58-column monospace map | 2 to 5 KB of text, 0.4 to 1.1 KB compressed |
+| **Small picture** | a slow connection | a 400 px WebP map drawn for that size, or the photo/radar shrunk | 4.5 to 23 KB |
+| **High data** | a working connection | an ordinary picture map, or the photo itself | 50 to 180 KB |
 
-It has four modes, one per tab in the simulator:
+Ask it anything in one message; **Muse Spark** decides which tools to call:
 
-- **Emergency:** an alert text (fire, gas leak, wildfire, flood) plus the person's GPS gives "are you affected, what to avoid, which way out".
-- **Photo:** a photo that won't download comes back as a description plus the photo drawn in text.
-- **Weather radar:** "is rain coming?" comes back as the latest radar around you plus a 2-hour forecast for your spot.
-- **Directions abroad:** walking directions on a capped roaming plan, routed on real street data from your GPS.
+- "Is it going to rain on my walk to the Colosseum?" → radar + walking route → one reply with the route map
+- an emergency alert (fire, gas leak, wildfire, flood) → the fixed, tested emergency reply: are you affected, what to avoid, which way out
+- "my friend sent me this, what is it?" + a photo that won't download → a description + the photo drawn in text
+- "How far is the Trevi Fountain?" → a one-line answer
 
 Built on the Meta Model API (Muse Spark; SAM 3.1 planned).
 
-## How it fits together
+Contents: [Architecture](#architecture) · [The router](#the-router-one-message-in-muse-picks-the-tools) · [Tools](#tools) · [Scene and renderers](#scene-one-description-four-drawings) · [Emergency](#emergency-alerts) · [Photo](#photos-that-wont-load) · [Radar](#weather-radar) · [Directions](#walking-directions-abroad) · [Text-map rules](#why-the-text-maps-line-up) · [Simulator](#try-it-the-simulator) · [Command line](#run-it-from-the-command-line) · [Code](#code) · [Limits](#known-limits)
+
+## Architecture
 
 ```mermaid
 flowchart LR
-  subgraph Page["sim/index.html (browser)"]
-    T1[Emergency tab]
-    T2[Photo tab]
-    T3[Weather radar tab]
-    T4[Directions abroad tab]
+  subgraph In["In"]
+    M["Message + GPS<br/>(+ photo)"]
   end
-  subgraph Server["sim/server.py"]
-    A["/api/alert"]
-    P["/api/photo"]
-    R["/api/radar"]
-    D["/api/directions"]
+  subgraph Router["evac/router.py"]
+    MU["Muse Spark<br/>picks tools"]
+    RUN["Run tool calls<br/>in parallel"]
+    TXT["Muse writes<br/>the reply text"]
   end
-  T1 --> A --> PL[evac/pipeline.py]
-  T2 --> P --> PH[evac/photo.py]
-  T3 --> R --> RA[evac/radar.py]
-  T4 --> D --> DI[evac/directions.py]
-
-  PL --> TM["textmap.py: SMS map"]
-  PL --> LM["laptopmap.py: monospace map"]
-  PL --> IM["imagemap.py: picture map"]
-  DI --> TM
-  DI --> LM
-  DI --> IM
-
-  subgraph Outside["Outside services"]
-    MUSE["Meta Model API: Muse Spark"]
-    NOM["Nominatim: geocoding"]
-    OVP["OpenStreetMap Overpass: roads, paths, towns"]
-    ESRI["Esri tiles: aerial photo, grey basemap"]
-    RV["RainViewer: radar tiles"]
-    OM["Open-Meteo: 15-minute rain forecast"]
+  subgraph Tools["evac/tools.py (10 tools)"]
+    T1[emergency_reply]
+    T2[walking_route]
+    T3[rain_radar]
+    T4[describe_photo]
+    T5["geocode, streets,<br/>nearby_towns, ..."]
   end
-  PL -.-> MUSE & NOM & OVP & ESRI
-  PH -.-> MUSE
-  RA -.-> RV & OM & OVP & ESRI & MUSE
-  DI -.-> NOM & OVP & ESRI & MUSE
-
-  TM --> OUT1["Low: SMS text"]
-  LM --> OUT2["Medium: WhatsApp text"]
-  IM --> OUT3["High: JPEG"]
+  subgraph Store["ctx.store"]
+    S["bulky results:<br/>routes, roads, radar grids,<br/>a whole emergency reply"]
+  end
+  SC["Scene<br/>(evac/scene.py)"]
+  subgraph Render["evac/render.py"]
+    R1["sms()"]
+    R2["mono()"]
+    R3["small()"]
+    R4["picture()"]
+  end
+  M --> MU --> RUN --> Tools
+  Tools -- "short JSON" --> MU
+  Tools --> S --> SC
+  MU --> TXT --> SC
+  SC --> R1 & R2 & R3 & R4
+  R1 --> O1["Low: SMS"]
+  R2 --> O2["Medium: WhatsApp text"]
+  R3 --> O3["Small: 400 px WebP"]
+  R4 --> O4["High: JPEG"]
 ```
 
-Every mode returns the same three versions, and the page shows them side by side with their real sizes. Everything slow or flaky is cached (`cache/osm/` for road data) or has a fallback: no model key means regex parsing and template text; no road data means routing on imagery only; no town names means the radar map is drawn without them.
+Three ideas hold it together:
 
-### What Muse Spark does, and doesn't
+1. **Tools return two things.** A short JSON summary goes back to Muse (a distance, the steps, "no rain in the next 2 hours"). The bulky result (a street network, a route, a radar grid, a whole emergency reply) stays in the request's `ctx.store`. The model never has to read thousands of road points, and what gets drawn is exactly what the tools found.
+2. **One Scene, four drawings.** Whatever was asked, the result becomes one `Scene`: where you are, the roads, closures, danger zone, the goal (a shelter or a destination), the route, terrain and the text. Each version is drawn from that same Scene by `evac/render.py`, so the SMS map, the WhatsApp map and the pictures always show the same route.
+3. **The model plans and words; code computes and draws.** Muse chooses tools and writes the message. Distances, routes, closures, every map and legend are code. For emergencies the model only routes the alert to the fixed, tested reply and never rewrites it.
 
-| Muse does | Code does |
+Everything slow or flaky is cached (`cache/osm/` for road data) or has a fallback: no model key means keyword routing, regex alert parsing and template text; a failed tool comes back to the model as an error it can work around; no road data means routing on imagery only.
+
+## The router: one message in, Muse picks the tools
+
+```mermaid
+sequenceDiagram
+  participant P as Person (text + GPS)
+  participant R as router.handle
+  participant M as Muse Spark
+  participant T as tools.call
+  participant S as Scene + render
+  P->>R: "Is it going to rain on my walk to the Colosseum?"
+  R->>M: system prompt + message + 10 tool descriptions
+  M-->>R: tool_calls: rain_radar(), walking_route("Colosseum, Rome")
+  par in parallel
+    R->>T: rain_radar
+    T-->>R: rain here: none, nearest 31 km NE, forecast: no rain
+  and
+    R->>T: walking_route
+    T-->>R: 1479 m, 20 min, steps
+  end
+  R->>M: tool results (short JSON)
+  M-->>R: reply text (no more tool calls)
+  R->>S: walking-route Scene + Muse's text
+  S-->>P: SMS · WhatsApp text · small picture · picture
+```
+
+`router.handle(message, you, image=None)`:
+
+1. **Plan.** Muse Spark gets a system prompt (the person's GPS, whether a photo is attached, "keep every number exactly", "never list every forecast value", "for any emergency alert call `emergency_reply` and nothing else") and the tool descriptions. It answers with tool calls. Up to 3 rounds, so it can look something up and then act on it.
+2. **Run.** Tool calls in a round run in parallel threads (radar and routing each take seconds). Each result goes back to Muse as a `tool` message, truncated to 4,000 characters.
+3. **Write.** When Muse stops calling tools, its reply is the message text. For an emergency the fixed reply's text is used verbatim instead.
+4. **Draw.** The router picks what to draw from what the tools kept, in this order: an emergency reply, a walking route, the radar, a photo. Map scenes are drawn by `evac/render.py`; radar and photos still bring their own four versions until they become Scenes too.
+
+Without a model key, keyword rules pick one tool (`_run_rules`): a photo → `describe_photo`; a long text mentioning an alert, fire, flood, leak or evacuation → `emergency_reply`; "rain", "radar" or "weather" → `rain_radar`; "walk to X" or "directions to X" → `walking_route`.
+
+### Real runs
+
+Rome Termini, "Is it going to rain on my walk to the Colosseum?" (25.1 s; map: walking route):
+
+```
+tools called: rain_radar(), walking_route(Colosseum, Rome)
+
+No rain in the next 2 hours.
+Your walk is 1479 m, about 20 min.
+Colosseum is 1377 m SW.
+Head SW on Via Giovanni Giolitti ~690 m.
+Then head SW on unnamed road ~780 m.
+
+MAP (north is up):
+== ===========
+==============
+==============
+ ==== v  🔴 ===== 
+====<<========
+== S==========
+===== ========
+
+= open road
+< > Λ v route
+🔴 you
+S destination: Colosseum
+```
+
+Rome Termini, "How far is the Trevi Fountain?":
+
+```
+tools called: geocode(Trevi Fountain)
+
+Trevi Fountain is 1516 m to the W.
+About a 20 min walk from you.
+
+1.9 s; map: None
+```
+
+A photo attached, "my friend sent me this, what is it?":
+
+```
+tools called: describe_photo()
+
+It shows pink flamingos wading in shallow water.
+About two dozen birds standing and walking together.
+Warm golden light with light mist over the water.
+Calm wetland scene at sunrise or sunset.
+
+$#######00000000##
+#####000¤¤¤¤¤¤¤¤¤0
+000¤¤¤¤¤××××××××+×
+¤×××××¤×××××××××××
+¤¤×¤¤¤¤×¤××¤¤××××¤
+(the photo, drawn in text)
+```
+
+Before building the router, Muse's tool choice was tested on seven requests: it picked the right tools every time, in 0.6 to 1.3 s per decision.
+
+## Tools
+
+`evac/tools.py`. A function becomes a tool with one decorator line: a plain-language description and its parameters, which become the JSON schema Muse reads.
+
+```python
+@tool("Walking route from the person to a destination along real streets and footpaths, with turn-by-turn steps.",
+      destination=("string", "Where to, e.g. 'Colosseum, Rome'", True))
+def walking_route(ctx, destination):
+    ...
+    ctx.store["walking_route"] = res          # bulky: kept for the Scene
+    return {"distance_m": ..., "minutes": ..., "steps": ...}   # short: goes to the model
+```
+
+| Tool | What it returns to the model | What it keeps for drawing | Backed by |
+| --- | --- | --- | --- |
+| `emergency_reply(text)` | affected?, inside the zone?, the message, steps | the whole emergency reply (all four versions) | `pipeline.run` |
+| `read_alert(text)` | hazard, order, place, radius as written, shelters, closed segments | the parsed alert | `notice.parse` (Muse, regex fallback) |
+| `locate_incident(place)` | lat/lon, distance, direction | | `pipeline.locate` (intersections from road data) |
+| `walking_route(destination)` | distance, minutes, steps, where the destination is | the walking-route Scene | `directions.run` |
+| `streets(radius_m, walking)` | how many streets, the main ones | the street network | Overpass |
+| `geocode(query)` | lat/lon, distance, direction | | Nominatim |
+| `nearby_towns(radius_km)` | towns with distance and direction | the town list | Overpass |
+| `rain_radar()` | rain over you, nearest rain, motion, forecast summary | radar grids and its four versions | RainViewer + Open-Meteo |
+| `rain_forecast(lat, lon)` | 15-minute rain for 2 hours at one spot | the forecast | Open-Meteo |
+| `describe_photo()` | caption, details, subject boxes | the description | Muse Spark (vision) |
+
+`tools.call(ctx, name, args)` never raises: a missing argument, an unknown tool or a failing service (Overpass timing out, for example) comes back as `{"error": ...}`, which the model reads and works around. Every call is logged in `ctx.log`.
+
+## Scene: one description, four drawings
+
+`evac/scene.py` is what a mode produces and every renderer reads. Renderers never fetch data or route; they draw what is in the Scene.
+
+| Field | Meaning |
 | --- | --- |
-| Reads the alert into fields: hazard, order, place, radius **as written**, shelters, closed road segments | Converts units, geocodes, finds intersections in road data, decides "affected or not" |
-| Looks at a photo: caption, details, boxes around the main subjects | Draws the photo in characters, boxes the subjects, sizes everything |
-| Rewrites the drafts (instructions, directions, weather facts) into calm short text, told to keep every number and name | Routing, distances, directions, every map, every legend |
+| `you` | the reader's GPS; every map is centred here |
+| `half_m` | half the width of the view, in metres |
+| `text` | the message (instructions, directions, Muse's reply) |
+| `roads`, `closures` | OSM roads; closed segments `{road, from, to}` |
+| `hazard`, `zone` | e.g. `"fire"`; `((lat, lon), radius_m)` of the danger zone. No zone = plain directions |
+| `goal` | `(name, (lat, lon))`: a shelter, or a destination when there is no zone |
+| `route` | `[(lat, lon), ...]` from you to the goal or to safety |
+| `aerial`, `masks` | the aerial photo of the view and its terrain masks (water, trees) |
+| `walk` | routed on foot: off-street cells cost more, footpaths aren't drawn |
+| `street_grid` | a Manhattan intersection: the SMS map uses the avenue/street grid |
+| `title`, `summary` | the picture's banner |
+| `cols` | width of the canonical frame (the SMS routing grid, 40 columns) |
 
-Muse never sees or edits a map, so it can't break one. It runs with `reasoning_effort: minimal` (1 to 2.5 s per call).
+`evac/render.py`:
 
-## Emergency mode
+| Function | Version | How |
+| --- | --- | --- |
+| `sms(scene)` | low data | `textmap.py`: Manhattan street grid, or the routing grid shrunk to 14 to 20 columns; legend; returns the full SMS |
+| `mono(scene, cols)` | medium data | `laptopmap.py`: line-drawn roads, shaded zone, labels, route arrows, 58 columns for WhatsApp |
+| `small(scene)` | slow connection | `imagemap.py` at 400 px, WebP quality 50: **drawn** at that size, so labels stay readable |
+| `picture(scene)` | high data | `imagemap.py` at 800 px, JPEG: an agency-style map |
+
+Moving the emergency and directions modes onto the Scene was checked against the previous code on five cases (NYC fire, gas leak, wildfire, flood, Lisbon walk) with the model switched off: the SMS replies and the pictures came out byte-for-byte identical. The WhatsApp maps changed only where they now draw the shared route instead of computing their own.
+
+### Choosing the version
+
+The simulator's **Person's connection** setting is a data budget per message: no data (0) → SMS; a trickle (~2 KB) → WhatsApp text, counted at its compressed size; slow (~25 KB) → the small picture; good → the full picture. The richest version that fits is highlighted as "sent on this connection". On a phone the app could measure its own speed; over SMS the server can't, so this is a per-person setting.
+
+**Why draw small pictures instead of shrinking big ones:** shrinking the 800 px NYC map to 200 px gives 3.9 KB but its 11 px street names become unreadable smudges. Drawn at 400 px, text and lines keep their pixel size, fewer labels fit (biggest roads first, no overlaps), and the map stays legible at 17 KB. Photos and radar are pictures to begin with, so those are simply shrunk (4.5 KB for the radar, 3.5 KB for a misty photo).
+
+## Emergency alerts
+
+The one fixed path: `emergency_reply` runs `pipeline.run`, which is deterministic apart from Muse reading the alert and rewording the instructions.
 
 ```mermaid
 flowchart TD
-  A[Alert text + person's GPS] --> B["Muse Spark: alert to fields<br/>(numbers and street names copied as written)"]
+  A[Alert text + person's GPS] --> B["Muse Spark: alert to fields<br/>(numbers, units and street names copied as written)"]
   B --> C["Code: units to metres<br/>no radius = 150 m point incident"]
   C --> D["Find the incident<br/>Nominatim as written, then the crossing of the two streets in OSM road data"]
   D --> E{"Distance from person"}
   E -- "far (> zone + 3 km)" --> F["One line: 'You are 3962 km outside the fire zone. No action needed.'"]
   E -- "inside or near" --> G["Grid around the person<br/>aerial tiles → terrain, OSM roads, closed segments, hazard circle"]
-  G --> H["Route: Dijkstra, roads cheap, closures 60×, cost rises toward the hazard centre<br/>to the shelter, or to safe cells if inside"]
+  G --> H["Route: Dijkstra; roads cheap, closures 60×, cost rises toward the hazard centre<br/>to the shelter, or to safe cells if inside"]
   H --> I["Directions: 'Head E on Alma Real Drive ~2.5 km'"]
   I --> J["Muse Spark rewrites the draft (keeps every number and name)"]
-  J --> K1["Low: SMS + textmap.py<br/>street grid for Manhattan, raster elsewhere"]
-  J --> K2["Medium: laptopmap.py, 58 columns"]
-  J --> K3["High: imagemap.py, 800 px JPEG"]
+  J --> K["Scene → render: SMS, WhatsApp text, small picture, picture"]
 ```
+
+Details that matter:
+
+- **The model copies, code computes.** Muse returns `{"value": 2, "unit": "mi"}` and street segments exactly as written; `notice._normalize` converts. Letting the model convert made the radius differ run to run, which changed the map area and missed the road cache.
+- **Intersections come from road data.** "5 Av and W 47 St" is found where the two streets cross in OpenStreetMap; the geocoder alone was about 600 m off. The place is looked up as written first (biasing toward the reader once put a Manhattan fire in Los Angeles for a reader there).
+- **Closures are segments.** "Avoid 5 Av between W 42 St and W 50 St" closes only that stretch, found by its two cross streets.
+- **Routing** is Dijkstra on a grid whose cells are twice as tall as wide (like a character): roads cost 1, open ground 3, trees 4 (8 in a wildfire), buildings 12, water 30 (impassable outside wildfires), closures 60, and costs rise toward the centre of the hazard.
+- **Muse runs with `reasoning_effort: minimal`**: the same answers in 1 to 2 s instead of 5 to 10 s.
 
 Samples are in [`samples/`](samples/); the NYC alerts are fictional drills.
 
 ### NYC fire, you are 3 blocks east
 
-Input: [`samples/nyc_fire.txt`](samples/nyc_fire.txt), location `40.75491,-73.97441`.
-
 ```bash
 python3 main.py samples/nyc_fire.txt --at 40.75491,-73.97441 --laptop 58
 ```
 
-Low data (SMS, 12 parts):
+Low data (12 SMS parts):
 
 ```
-FDNY on scene at 5 Av and W 47 St.
-Fire incident 400 m from you.
+FDNY is on scene of a fire at 5 Av and W 47 St.
+Fire is 400 m from you.
 Avoid 5 Av between W 42 St and W 50 St.
-Expect road closures and smoke.
+Roads are closed with smoke in the area.
 
 MAP (uptown is up):
 =================== 51 St
@@ -138,13 +294,13 @@ MAP (uptown is up):
 Avenues left to right: 6 Av, 5 Av, Madison, Park, Lex
 ```
 
-Medium data (WhatsApp, 3.7 KB, 0.6 KB compressed):
+Medium data (3.7 KB, 0.6 KB compressed):
 
 ```
-FDNY on scene at 5 Av and W 47 St.
-Fire incident 400 m from you.
+FDNY is on scene of a fire at 5 Av and W 47 St.
+Fire is 400 m from you.
 Avoid 5 Av between W 42 St and W 50 St.
-Expect road closures and smoke.
+Roads are closed with smoke in the area.
 
              Vanderbilt Av  Lexington Av
  5th Av  Madison Av  Park Av            3rd Av        2nd Av
@@ -185,19 +341,27 @@ Expect road closures and smoke.
 Avenues run up and down, streets left and right.
 ```
 
-High data (95 KB JPEG):
+Small picture (17 KB, drawn at 400 px) and full picture (95 KB):
 
-![Picture map of the NYC fire](docs/alert_picture_nyc_fire.jpg)
+![Small picture map of the NYC fire](docs/alert_small_nyc_fire.webp) ![Picture map of the NYC fire](docs/alert_picture_nyc_fire.jpg)
 
 ### NYC gas leak, a street closure
 
-Input: [`samples/nyc_gas_leak.txt`](samples/nyc_gas_leak.txt), location `40.7560,-73.9740`.
+```bash
+python3 main.py samples/nyc_gas_leak.txt --at 40.7560,-73.9740 -v
+```
 
 ```
-Gas leak 220 m from you at Lexington Av and E 51 St.
-Con Edison and FDNY are responding.
-Avoid E 51 St (Park Av to 3 Av).
-Expect delays in Manhattan.
+notice (llm): {'hazard': 'gas', 'order': 'avoid_area', 'zone_center_place': 'Lexington Av and E 51 St, Manhattan', 'shelters': [], 'avoid_roads': [{'road': 'E 51 St', 'from': 'Park Av', 'to': '3 Av'}], 'deadline': None, 'summary': 'Con Edison and FDNY are responding to a gas leak at Lexington Av and E 51 St, avoid E 51 St between Park Av and 3 Av and expect delays.', 'zone_radius_m': None}
+intersection Lexington Av & E 51 St found in road data at (40.7571285, -73.9719044) (geocoder said (40.7641117, -73.966817))
+user (40.756, -73.974), zone center (40.7571285, -73.9719044) r=150m, distance 216m, inside=False
+closure '51 street': segment between cross streets
+text map: 13 rows, worst row drift 0.04 cells 
+
+Con Edison and FDNY are responding to a gas leak at Lexington Av and E 51 St.
+Gas incident is 220 m from you.
+Avoid E 51 St between Park Av and 3 Av.
+Expect delays.
 
 MAP (uptown is up):
 =============== 53 St
@@ -224,15 +388,16 @@ Avenues left to right: Madison, Park, Lex, 3 Av
 
 ### Wildfire, you are inside the zone
 
-Input: [`samples/palisades_fire.txt`](samples/palisades_fire.txt), location `34.0445,-118.5300`.
+```bash
+python3 main.py samples/palisades_fire.txt --at 34.0445,-118.5300 --laptop 58
+```
 
-Low data (SMS):
+Low data:
 
 ```
-EVACUATE NOW.
-You are INSIDE wildfire zone near Temescal Canyon Park.
-Mandatory evacuation within 2 miles.
-Go to Westwood Recreation Center.
+MANDATORY EVACUATION - Wildfire near Temescal Canyon Park.
+You are within 2 miles of fire. Leave now.
+Shelter: Westwood Recreation Center.
 Head E on unnamed road ~210 m.
 Head E on Alma Real Drive ~2.5 km.
 Head E on 17th Street ~620 m.
@@ -257,13 +422,12 @@ MAP (north is up):
 🔴 you
 ```
 
-Medium data (4.5 KB, 0.9 KB compressed; at this scale one character is 142 m, so side streets are left out):
+Medium data (at this scale one character is 142 m, so side streets are left out):
 
 ```
-EVACUATE NOW.
-You are INSIDE wildfire zone near Temescal Canyon Park.
-Mandatory evacuation within 2 miles.
-Go to Westwood Recreation Center.
+MANDATORY EVACUATION - Wildfire near Temescal Canyon Park.
+You are within 2 miles of fire. Leave now.
+Shelter: Westwood Recreation Center.
 Head E on unnamed road ~210 m.
 Head E on Alma Real Drive ~2.5 km.
 Head E on 17th Street ~620 m.
@@ -272,22 +436,22 @@ Avoid Sunset Blvd, Palisades Dr.
 
 ┌─ ↑ N ────────────────────────────────────────────────────┐
 │      ××××  ··    ··  ····················     ╲╲  ·      │
-│··   ·× ××××××     ·· ········  ·· · ···· ·     ╲─╲  ╲    │
+│···  ·× ××××××     ··  ·······  ·· · ···· ·     ╲─╲  ╲    │
 │···  ·××      ××   ···         ·    ···   ·       ╲╳ ╲╲│  │
 │  ·····×××  ·    ··· ··   ····  ·  ·     ···  ·   ││   ╲╲ │
-│    ·····××··   · ··░░░░░░░░░░░░░░·   ·· ·····     ╲╲·  ╲╲│
+│    ·····××··   · ··░░░░░░░░░░░░░░·   ········     ╲╲·  ╲╲│
 │ · ·······×····░░░░░░░░░░░░░░░░░░░░░░░·    ··       │     │
-│····  ·· ·××·Palisades Dr░░░░░░Mandeville Canyon Rd │·    │
-│··  ····  ░░×░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░·       ××     │
+│····   · ·××·Palisades Dr░░░░░░Mandeville Canyon Rd │·    │
+│··  ····· ░░×░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░·       ××     │
 │·········░░░××░░░░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░░░Sunset Blvd ××××××××│
-│  ·····░░░░░░×░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░░░░░░░░  ×××─╲     │
+│   ····░░░░░░×░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░░░░░░░░  ×××─╲     │
 │······░░░░░░░××▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒│▒▒▒▒▒▒░░×░░░××××  ││     │
 │·     ░░░░░░░░×▒▒▒▒▒×××××××××××▒│▒▒▒▒▒▒▒×××░×░░░·· ╲╲━━━━⌂│
 │     ░░░░░░░░▒×▒▒▒▒▒×▒▓▓▓▓▓▓╱┃×××▒▒▒▒▒▒×××××░░░░░·╱╱╱╳╲╲  │
 │     ░░░░░░░▒×××▒▒▒××▓▓▓▓▓▓▓┃🔴▓×××▒▒××▒▒░░░░░░░╱╱╱    ╲╲╲│
-│╱╱━━━━━╲░░░░▒××××××▓▓▓▓▓▓▓▓┃▓││↘▓╳▒×××▒▒▒▒░░░░╱╳╳        ╲│
-│≈≈≈≈░░░░━━╲━╋╋━━━━━━━━╲▓▓▓◆╱▓│▓▓↘→→→→▒▒▒▒▒░░╱╳╳░╲╲╲     ┼╱│
-│≈≈≈≈░░░░░░░░▒▒▒▒▒▒▒▒▓▓╲╲╲╳╱▓▓│▓▓▓╳▒││↘→→→→→→→→→→→→→╲╲ ╱┼┼ │
+│╱╱━━━━━╲░░░░▒××××××▓▓▓▓▓▓▓▓┃▓│→→→→▒×××▒▒▒▒░░░░╱╳╳        ╲│
+│≈≈≈≈░░░░━━╲━╋╋━━━━━━━━╲▓▓▓◆╱▓│▓▓│↓→→→→→→→→→→→→→→→→→→    ┼╱│
+│≈≈≈≈░░░░░░░░▒▒▒▒▒▒▒▒▓▓╲╲╲╳╱▓▓│▓▓▓╳▒││▒▒▒▒▒░░┃░░╲╲ ╲╲╲ ╱┼┼ │
 │≈≈≈≈≈░░░░░░░▒▒▒▒▒▒▒▒▒▓▓▓▓╲╲╲╲▓▓▓│╱▒│▒▒▒▒▒╱┼┃┃░░░░╲╲ ╱╳╲ ╲╲│
 │≈≈≈≈≈░░░░░░░░▒▒▒▒▒▒▒▒▒▒▓▓▓▓▓▓╲━╲┃╲▒│╲▒─╱╱╱╳╳░░░░  ╱╳╳ ╲╲╲ │
 │≈≈≈≈≈≈░░░░░░░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒╲╲╋╳╱─░╱╳╳░░░░░╱╳╲╲╲╲╲ ╳╋│
@@ -310,19 +474,20 @@ Avoid Sunset Blvd, Palisades Dr.
 · trees / park
 ```
 
-## Photo mode
+## Photos that won't load
 
 ```mermaid
 flowchart TD
   A["Photo a friend sent<br/>(it didn't download)"] --> B["Server shrinks it to 1024 px<br/>and sends it to Muse Spark"]
   B --> C["Caption, up to 3 details,<br/>up to 4 subjects with boxes"]
   A --> D["Greyscale + histogram equalisation"]
-  D --> E1["18 columns in iPhone-safe characters<br/>  + × ¤ 0 # $ (light → dark)"]
+  D --> E1["18 columns in iPhone-safe characters<br/>(blank) + × ¤ 0 # $, light to dark"]
   D --> E2["58 columns in ASCII  .:-=+*#%@"]
   C --> E2
   E2 --> F["Objects boxed and numbered;<br/>regions like 'sky' only listed"]
   E1 --> L["Low: description + small sketch"]
   F --> M["Medium: description + sketch + key"]
+  A --> SM["Small: 400 px WebP"]
   A --> H["High: the photo"]
 ```
 
@@ -332,13 +497,13 @@ Example: "Eagle & Waterfall", one of the photos macOS ships in `/Library/Desktop
 python3 main.py --photo eagle.jpg
 ```
 
-Low data (SMS, 6 parts):
+Low data (6 SMS parts):
 
 ```
 Photo: A lone bird soars in silhouette before a massive waterfall shrouded in golden mist and sunlight.
-- No readable text is visible
-- Warm golden light illuminates the waterfall mist
-- A dark cliff face is visible on the right edge
+- No readable text in the image
+- Warm golden backlight creates a hazy, glowing mist over the falls
+- Scene shows powerful cascading water on the left and a dark cliff on the right
 
 0¤×¤××××++++++   +
 000¤¤¤××××+++++ +¤
@@ -348,108 +513,108 @@ $##$$#####00000¤0$
 (the photo, drawn in text)
 ```
 
-Medium data (1.1 KB of text, 0.37 KB compressed, against a 182 KB photo):
+Medium data (1.3 KB, 0.45 KB compressed, against a 182 KB photo). Muse found three subjects; the bird is box 1:
 
 ```
 Photo: A lone bird soars in silhouette before a massive waterfall shrouded in golden mist and sunlight.
-- No readable text is visible
-- Warm golden light illuminates the waterfall mist
-- A dark cliff face is visible on the right edge
+- No readable text in the image
+- Warm golden backlight creates a hazy, glowing mist over the falls
+- Scene shows powerful cascading water on the left and a dark cliff on the right
 
-┌1─────────────────┐-::::::::...........              ....
-│**+=+=--====------│--::::::::::..........                
-│+**++++==+======--│----:-::::::::....... -. .          .-
-│=**+++*+=++=======│---------:::::::.....-#: ..        :*#
-│+=+*+*#*+++=======│=---------:::::::....:..........  .+**
-│#*+**##%*+==+==++=│==----------::::::::............. -+**
-│#****##%%*+++++++=│===----=----::::::::::...........:=+**
-│##***##%%#+*****++│=+========---:::::::::::........:=++*#
-│%%#*#%#%%%****#**+│+++========----::--:-:::::::::..-++*##
-│%%%####%%%##******│**++++=++++==------:-::::::.::::=++*##
-│%%%%%###%%%%%##**#│****+*++***++=-----------:::::::-+***#
-│%##%%%#%#%@@%%%%##│####**#*****+++=====--==--------=+**#@
-│%#%%%%%%%%@@@%%%##│##%%#*#####****++++++++=++===--=+*#%@@
-│%%#%%#%@@%%@@@%%%#│%%%%%##%%###*********+++++++====+*#%@@
-│@@%%%%%%@%@@@@%@%%│%%%@%#%%%%%########****++*++++++**#@@@
-└──────────────────┘@%@@@%%%%%%%########*******+++***#%@@@
+┌2──────────────────┐::::::::...........              ....
+│**+=+=--====-------│-::::::::::..........                
+│+**++++==+======---│---:-::::::::....... -. .   ┌3──────┐
+│=**+++*+=++========│--------:::::::.....┌1─┐..  │     :*│
+│+=+*+*#*+++=======-│---------:::::::....└──┘....│..  .+*│
+│#*+**##%*+==+==++==│=----------::::::::.........│... -+*│
+│#****##%%*+++++++==│==----=----::::::::::.......│...:=+*│
+│##***##%%#+*****++=│+========---:::::::::::.....│..:=++*│
+│%%#*#%#%%%****#**++│++========----::--:-::::::::│..-++*#│
+│%%%####%%%##*******│*++++=++++==------:-::::::.:│::=++*#│
+│%%%%%###%%%%%##**##│***+*++***++=-----------::::│::-+***│
+│%##%%%#%#%@@%%%%##%│###**#*****+++=====--==-----│--=+**#│
+│%#%%%%%%%%@@@%%%##%│#%%#*#####****++++++++=++===│-=+*#%@│
+│%%#%%#%@@%%@@@%%%#%│%%%%##%%###*********+++++++=│==+*#%@│
+│@@%%%%%%@%@@@@%@%%%│%%@%#%%%%%########****++*+++│++**#@@│
+└───────────────────┘%@@@%%%%%%%########*******++└───────┘
 
-1  waterfall (middle left)
+1  soaring bird (top right)
+2  waterfall (middle left)
+3  rocky cliff (middle right)
 ```
 
-The bird is the small dark mark on the right; Muse mentions it in the caption but boxed only the waterfall.
-
-## Weather radar mode
+## Weather radar
 
 ```mermaid
 flowchart TD
   A["'RADAR' + GPS"] --> B["RainViewer: latest radar frame<br/>tiles at zoom 7 (~1 km per pixel), 160 × 110 km around you"]
-  B --> C["Tile colours → dBZ using RainViewer's colour table<br/>→ none / light / moderate / heavy / storm"]
+  B --> C["Tile colours → dBZ with RainViewer's colour table<br/>→ none / light / moderate / heavy / storm"]
   B --> D["Frame from 40 min ago → how far the rain moved<br/>→ direction and km/h"]
   A --> E["Open-Meteo: rain at your spot<br/>every 15 min for 2 hours"]
   A --> F["Overpass: towns to label<br/>(one quick try, skipped for 10 min after a timeout)"]
   C & D & E --> G["Facts: over you now? nearest rain, moving where, rain later?<br/>Muse rewrites them"]
   C --> L["Low: 18-column grid  + × 0 #"]
   C & F --> M["Medium: 58-column map ░▒▓█ with towns<br/>+ 2-hour sparkline"]
-  B --> H["High: radar over Esri grey basemap with labels"]
+  B --> H["Small and high: radar over a grey basemap with place names"]
 ```
 
-Example: "Find heavy rain right now" picked `-9.6838, -40.4297` (Bahia, Brazil) on 2026-10-28 00:25 UTC. Radar is live, so this will differ every run.
+RainViewer's free tiles go up to zoom 7 and have a fixed colour scheme, so `radar.PALETTE` maps colours back to radar strength (dBZ) using RainViewer's published colour table. It has no forecast frames, so the 2-hour timeline comes from Open-Meteo.
 
-Low data (SMS, 6 parts):
+Example: "Find heavy rain right now" picked `(-9.6838, -40.7812)` (Bahia, Brazil) on 2026-10-28 02:10 UTC. Radar is live, so this differs every run.
+
+Low data:
 
 ```
-Hi! 21:20 update: no rain over you now. Nearest rain 28 km SW (moderate), moving toward the W at about 35 km/h. Good news: no rain in the next 2 hours for your spot!
+Hi! 23:00 check: dry over you now :) Nearest light rain 31 km NE, moving toward the SW at about 26 km/h. Good news: no rain for your spot in the next 2 hours!
 
 RADAR (north is up, 160 km across):
-#00×         +××××
- ×00              
-0×00×        ×+   
-00#000×  🔴     ++++
-+0×0+0+       00 ×
-++      ×+××××××××
+ 000              
+ 0××      ++      
+ ××              ×
+× 00     🔴         
+×000×××           
+××00000××       00
 
 + light  × moderate
 0 heavy  # storm
 🔴 you
 ```
 
-Medium data (2.2 KB of text, 0.4 KB compressed, against a 57 KB radar picture):
+Medium data (2.0 KB, 0.36 KB compressed; small picture 4.6 KB; full picture 51 KB):
 
 ```
-┌─ ↑ N  radar 21:20 ───────────────────────────────────────┐
-│▓██▓▓░░░   ▒                                ░▒░░▒▒░░░     │
-│▒▓▓▓▓▓▓ ▒▒▒▒                                              │
-│ ░▒▒▒▓▓▓▓                                            ▒▒▒ ▒│
-│    ░▒▓▓▓                                                 │
-│    ░▒▒░░                                                 │
-│    ░░▓▓░▒▓                                               │
-│    ░▒▓▓░▒▓▒░░░                                           │
-│▓▒  ▒▒▒▒▓▓▒▒▒▒▒▒                          ░░              │
-│▓░ ▒▒▒▒▒▓▓▒▒▒▒░░                           ▒▒░░░          │
-│   ▒▒▒▓▓▓▓▓▓▓▓▓▓▓           🔴                ░░░░░░      │
-│░▓▓▓▒▒▓███▓▓▓▓▓▓▓                                 ░░░░░░  │
-│▒▓▓▓▓▓▓▓▓▓▓▓▒▒▒▓▓▒▓░▒                                 ░░░░│
-│░░░▒▓▓▓▒░▒▓▓▓    ▓▓▒░                         ▒▓▒░      ▒░│
-│          ▓▓▓░   ░▒                           ▒▓▓░░▒      │
-│           ░                                  ▒▒▒░░░      │
-│                                       ▒▒         ▒▒      │
-│                                   ░░▒▒▒▒░▒░░   ▒▒▒▒   ▒▒░│
-│░░  ░░                     ░▒░░░░░▒▒▒▒▒▒▒▒▒▒▒░░▒▒▒▒▒▒▒░  ░│
+┌─ ↑ N  radar 23:00 ───────────────────────────────────────┐
+│   ░▒░   ▓▓▓                                              │
+│     ▒▒                                                   │
+│    ▒▓▓                                                   │
+│    ▒▓▓                                                   │
+│                                  ░░░                     │
+│          ▒▒                                              │
+│     ▒▒▒░                                                 │
+│     ░░░░                                               ▒▒│
+│                                                         ▒│
+│      ▒▒▓▓▓▒                🔴                            │
+│░░     ▒▓▓▓▒                                              │
+│▒▒░   ▒▒▒ ▒▒▒                                             │
+│▒▒░░▒▒▒▒▒░░░ ░░░                                          │
+│▒░░░▒▒▓▓▓▓▓▓▒▒▒░░░                                        │
+│▒▒░░▒▒▓▓▓▓▓▓▒▒▒▒▒▒░▒▒░                                    │
+│░  ▒░░▒▓▓▓▓▓▓▒▒▒▒▒▒▒▓▒▒                               ▒   │
+│       ▒▒░▒▓▓▓▓▓▒▒▒▒▒▒▒                             ░░▒░░▒│
+│ ░▒ ░░░▒░▒▒▓▓▓▓▓▓▓▓▓▓▒▒▒  ▒▒                        ░▒▓▓░▒│
 └─ ├───────┤ 25 km ────────────────────────────────────────┘
 
 Your spot, next 2 h (15 min steps): ········
-21:15 now  ...  23:00
+23:00 now  ...  00:45
 
 ░ light  ▒ moderate  ▓ heavy  █ storm   🔴 you
 ```
 
-High data:
-
 ![Radar picture](docs/radar_picture.jpg)
 
-## Directions abroad mode
+## Walking directions abroad
 
-Asked directly, Muse Spark gives walking directions from memory. They read well, but it can't know where you are standing, some turns are wrong (for Rossio to the castle in Lisbon it sent us through the Arco da Bandeira into Praça da Figueira, which it doesn't lead to), and its sketch isn't to scale. So here the route comes from real street data and Muse only rewords it.
+For someone roaming on a capped plan. Asked directly, Muse Spark gives directions from memory: they read well, but it can't know where you are standing, some turns were wrong (for Rossio to the castle in Lisbon it sent us through the Arco da Bandeira into Praça da Figueira, which it doesn't lead to), and its sketch wasn't to scale. Here the route comes from real street data and Muse only rewords it.
 
 ```mermaid
 flowchart TD
@@ -458,20 +623,17 @@ flowchart TD
   C -- no --> X["'Too far to walk. Try transit.'"]
   C -- yes --> D["Overpass: streets, pedestrian streets, footways, steps<br/>(no motorways, no service roads)"]
   D --> E["Grid: off-street cells expensive, so the route stays on streets and paths"]
-  E --> F["Dijkstra you → destination<br/>steps, distance, minutes at 4.5 km/h"]
+  E --> F["Dijkstra on 40 columns → steps, distance, minutes at 4.5 km/h"]
+  E --> F2["Dijkstra on 160 columns → the route that gets drawn"]
   F --> G["Muse rewrites the steps (one per line, nothing added)"]
-  G --> L["Low: SMS + 40-column map, S = destination"]
-  G --> M["Medium: 58 columns, footpaths routed on but not drawn"]
-  F --> H["High: picture map, route on a 160-column grid so it follows the alleys"]
+  G & F2 --> S["Scene (walk=True) → SMS, WhatsApp text, small picture, picture"]
 ```
-
-Example: Rossio station to Castelo de São Jorge, Lisbon.
 
 ```bash
 python3 main.py --walk "Castelo de São Jorge, Lisbon" --at 38.7139,-9.1406
 ```
 
-Low data (SMS, 7 parts):
+Low data (7 SMS parts):
 
 ```
 Hey! Walk to Castelo de São Jorge: about 0.7 km, 9 min.
@@ -495,7 +657,7 @@ MAP (north is up):
 S destination: Castelo de São Jorge
 ```
 
-Medium data (4.6 KB, 1.0 KB compressed). Lisbon's old centre is a dense tangle at 27 m per character:
+Medium data (4.7 KB, 1.0 KB compressed). Lisbon's old centre is a dense tangle at 27 m per character; footpaths are routed on but not drawn:
 
 ```
 ┌─ ↑ N ────────────────────────────────────────────────────┐
@@ -511,9 +673,9 @@ Medium data (4.6 KB, 1.0 KB compressed). Lisbon's old centre is a dense tangle a
 ││┼╱│╲  ╱╋╋╋╋   ╲╲╲╲╲╲╳╳╲╲╲╲╱─╳╳ ╲┼┼┼┼╱│┃┃ ┃│┼┼┼─╳┼┼╲│  │╱╱│
 │┼─│╲╳╳╱─┼┼┼│━╋━━━╲╲╲╳│  ╲╲╲╳╱╳╳╲╲╲╲┼╳╱┃┃ ┃┃│ ╱╳╳╳╳╲╲┼╳ ┼│││
 │╲╳│╱│──╱─┼┼┼┼┼─╳╳╳╲│╳╲    ╲╳╲│┼─┼┼┼┼╲╋╳╲━┃│╱╱╱────────╲││╲│
-│╱╱╳╳╱╱╳──┼││┼┼┼┼╲╳╋╳│ ╲╲    ╲╋╋╋↗→→→→→→→→→→→→→→→→    ╲╲╲┼╲│
-│┼╱╱╱──│  ┼─┼│││┼┼┼┼╋╲  ╱╲  ┼╳🔴→ ╋┼ ┼╋┃ ┃─│╱╱││  ⌂ │  │╳╳┼│
-│─╱┼┼──┼──┼┼│─┼┼┼┼─┼─╋━╳╱╲╲╲╲┼┼┼┃╋╋╋╋╋╋╲╋╋ ╳┼┼┼  ╱╳─╱┼│ ╲┼┼│
+│╱╱╳╳╱╱╳──┼││┼┼┼┼╲╳╋╳│ ╲╲    ╲╋╋╋╋┼┼──╋↑→→→→→→→→→→    ╲╲╲┼╲│
+│┼╱╱╱──│  ┼─┼│││┼┼┼┼╋╲  ╱╲  ┼╳🔴╋↑→→→→→→ ┃─│╱╱││ ↓⌂ │  │╳╳┼│
+│─╱┼┼──┼──┼┼│─┼┼┼┼─┼─╋━╳╱╲╲╲╲┼↓→→→╋╋╋╋╋╲╋╋ ╳┼┼┼  ╱╳─╱┼│ ╲┼┼│
 │┼┼       │╱┼┼─┼┼┼┼┼─┼╋┼╱╳╲╲╲│ │┼┼│┼││┼┼╋┃┃┼┼││    ╳╳┼┼┼┼╳╳│
 │┼┼┼      │┼ ││││┼┼┼┼┼╋╋┼  ╳╳╳ ─│╱┼┼┼┼│││╋┃┃│╲││ ╳╳┼┼╲╳╲─╳┼│
 │─│╲╲    ─┼│╱┼─┼┼┼┼┼┼┼┼╋ ┼┼╱╳╳╳ │ ┼┼┼┼┼┼┼┃┃╋┼╲│╳╲──┼ ╳╱┼─┼┼│
@@ -534,30 +696,27 @@ Medium data (4.6 KB, 1.0 KB compressed). Lisbon's old centre is a dense tangle a
 ━ main road   ─ street
 ```
 
-High data (119 KB):
-
 ![Walking route picture](docs/walk_picture_lisbon.jpg)
 
-## How a text map is drawn
+## Why the text maps line up
 
-All the maps are drawn from map data, not converted from a photo pixel by pixel:
+All the maps are drawn from map data, one meaning per character cell, not converted from a photo pixel by pixel:
 
 ```mermaid
 flowchart LR
-  A["lat/lon → local metres<br/>(Manhattan turned 29° so avenues run up)"] --> B["Grid of cells<br/>each cell ~2× taller than wide, like a character"]
+  A["lat/lon → local metres<br/>(Manhattan turned 29° so avenues run up)"] --> B["Grid of cells<br/>each ~2× taller than wide, like a character"]
   B --> C["Layers per cell: terrain, roads and their direction,<br/>closures, hazard depth, route"]
   C --> D["One character per cell by priority:<br/>you, incident, shelter, route, closure, road, danger shading, water, trees, blank"]
   D --> E["Labels only where they cover blank space<br/>street names written on the street line"]
   E --> F["Frame, scale bar, legend"]
 ```
 
-### Why the phone and WhatsApp versions use different characters
+- **iPhone Messages uses SF Pro, a proportional font.** Ordinary ASCII art comes out crooked, so the SMS maps use only characters measured (in a browser canvas, `17px system-ui`) to be exactly one digit wide: `= # + < > 0 $ ¤ £ ¥ ×` and U+2007 FIGURE SPACE for blanks. Narrow ones are padded with thin and hair spaces (`|`, `v`); slightly wide ones (`Λ` +6%, `S` +1.2%) appear at most once or twice per row. Each row's width error is added up and logged (`worst row drift`); the examples are 0.03 to 0.04 cells. Figure spaces and `×` are outside the GSM-7 alphabet, so these messages are UCS-2: 67 characters per SMS part.
+- **WhatsApp shows text in triple backticks in a monospace font, but can't colour it.** So the medium maps use line drawing (`━ ┃ ╋ ╱ ╲`) and shading (`░▒▓█`), all one cell wide in Menlo, Monaco and Courier. Braille dots, common in ASCII art, are avoided: on a Mac they fall back to another font and come out 14% wider. A WhatsApp bubble is at most 65% of the chat pane, which in the simulated window fits 58 columns without wrapping.
+- **"You" is the 🔴 red dot in both**, the only way to get colour. It is wider than a character, so it takes two cells: exactly two in SF Pro (with padding), a third of a cell short in Menlo (about 2.5 px on that one row).
+- **Street names** go at the end of rows on the SMS map (never inside the grid) and are dropped if the row would wrap in the bubble. On the WhatsApp map, Manhattan street names are written on the street line itself so they can't be read as the street above or below, and avenue names go in a header.
 
-- **iPhone Messages uses SF Pro, a proportional font.** Ordinary ASCII art comes out crooked, so the SMS maps use only characters measured (in a browser canvas, `17px system-ui`) to be exactly one digit wide: `= # + < > 0 $ ¤ £ ¥ ×` and U+2007 FIGURE SPACE for blanks. Narrow ones are padded with thin and hair spaces (`|`, `v`); slightly wide ones (`Λ` +6%, `S` +1.2%) appear at most once or twice per row. The code adds up each row's width error and logs it (`worst row drift`); the examples above are 0.03 to 0.04 cells (under half a pixel). Figure spaces and `×` are outside the GSM-7 alphabet, so these messages are UCS-2: 67 characters per SMS part.
-- **WhatsApp shows text in triple backticks in a monospace font, but can't colour it.** So the medium maps can use line drawing (`━ ┃ ╋ ╱ ╲`) and shading (`░▒▓█`), all one cell wide in Menlo, Monaco and Courier. Braille dots, common in ASCII art, are avoided: on a Mac they fall back to another font and come out 14% wider. A WhatsApp bubble is at most 65% of the chat pane, which in the simulated window fits 58 columns without wrapping.
-- **"You" is the 🔴 red dot in both,** the only way to get colour. It is wider than one character, so it takes two: exactly two in SF Pro (with padding), and a third of a cell short in Menlo (about 2.5 px on that one row).
-
-Previews of the SMS maps rendered in SF Pro on a Mac (not yet checked on a real iPhone):
+Previews of the SMS maps in SF Pro on a Mac (not yet checked on a real iPhone):
 
 ![SMS replies in SF Pro](docs/preview_replies.jpg)
 
@@ -567,15 +726,14 @@ Previews of the SMS maps rendered in SF Pro on a Mac (not yet checked on a real 
 python3 sim/server.py
 ```
 
-Open http://127.0.0.1:8765. In the Claude desktop app, `.claude/launch.json` starts it in the browser pane.
+Open http://127.0.0.1:8765. In the Claude desktop app, `.claude/launch.json` starts it in the browser pane. Every tab shows the result four ways with real sizes, and the **Person's connection** picker highlights the version that would be sent.
 
-- **Emergency:** the left phone is **Emergency Response (555) 010-0911**. Type an alert or pick a sample (NYC fire, NYC gas leak, LA wildfire, Pasadena flood) and choose who gets it: **Bob the Builder**, **Wendy** or **Farmer Pickles**, each with their own GPS (one-click places or typed coordinates). Below, the selected person's reply appears three ways. Move them and press **Text MAP** for a fresh reply. The pipeline log shows what Muse parsed and the alignment check.
+- **Emergency:** the left phone is **Emergency Response (555) 010-0911**. Type an alert or pick a sample (NYC fire, NYC gas leak, LA wildfire, Pasadena flood) and choose who gets it: **Bob the Builder**, **Wendy** or **Farmer Pickles**, each with their own GPS. Move someone and press **Text MAP** for a fresh reply. The pipeline log shows what Muse parsed and the alignment check.
 - **Photo:** pick a sample photo or upload one.
-- **Weather radar:** pick a city, type coordinates, or press **Find heavy rain right now** (the strongest storm on the world radar, so there is always something to see).
+- **Weather radar:** pick a city, type coordinates, or press **Find heavy rain right now**.
 - **Directions abroad:** pick a starting station (Lisbon, Paris, Rome, Tokyo) and a destination.
+- **Ask anything:** the router. Pick where you are (Rome, Lisbon, NYC), type anything or pick an example, optionally attach a photo; the tools Muse called are listed under the box.
 - **Clear** empties every thread, result and the log.
-
-Each card's caption gives the real size: SMS parts, text bytes (and compressed), and the picture's size.
 
 ## Run it from the command line
 
@@ -589,40 +747,46 @@ Put your Meta Model API key in `.env` (git-ignored):
 LLAMA_API_KEY=...
 ```
 
-Optional settings in `.env`: `LLM_BASE_URL` (default `https://api.meta.ai/v1`), `LLM_MODEL` (default `muse-spark-1.3`), `LLM_REASONING_EFFORT` (default `minimal`). Without a key, alerts are parsed with regexes, photos get no description, and messages use templates.
+Optional settings in `.env`: `LLM_BASE_URL` (default `https://api.meta.ai/v1`), `LLM_MODEL` (default `muse-spark-1.3`), `LLM_REASONING_EFFORT` (default `minimal`). Without a key: keyword routing, regex alert parsing, no photo descriptions, template text.
 
 ```bash
-python3 main.py samples/palisades_fire.txt --at 34.0445,-118.5300 -v          # alert → SMS reply
-python3 main.py samples/nyc_fire.txt --at 40.75491,-73.97441 --laptop 58      # + the WhatsApp map
-python3 main.py --photo some.jpg                                              # photo → text versions
-python3 main.py --radar 40.7128,-74.0060                                      # weather radar as text
-python3 main.py --walk "Castelo de São Jorge, Lisbon" --at 38.7139,-9.1406 -v  # walking directions
+python3 main.py --ask "Is it going to rain on my walk to the Colosseum?" --at 41.9010,12.5016   # the router
+python3 main.py --ask "what is this?" --photo some.jpg --at 40.75,-73.98                        # router + photo
+python3 main.py samples/palisades_fire.txt --at 34.0445,-118.5300 -v                           # alert → SMS reply
+python3 main.py samples/nyc_fire.txt --at 40.75491,-73.97441 --laptop 58                       # + the WhatsApp map
+python3 main.py --photo some.jpg                                                               # photo → text versions
+python3 main.py --radar 40.7128,-74.0060                                                       # weather radar as text
+python3 main.py --walk "Castelo de São Jorge, Lisbon" --at 38.7139,-9.1406 -v                   # walking directions
 ```
 
-`-v` prints the parsed alert, the distance check, closures found and the map's alignment check.
+`-v` prints the log: the parsed alert, the distance check, closures found, the map's alignment check, and every tool call with its result.
 
 ## Code
 
 | File | Role |
 | --- | --- |
-| `CLAUDE.md` | Notes for Claude Code: commands, how the pieces connect, the text-map width rules |
-| `main.py` | Command line: alerts, `--photo`, `--radar`, `--walk` |
-| `sim/server.py` | Simulator server: serves the page; `/api/alert`, `/api/photo`, `/api/radar`, `/api/directions`, `/api/find_rain`, sample photos |
-| `sim/index.html` | The four tabs and the three-way result cards |
-| `evac/pipeline.py` | Emergency mode: wires the steps together and composes the message |
-| `evac/notice.py` | Alert text to structured fields (Muse Spark, regex fallback); unit conversion happens here, not in the model |
-| `evac/photo.py` | Photo mode: Muse description and subject boxes, text sketches |
-| `evac/radar.py` | Weather radar mode: RainViewer tiles to rain levels, motion, Open-Meteo forecast, three versions |
-| `evac/directions.py` | Directions abroad mode: walking route on street data, three versions |
+| `evac/router.py` | One entry point: Muse picks tools (parallel, up to 3 rounds), writes the reply; the kept results become the versions |
+| `evac/tools.py` | The 10 tools, their JSON descriptions, the per-request `Context`, `call()` that never raises |
+| `evac/scene.py` | The `Scene`: what to draw, shared by every renderer |
+| `evac/render.py` | Scene → `sms`, `mono`, `small`, `picture` |
 | `evac/textmap.py` | SMS maps aligned for SF Pro (Manhattan street grid, raster elsewhere) |
-| `evac/laptopmap.py` | Monospace maps for WhatsApp/laptops: line-drawn roads, shading, labels, route arrows |
-| `evac/imagemap.py` | Picture maps (JPEG) in the style of agency alert maps |
-| `evac/llm.py` | Meta Model API client; loads `.env`; `reasoning_effort` minimal |
+| `evac/laptopmap.py` | Monospace maps for WhatsApp: line-drawn roads, shading, labels, route arrows |
+| `evac/imagemap.py` | Picture maps (JPEG, or WebP drawn small) in the style of agency alert maps; `shrink()` for photos and radar |
+| `evac/pipeline.py` | The fixed emergency reply: parse, locate, route, word, build the Scene |
+| `evac/directions.py` | Walking route on street data → Scene |
+| `evac/radar.py` | RainViewer tiles → rain levels, motion, Open-Meteo forecast, its four versions |
+| `evac/photo.py` | Muse description and subject boxes, text sketches |
+| `evac/notice.py` | Alert text → fields (Muse, regex fallback); unit conversion in code |
+| `evac/grid.py` | Grid: terrain, roads, closures, hazard, Dijkstra, turn-by-turn directions |
+| `evac/osm.py` | Overpass queries (roads, walkable paths, towns) cached in `cache/`; street-name matching ("5 Av" = "Fifth Avenue"); intersections |
 | `evac/geo.py` | Geocoding, distance, local projection |
-| `evac/osm.py` | Overpass queries (roads, walkable paths, towns), cached in `cache/`; street-name matching ("5 Av" = "Fifth Avenue"); intersection finding |
 | `evac/imagery.py` | XYZ tile stitching (Esri aerial, Esri grey basemap, RainViewer radar) |
-| `evac/segment.py` | Aerial image to terrain masks (SAM 3 path, or a colour heuristic) |
-| `evac/grid.py` | Routing grid: roads, closures, hazard, lowest-cost route, turn-by-turn directions |
+| `evac/segment.py` | Aerial image → terrain masks (SAM 3 path, or a colour heuristic) |
+| `evac/llm.py` | Meta Model API client (`chat`, `chat_json`, `chat_tools`); loads `.env`; `reasoning_effort` minimal |
+| `main.py` | Command line: `--ask`, alerts, `--photo`, `--radar`, `--walk`, `--laptop N` |
+| `sim/server.py` | Simulator server: `/api/message` (router), `/api/alert`, `/api/photo`, `/api/radar`, `/api/directions`, `/api/find_rain`, sample photos |
+| `sim/index.html` | The tabs, the four-way result cards, the connection picker |
+| `CLAUDE.md` | Notes for Claude Code: commands, how the pieces connect, the text-map width rules |
 
 ## Data sources
 
@@ -631,9 +795,10 @@ Roads, paths and towns © OpenStreetMap contributors (via Overpass); geocoding b
 ## Known limits
 
 - Not yet checked on a real iPhone or in real WhatsApp (fonts, emoji widths, Bold Text, text size).
-- The free Overpass servers are the slow, flaky part: a new area takes 30 s to 2 minutes or times out (seen for a new directions destination and for an intersection lookup). When the intersection lookup fails, the incident falls back to the geocoder, which for the gas leak once landed 1.7 km away on the middle of Lexington Avenue; the cache makes repeat runs reliable.
-- Radar town names often time out; the map is then drawn without them. "Find heavy rain" works on a coarse world view, so the spot it picks can sit in a gap between storms.
-- Walking maps of dense old centres (Lisbon) are busy at 58 columns.
-- Muse's rewrites are not checked against the draft; a prompt asks it to keep every number and name.
+- The free Overpass servers are the slow, flaky part: a new area takes 30 s to 2 minutes or times out (a first walking route from Rome Termini timed out; Muse retried and the second call worked). When the intersection lookup fails, an incident falls back to the geocoder, which once put the gas leak 1.7 km away on the middle of Lexington Avenue. The cache makes repeat runs fast and reliable.
+- Radar town names often time out and are then skipped. "Find heavy rain" works on a coarse world view, so the spot it picks can sit in a gap between storms.
+- Radar and photos still produce their own versions; the next step makes them Scenes (a grid of values) so the router can, for example, draw the rain on the walking-route map.
+- Muse's wording isn't checked against the tool results; the prompt asks it to keep every number and name. It sometimes adds an estimate (the Trevi Fountain reply guessed a 20-minute walk).
+- Walking maps of dense old centres are busy at 58 columns.
 - Terrain comes from a colour heuristic; SAM 3.1 on the Meta Model API is not wired in yet (Muse's subject boxes stand in for it in photo mode).
-- Replies are long: 6 to 12 SMS parts.
+- SMS replies are long: 6 to 12 parts.

@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Built on the Meta Model API (Muse Spark; SAM 3.1 planned). A server with a good connection does the work and sends the result to someone who can only receive text. Four modes: **emergency** (alert + GPS → instructions and a text map), **photo** (a photo that won't load → description + the photo drawn in text), **weather radar** (latest radar + 2-hour forecast as text) and **directions abroad** (walking route on street data). Each returns three versions: SMS aligned for **iPhone Messages** (iPhone only, multi-part SMS is fine), a 58-column monospace map for WhatsApp, and a JPEG.
+Built on the Meta Model API (Muse Spark; SAM 3.1 planned). A server with a good connection does the work and sends the result to someone who can only receive text. A router (`evac/router.py`) lets Muse pick tools for any message; underneath are four modes: **emergency** (alert + GPS → instructions and a text map), **photo** (a photo that won't load → description + the photo drawn in text), **weather radar** (latest radar + 2-hour forecast as text) and **directions abroad** (walking route on street data). Each reply exists in four versions: SMS aligned for **iPhone Messages** (iPhone only, multi-part SMS is fine), a 58-column monospace map for WhatsApp, a small picture (400 px WebP) and a full JPEG.
 
 ## Commands
 
 There is no build, lint or test suite. Python 3.9 (`/opt/anaconda3/bin/python3`); dependencies are `requests`, `pillow`, `numpy` (and `fontTools` for font checks).
 
 ```bash
+python3 main.py --ask "Is it going to rain on my walk to the Colosseum?" --at 41.9010,12.5016 -v  # router
 python3 main.py samples/palisades_fire.txt --at 34.0445,-118.5300 -v   # wildfire, raster map
 python3 main.py samples/nyc_fire.txt --at 40.75491,-73.97441 -v        # Manhattan street-grid map
 python3 main.py samples/nyc_gas_leak.txt --at 40.7560,-73.9740 -v      # street (not avenue) closure
@@ -26,6 +27,10 @@ python3 sim/server.py                                                     # simu
 `.env` (git-ignored, loaded by `evac/llm.py`) holds `LLAMA_API_KEY` (a Meta Model API key; `MODEL_API_KEY` also works). Optional: `LLM_BASE_URL` (default `https://api.meta.ai/v1`), `LLM_MODEL` (default `muse-spark-1.3`), `LLM_REASONING_EFFORT` (default `minimal`). With no key, everything falls back to regex parsing and a message template.
 
 ## Architecture
+
+Request flow: `router.handle(message, you, image)` → Muse (`llm.chat_tools`) picks tools from `tools.schemas()` → `tools.call` runs them in parallel (never raises; errors go back to the model) → each tool returns a short JSON summary to the model and keeps its bulky result in `ctx.store[tool name]` → Muse writes the reply → `router._versions` turns the kept results into the versions (emergency reply > walking route > radar > photo). Emergencies always go through `emergency_reply` (= `pipeline.run`) and its text is used verbatim. Without a key, `_run_rules` routes on keywords.
+
+**Scene and renderers:** `evac/scene.py:Scene` is what to draw (you, view size, text, roads, closures, zone, goal, route as lat/lon, aerial + masks, walk, street_grid, banner). `evac/render.py` draws a Scene as `sms` (textmap), `mono` (laptopmap), `small`/`picture` (imagemap). Renderers never fetch or route; every version draws `scene.route`. The emergency and directions modes build Scenes; radar and photo still render their own versions (next step: a raster layer in Scene). When changing a renderer, compare outputs with the model off (`llm._key = lambda: None`) against a saved baseline: SMS and pictures should stay byte-identical unless the change is meant to alter them.
 
 `evac/pipeline.py:run` is the emergency flow: `notice.parse` → `geo.current_location` → `locate` (incident) → distance check (far = one line, return) → `grid.Grid` sized to the zone → aerial tiles + `segment` → `osm.fetch_roads` → `add_roads` (closures) → `add_hazard_circle` → `route` → `textmap.render_grid` or `render_raster` → `instructions` (Muse rewrite) → `compose`; with `laptop=N` it also calls `laptopmap.render` (N columns) and with `image=True` `imagemap.render`. `evac/photo.py`, `evac/radar.py` and `evac/directions.py` are the other modes; each returns `sms`, `text`, `mono` (+ bytes/gzip) and, except photo, `image`. `sim/server.py` exposes them as `/api/alert|photo|radar|directions` and the page renders every result with one `triple()` function.
 

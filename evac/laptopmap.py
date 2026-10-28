@@ -6,7 +6,7 @@ import gzip
 import io
 import math
 
-from . import geo, grid, imagery, segment, textmap
+from . import geo, grid, textmap
 from .osm import norm_road
 
 COLS = 100
@@ -54,27 +54,26 @@ def _line_char(bins):
     return HEAVY.get(ch, ch) if major else ch, major
 
 
-def render(n, user, center, radius, roads, shelter, half, cols=COLS, walk=False):
-    """Returns {"lines": [[[cls, text], ...], ...], "text", "bytes", "gzip", "aerial_bytes", "m_per_char"}.
-    center=None draws no hazard (plain directions, with `shelter` as the destination); walk=True keeps the
-    route on streets and paths instead of cutting across blocks."""
-    rotated = textmap.is_grid_place(n.get("zone_center_place"))
+def render(scene, cols=COLS):
+    """Scene -> {"lines": [[[cls, text], ...], ...], "text", "bytes", "gzip", "aerial_bytes", "m_per_char"}.
+    Draws the scene's own route; a scene with no zone is plain directions (goal = destination)."""
+    user, roads, shelter, half, walk = scene.you, scene.roads, scene.goal, scene.half_m, scene.walk
+    center = scene.zone[0] if scene.zone else None
+    rotated = scene.street_grid
     aspect = ASPECT if cols >= 90 else 0.9  # narrow maps (a chat bubble) grow down instead of losing area
     # A rotated frame has to fit inside the north-up area the roads were fetched for.
     hw = half / (math.cos(math.radians(textmap.GRID_BEARING)) + aspect * math.sin(math.radians(textmap.GRID_BEARING))) if rotated else half
     g = grid.Grid(user, hw, hw * aspect, cols)
-    img = imagery.fetch_aerial(*g.bbox())
     jpg = io.BytesIO()
-    img.convert("RGB").save(jpg, "JPEG", quality=70)
+    if scene.aerial is not None:  # only to report what a photo of the same area would cost
+        scene.aerial.convert("RGB").save(jpg, "JPEG", quality=70)
     if rotated:
         g.proj = _RotProj(user, textmap.GRID_BEARING)  # imagery is north-up, so no terrain on a rotated frame
-    elif walk:
-        g.terrain[:] = grid.BUILDING  # off-street cells are expensive: walk along streets and paths
-    else:
-        g.add_terrain(segment.segment(img))
-    g.add_roads(roads, n.get("avoid_roads") or [])
+    elif scene.masks is not None and not walk:
+        g.add_terrain_at(scene.masks, scene.bbox())
+    g.add_roads(roads, scene.closures)
     if center:
-        g.add_hazard_circle(center, radius)
+        g.add_hazard_circle(*scene.zone)
     rows = g.rows
 
     # Which way each road runs through each cell.
@@ -125,12 +124,10 @@ def render(n, user, center, radius, roads, shelter, half, cols=COLS, walk=False)
             elif g.terrain[r, c] == grid.VEG:
                 cells[r][c] = ("·", "veg")
 
-    # Route out, as arrows.
+    # The scene's route, as arrows.
     ucell = g.cell_of(user)
     scell = g.cell_of(shelter[1]) if shelter else None
-    inside = bool(center) and geo.haversine_m(user, center) < radius
-    goals = {scell} if scell else (g.safe_cells(n.get("hazard")) if inside else set())
-    path = g.route(ucell, goals, n.get("hazard")) if ucell else []
+    path = g.cells_along(scene.route)
     for (r0, c0), (r1, c1) in zip(path, path[1:]):
         cells[r1][c1] = (ARROW[((r1 > r0) - (r1 < r0), (c1 > c0) - (c1 < c0))], "route")
 
@@ -156,7 +153,7 @@ def render(n, user, center, radius, roads, shelter, half, cols=COLS, walk=False)
     if cc:
         cells[cc[0]][cc[1]] = ("◆", "danger")
         taken[cc[0]][cc[1]] = True
-        place(cc, (n.get("hazard") or "hazard").upper(), "danger label", ANY)
+        place(cc, (scene.hazard or "hazard").upper(), "danger label", ANY)
     if scell:
         cells[scell[0]][scell[1]] = ("⌂", "shelter")
         place(scell, shelter[0][:24], "shelter label", ANY)
@@ -210,7 +207,7 @@ def render(n, user, center, radius, roads, shelter, half, cols=COLS, walk=False)
     out.append([["", ""]])
     for key, text in LEGEND:
         if key in used or (key == "danger" and "zone" in used):
-            if not center:  # directions, not an alert
+            if not scene.alert:  # directions, not an alert
                 text = text.replace("way out", "route").replace("shelter", "destination")
             out.append([["legend", text]])
     if rotated:

@@ -68,15 +68,59 @@ class Grid:
                 elif frac.get("vegetation", 0) > 0.4:
                     self.terrain[r, c] = VEG
 
-    def add_roads(self, roads, avoid=()):
-        """avoid: [{"road", "from", "to"}]. With both cross streets found, only that stretch is closed;
-        otherwise the whole named road in view is."""
+    def add_terrain_at(self, masks, bbox):
+        """Like add_terrain, for masks covering `bbox` (s, w, n, e) rather than exactly this grid (north-up only)."""
+        s, w, n, e = bbox
+        h, wpx = next(iter(masks.values())).shape
+        for r in range(self.rows):
+            for c in range(self.cols):
+                (la0, lo0), (la1, lo1) = (self.proj.to_latlon((self.x0 + c * self.cw, self.y1 - r * self.ch)),
+                                          self.proj.to_latlon((self.x0 + (c + 1) * self.cw, self.y1 - (r + 1) * self.ch)))
+                y0, y1 = int((n - la0) / (n - s) * h), int((n - la1) / (n - s) * h)
+                x0, x1 = int((lo0 - w) / (e - w) * wpx), int((lo1 - w) / (e - w) * wpx)
+                y0, x0 = min(max(y0, 0), h - 1), min(max(x0, 0), wpx - 1)
+                ys, xs = slice(y0, max(y0 + 1, min(y1, h))), slice(x0, max(x0 + 1, min(x1, wpx)))
+                frac = {k: m[ys, xs].mean() for k, m in masks.items()}
+                if frac.get("water", 0) > 0.4:
+                    self.terrain[r, c] = WATER
+                elif frac.get("vegetation", 0) > 0.4:
+                    self.terrain[r, c] = VEG
+
+    def set_closures(self, roads, avoid=()):
+        """avoid: [{"road", "from", "to"}] -> {road name: [span in local metres, or None for the whole road]}.
+        With both cross streets found, only that stretch is closed; otherwise the whole named road in view is."""
         closures = {}
         for seg in avoid:
             ends = [find_intersection(roads, seg["road"], x) for x in (seg.get("from"), seg.get("to")) if x]
             span = tuple(self.proj.to_xy(p) for p in ends) if len(ends) == 2 and all(ends) else None
             closures.setdefault(norm_road(seg["road"]), []).append(span)
         self.closure_spans = closures
+        return closures
+
+    def cells_along(self, pts, interpolate=True):
+        """[(lat, lon), ...] -> the grid cells the line passes through, in order, without repeats.
+        interpolate=False takes only the points' own cells (a route that is already a chain of cell centres)."""
+        out = []
+        xy = [self.proj.to_xy(p) for p in pts]
+        if not interpolate:
+            for x, y in xy:
+                c, r = int((x - self.x0) // self.cw), int((self.y1 - y) // self.ch)
+                if 0 <= r < self.rows and 0 <= c < self.cols and (not out or out[-1] != (r, c)):
+                    out.append((r, c))
+            return out
+        step = min(self.cw, self.ch) / 3
+        for (ax, ay), (bx, by) in zip(xy, xy[1:] or xy):
+            n = max(1, int(math.hypot(bx - ax, by - ay) / step))
+            for i in range(n + 1):
+                x, y = ax + (bx - ax) * i / n, ay + (by - ay) * i / n
+                c, r = int((x - self.x0) // self.cw), int((self.y1 - y) // self.ch)
+                if 0 <= r < self.rows and 0 <= c < self.cols and (not out or out[-1] != (r, c)):
+                    out.append((r, c))
+        return out
+
+    def add_roads(self, roads, avoid=()):
+        """avoid: [{"road", "from", "to"}]; see set_closures."""
+        closures = self.set_closures(roads, avoid)
         step = min(self.cw, self.ch) / 2
         for rd in roads:
             rank = ROAD_RANK.get(rd["kind"].replace("_link", ""), 1)

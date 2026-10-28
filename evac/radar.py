@@ -216,8 +216,9 @@ def run(user, w_km=160, h_km=110, sms_cols=18, mono_cols=58):
                     ["", "+ light  × moderate", "0 heavy  # storm", "\U0001F534 you"])
 
     image = _picture(user, (s, w, n, e), rgba, clock, w_km)
+    small = imagemap.shrink(image.pop("pil"))  # radar is a picture to begin with, so shrinking is fine
     return {"text": text, "sms": sms, "mono": mono, "mono_bytes": len(mono.encode()),
-            "mono_gzip": len(gzip.compress(mono.encode())), "image": image, "frame_time": frame["time"],
+            "mono_gzip": len(gzip.compress(mono.encode())), "image": image, "small": small, "frame_time": frame["time"],
             "here": LEVEL_NAME[here], "nearest": nearest, "motion": motion, "forecast": list(zip(times, mm))}
 
 
@@ -245,7 +246,7 @@ def _picture(user, bbox, rgba, clock, w_km):
     base.save(buf, "JPEG", quality=82)
     data = buf.getvalue()
     return {"data_url": "data:image/jpeg;base64," + base64.b64encode(data).decode(), "bytes": len(data),
-            "width": W, "height": H}
+            "width": W, "height": H, "pil": base}
 
 
 def find_rain():
