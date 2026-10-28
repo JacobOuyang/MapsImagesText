@@ -5,7 +5,8 @@
 POST /api/alert {"text", "lat", "lon"} -> {"message" (SMS), "text", "laptop" (WhatsApp map), "small", "image", ...}
 POST /api/photo {"image": data URL} -> {"sms", "text", "mono", "small", "parts", sizes, ...}
 POST /api/radar {"lat", "lon"} -> {"sms", "text", "mono", "small", "image", "parts", ...}
-POST /api/directions {"lat", "lon", "to"} -> {"sms", "text", "mono", "small", "image", "parts", ...}
+POST /api/directions {"lat", "lon", "to"} -> {"sms", "text", "mono", "small", "image", "parts", "trip", ...}
+POST /api/directions/move {"trip", "metres" | "astray": true} -> the update after a simulated GPS fix
 "small" is the slow-connection picture (~400 px WebP); "image" the full JPEG.
 POST /api/message {"text", "lat", "lon", "image"?} -> router: Muse picks tools; same versions + "tools" it called
 GET /api/find_rain, /api/samples, /api/sample?name=
@@ -40,6 +41,7 @@ def sms_parts(text):
     return 1 if units <= 70 else -(-units // 67)
 
 
+TRIPS = {}  # trip id -> directions.Trip, for the simulated walk
 SAMPLE_DIR = "/Library/Desktop Pictures"  # macOS ships photos here; used as sample "photos a friend sent"
 
 
@@ -110,8 +112,21 @@ class Handler(SimpleHTTPRequestHandler):
             elif self.path == "/api/directions":
                 out = directions.run((float(body["lat"]), float(body["lon"])), body["to"])
                 out.pop("scene", None)  # the page gets the rendered versions, not the Scene object
+                trip = out.pop("trip", None)
+                if trip:
+                    out["trip"] = "%x" % id(trip)
+                    TRIPS[out["trip"]] = trip
+                    out["you"] = trip.you
                 if "sms" in out:
                     out["parts"] = sms_parts(out["sms"])
+            elif self.path == "/api/directions/move":
+                # Simulated GPS: walk along the route, or take a wrong turn, then send the update.
+                trip = TRIPS[body["trip"]]
+                you = (directions.astray(trip) if body.get("astray")
+                       else directions.along(trip, float(body.get("metres", 150))))
+                out = directions.move(trip, you)
+                out.pop("scene", None)
+                out.update(trip=body["trip"], you=you, parts=sms_parts(out["sms"]))
             else:
                 return self.send_error(404)
         except Exception as e:  # show the failure in the page rather than hanging it

@@ -2,7 +2,7 @@
 import os
 import re
 
-from . import geo, grid, imagery, laptopmap, llm, notice, osm, render, segment, textmap
+from . import focus, geo, grid, imagery, laptopmap, llm, notice, osm, render, segment, textmap
 from .scene import Scene
 
 ALERT_BUFFER_M = 3000   # outside the zone but this close still gets a map
@@ -90,12 +90,17 @@ def run(sms, user=None, cols=40, seg_backend="color", out_dir="out", laptop=Fals
     if shelter and not scell:
         km = geo.haversine_m(user, shelter[1]) / 1000
         steps.append("Continue to %s (%.1f km %s)" % (shelter[0], km, geo.compass(user, shelter[1])))
-    scene = Scene(you=user, half_m=half, text=instructions(n, inside, d, radius, shelter, steps), roads=roads,
+    text = instructions(n, inside, d, radius, shelter, steps)
+    if inside and path:  # one line to act on before anything else
+        text = lead(user, [g.cell_center(*c) for c in path], shelter) + "\n" + text
+    scene = Scene(you=user, half_m=half, text=text, roads=roads,
                   closures=n.get("avoid_roads") or [], hazard=n.get("hazard"), zone=(center, radius), goal=shelter,
                   route=[g.cell_center(*c) for c in path], aerial=img, masks=masks, cols=cols,
                   street_grid=bool(roads) and textmap.is_grid_place(n.get("zone_center_place")),
                   title="%s  ·  %s" % ((n.get("hazard") or "hazard").upper(), ORDER_TITLE.get(n.get("order"), "ALERT")),
                   summary=n.get("summary") or "")
+    scene.focus = focus.select(scene)  # only the way out, closures, main roads and the street you're on
+    log.append("%d of %d roads drawn" % (len(scene.focus), len(roads)))
     msg, tm = render.sms(scene)
     log.append("text map: %d rows, worst row drift %.2f cells" % (len(tm["rows"]), tm["drift"]))
     wide = None
@@ -116,6 +121,18 @@ def run(sms, user=None, cols=40, seg_backend="color", out_dir="out", laptop=Fals
             log.append("image map failed (%s)" % ex)
     return {"affected": True, "inside": inside, "map": tm, "steps": steps, "text": scene.text, "message": msg,
             "laptop": wide, "image": picture, "small": small, "scene": scene, "log": log}
+
+
+COMPASS_WORD = {"N": "NORTH", "NE": "NORTHEAST", "E": "EAST", "SE": "SOUTHEAST", "S": "SOUTH", "SW": "SOUTHWEST",
+                "W": "WEST", "NW": "NORTHWEST"}
+
+
+def lead(user, route, shelter):
+    """The first line for someone inside the zone: which way to go, in capitals. The direction is to where the
+    way out ends up (the shelter, or the zone's edge), not the first few metres of it."""
+    to = shelter[1] if shelter else route[-1]
+    where = " toward %s" % shelter[0] if shelter else ""
+    return "GO %s NOW%s." % (COMPASS_WORD.get(geo.compass(user, to), geo.compass(user, to)), where)
 
 
 def instructions(n, inside, d, radius, shelter, steps):

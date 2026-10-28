@@ -14,7 +14,7 @@ FRAME_COLS = 40  # default width of the canonical north-up frame: the SMS map's 
 
 @dataclass
 class Scene:
-    you: tuple                                   # the reader's (lat, lon); every map is centred here
+    you: tuple                                   # the reader's (lat, lon)
     half_m: float                                # half the width (and height) of the view, in metres
     text: str = ""                               # the message: instructions, directions
     roads: list = field(default_factory=list)    # OSM roads {"name", "kind", "pts"}
@@ -30,24 +30,32 @@ class Scene:
     title: str = ""                              # picture banner
     summary: str = ""                            # picture banner subtitle
     cols: int = FRAME_COLS                       # columns of the canonical frame (the SMS routing grid)
+    center: Optional[tuple] = None               # (lat, lon) the view is centred on (None: you)
+    focus: Optional[list] = None                 # the roads to draw (evac/focus.py); None draws every road
+    marks: list = field(default_factory=list)    # [(number, (lat, lon))]: where each numbered step starts
 
     @property
     def alert(self):
         """An alert (danger zone, shelter, way out) rather than plain directions (destination, route)."""
         return self.zone is not None
 
+    @property
+    def shown(self):
+        """The roads the maps draw."""
+        return self.roads if self.focus is None else self.focus
+
     def frame(self):
-        """The canonical north-up grid over the view with terrain, roads, closures and the zone."""
-        g = grid.Grid(self.you, self.half_m, self.half_m, self.cols)
+        """The canonical north-up grid over the view with terrain, the drawn roads, closures and the zone."""
+        g = grid.Grid(self.center or self.you, self.half_m, self.half_m, self.cols)
         if self.walk:
             g.terrain[:] = grid.BUILDING  # off-street cells are expensive: stay on streets and paths
         elif self.masks is not None:
             g.add_terrain(self.masks)
-        g.add_roads(self.roads, self.closures)
+        g.add_roads(self.shown, self.closures)
         if self.zone:
             g.add_hazard_circle(*self.zone)
         return g
 
     def bbox(self):
         """What the aerial image must cover."""
-        return grid.Grid(self.you, self.half_m, self.half_m, self.cols).bbox()
+        return grid.Grid(self.center or self.you, self.half_m, self.half_m, self.cols).bbox()

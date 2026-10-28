@@ -205,6 +205,10 @@ class Grid:
     # --- output ---
     def directions(self, path):
         """Collapse a cell path into 'Head NE on Sunset Blvd ~0.8 km' steps."""
+        return [text for text, _, _ in self.legs(path)]
+
+    def legs(self, path):
+        """The steps as (text, start cell, metres)."""
         if len(path) < 2:
             return []
         legs, cur = [], None
@@ -231,5 +235,5 @@ class Grid:
             ang = math.degrees(math.atan2((c1 - c0) * self.cw, (r0 - r1) * self.ch)) % 360
             heading = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][int((ang + 22.5) // 45) % 8]
             dist = "%.1f km" % (leg["m"] / 1000) if leg["m"] >= 1000 else "%d m" % round(leg["m"], -1)
-            out.append("Head %s on %s ~%s" % (heading, leg["name"], dist))
+            out.append(("Head %s on %s ~%s" % (heading, leg["name"], dist), leg["start"], leg["m"]))
         return out

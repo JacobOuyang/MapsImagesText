@@ -30,9 +30,9 @@ def render(scene, width=WIDTH, fmt="JPEG", quality=82):
     """Scene -> a picture map. A scene with no zone is plain directions (goal = destination).
     A small `width` draws the map for that size (same text and line sizes in pixels, so fewer but readable labels)
     instead of shrinking a big one, which turns labels into mush."""
-    g = grid.Grid(scene.you, scene.half_m, scene.half_m, scene.cols)  # the frame the aerial masks cover
+    g = grid.Grid(scene.center or scene.you, scene.half_m, scene.half_m, scene.cols)  # the frame the aerial masks cover
     g.set_closures(scene.roads, scene.closures)
-    masks, roads, user, shelter = scene.masks or {}, scene.roads, scene.you, scene.goal
+    masks, roads, user, shelter = scene.masks or {}, scene.shown, scene.you, scene.goal
     center, radius = scene.zone if scene.zone else (None, 0)
     w_m, h_m = g.cols * g.cw, g.rows * g.ch
     W = width * SS
@@ -47,10 +47,18 @@ def render(scene, width=WIDTH, fmt="JPEG", quality=82):
     im = Image.new("RGB", (W, H), "#f2efe9")
     for cls, colour in (("vegetation", "#d6e7c4"), ("water", "#aad3df")):
         # At street scale the colour heuristic calls rooftops trees; only trust it zoomed out.
-        if cls in masks and (cls == "water" or m_per_px > 4):
+        # A focused street-scale map skips water too: blue rooftops read as specks of lake.
+        if cls in masks and ((cls == "water" and scene.focus is None) or m_per_px > 4):
             m = Image.fromarray(masks[cls].astype(np.uint8) * 255).resize((W, H)).filter(ImageFilter.MedianFilter(9))
             im.paste(colour, (0, 0), m)
     d = ImageDraw.Draw(im)
+
+    # A focused scene: the other roads only as faint hairlines, so the route still has a city around it.
+    if scene.focus is not None:
+        drawn = {id(rd) for rd in roads}
+        for rd in scene.roads:
+            if id(rd) not in drawn:
+                d.line([px(p) for p in rd["pts"]], fill="#dcd6cc", width=2 * SS if m_per_px < 3 else SS, joint="curve")
 
     # Roads, minor first, casing under fill.
     spans = getattr(g, "closure_spans", {})
@@ -105,12 +113,19 @@ def render(scene, width=WIDTH, fmt="JPEG", quality=82):
                    (x1 + 16 * math.cos(a + 2.4), y1 + 16 * math.sin(a + 2.4)),
                    (x1 + 16 * math.cos(a - 2.4), y1 + 16 * math.sin(a - 2.4))], fill="#1a73e8")
 
+    # Where each numbered step starts.
+    for n, p in scene.marks:
+        x, y = px(p)
+        if 0 <= x < W and 0 <= y < H:
+            d.ellipse([x - 15, y - 15, x + 15, y + 15], fill="#ffffff", outline="#1a73e8", width=5)
+            d.text((x, y), str(n), font=_font(10, bold=True), fill="#1a73e8", anchor="mm")
+
     # Road names, biggest roads first, skipping any that would overlap.
     boxes = []
     f_lab = _font(11, bold=True)
     by_name = {}
     for rank, rd, pts in styled:
-        if rd["name"] and (rank >= 2 or not thin):
+        if rd["name"] and (rank >= 2 or not thin or scene.focus is not None):
             inside = [p for p in pts if 0 <= p[0] < W and 0 <= p[1] < H]
             key = norm_road(rd["name"])
             if inside and len(inside) > len(by_name.get(key, (0, [], ""))[1]):
