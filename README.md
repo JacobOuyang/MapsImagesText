@@ -871,6 +871,10 @@ flowchart TD
   S --> Z["ZOOM n: the same, on part n's crop of the full-size photo<br/>(each zoom can be zoomed again)"]
 ```
 
+- **The subject always stands out; the background stays light.** Background regions are shaded with only blank, `·` and `░`; the subject with `░ ▒ ▓` from its own tones (never blank, so a white mug still shows), inside a heavy outline; a subject too small to outline is marked `█`, which nothing else uses. Over the 36 sample photos the subject is now darker than its background in 34 (16 before), and Muse names the subject from the drawing alone 19% of the time (6% before). Before and after:
+
+  ![Emphasis on the subject](docs/eval_emphasis_dog.jpg)
+
 - **The high level is about scene and tone.** In "Eagle & Waterfall" it shows the dark waterfall on the left, the bright mist, the cliff on the right and the eagle as a dark mark in the sky. Muse, blind, read an earlier version as "body of water, land on left and right, small boat". That's the layout right, with the eagle as the boat.
 - **Zoom recurses into one part.** "ZOOM 2" redraws the flying bird from its crop of the full-size photo: a dark wing shape with feathered edges, against the mist.
 - **Cost:** the high level takes about 10 to 15 s after the low one; a zoom takes about 5 to 15 s. The text is about 4 KB (0.5 KB compressed).
@@ -880,6 +884,16 @@ flowchart TD
   - The zoom box can clip the edge of a thin part.
 
 **In the simulator:** after a photo, the **WhatsApp drawing: Low / High** switch and the **Zoom in** buttons (one per numbered part) appear under the samples. Each zoom joins the thread as a reply, as it would in WhatsApp.
+
+### How good is it, and how much of a photo can be rebuilt from text?
+
+`evals/` measures every sample photo's drawings against the photo (tone, edges, subject shape and contrast, whether Muse can name the subject from the drawing alone, bytes) and tries to recompose the photo from the text: decoding drawings and zooms back to grey, and asking Muse Image to recreate it. Method in [evals/README.md](evals/README.md), numbers in [evals/RESULTS.md](evals/RESULTS.md). In short:
+
+- **One drawing:** it rebuilds 19% of the way from flat grey to a 232-column picture of the photo. Every 2×2 and 4×4 zoom (59 KB of text) gets 54%. A same-size greyscale JPEG does far better on pixels; text is only worth it because it travels where pictures can't.
+- **Decode before recreating.** Given the raw text drawing, Muse Image copies the glyph texture. Given the drawing decoded to grey and the caption, its recreation matches the photo's layout at r 0.52 (caption alone: 0.37; unrelated photos: 0.02). With every zoom it reaches 0.75, the subject lands in the right place (IoU 0.67), and a Muse judge rates it 7.7 of 10.
+- **What the drawing carries:** where things are and how light or dark they are. The words carry what the subject is and its colours.
+
+![Recomposition examples](docs/eval_recompose_examples.jpg)
 
 ## Weather radar
 
@@ -1277,6 +1291,7 @@ python3 main.py --walk "Castelo de São Jorge, Lisbon" --at 38.7139,-9.1406 -v  
 | `evac/pipeline.py` | The fixed emergency reply: parse, locate, route, word, build the Scene |
 | `evac/directions.py` | A walk as a `Trip`: streets and landmarks downloaded once, re-routed at every GPS fix (`move`); one step at a time, to the next intersection, with its turn, a landmark and a map of just that stretch; optional named start |
 | `evac/radar.py` | RainViewer tiles → rain levels, motion, Open-Meteo forecast, its four versions |
+| `evals/` | Photo drawing evals: metrics against the photo, recomposition from text (D0 decode, Muse Image), report |
 | `evac/tonal.py` | The high-detail WhatsApp photo drawing: every part segmented, split recursively by brightness, shaded by grey value; zoom into a part |
 | `evac/sketch.py` | The WhatsApp photo drawing: everything Muse lists, outlined by SAM, drawn together, checked by Muse from a rendered image, repaired up to 3 times |
 | `evac/photo.py` | Muse description; the one object's outline (found by SAM 3.1, shaped by its mask or by colour inside its box; cropped; marching squares) or the borders of the main regions |

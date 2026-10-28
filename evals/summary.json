@@ -1,0 +1,304 @@
+{
+ "photos": 36,
+ "chance_layout_corr": 0.015425330653187797,
+ "drawings": {
+  "low": {
+   "tone_r": null,
+   "tone_ssim": null,
+   "edge_f1": null,
+   "edge_precision": null,
+   "edge_recall": null,
+   "subject_iou": null,
+   "contrast": null,
+   "subject_ink": null,
+   "background_ink": null,
+   "bytes": 1435.8333333333333,
+   "gzip": 201.80555555555554,
+   "read_scene_score": 2.0,
+   "read_subject_match": 0.23529411764705882
+  },
+  "faithful": {
+   "tone_r": 0.702520403838252,
+   "tone_ssim": 0.409384108415048,
+   "edge_f1": 0.7941077331016866,
+   "edge_precision": 0.6904420948636051,
+   "edge_recall": 0.9542330901732112,
+   "subject_iou": 0.8131205898854584,
+   "contrast": 0.24211758147068116,
+   "subject_ink": 0.30431073453132473,
+   "background_ink": 0.30610150092115607,
+   "bytes": 2894.8333333333335,
+   "gzip": 286.19444444444446,
+   "read_scene_score": 1.3888888888888888,
+   "read_subject_match": 0.05555555555555555
+  },
+  "high": {
+   "tone_r": 0.5219180069446723,
+   "tone_ssim": 0.4025288417439681,
+   "edge_f1": 0.7586118657898047,
+   "edge_precision": 0.7795660503073513,
+   "edge_recall": 0.8003938212878645,
+   "subject_iou": 0.8243703810600325,
+   "contrast": 0.2021071315261329,
+   "subject_ink": 0.2756046225516357,
+   "background_ink": 0.0869604749916074,
+   "bytes": 2891.1388888888887,
+   "gzip": 252.80555555555554,
+   "read_scene_score": 1.8055555555555556,
+   "read_subject_match": 0.19444444444444445
+  }
+ },
+ "recompose": {
+  "flat": 0.519462385394082,
+  "ceiling_58_glyphs": 0.5447679720349212,
+  "ceiling_58": 0.7250885720322865,
+  "ceiling_116_glyphs": 0.5756272266139635,
+  "ceiling_116": 0.8257943797106362,
+  "ceiling_232_glyphs": 0.6072853027599534,
+  "ceiling_232": 0.9385852301273656,
+  "high": {
+   "ssim": 0.5705251254103784,
+   "mae": 0.08126802048603826,
+   "bytes": 2918.027777777778
+  },
+  "faithful": {
+   "ssim": 0.6028528242139171,
+   "mae": 0.06653978938013612,
+   "bytes": 2927.3333333333335
+  },
+  "parts": {
+   "ssim": 0.6150476094235573,
+   "mae": 0.06278079012825595,
+   "bytes": 11581.5
+  },
+  "tiles2": {
+   "ssim": 0.6809529070673983,
+   "mae": 0.05108982208453469,
+   "bytes": 14159.138888888889
+  },
+  "tiles4": {
+   "ssim": 0.7659758419474524,
+   "mae": 0.03580835825862098,
+   "bytes": 58660.52777777778
+  },
+  "greedy_final": {
+   "ssim": 0.7649650847151365,
+   "bytes": 54504.75
+  },
+  "recovered": {
+   "high": 0.13319604625245826,
+   "faithful": 0.1906374950069737,
+   "parts": 0.19727570549237322,
+   "tiles2": 0.36190214715896407,
+   "tiles4": 0.5429082794868254,
+   "greedy_final": 0.5446488247558453,
+   "ceiling_58_glyphs": 0.05321261544766551
+  }
+ },
+ "generate": {
+  "caption_only": {
+   "n": 36,
+   "layout_corr": 0.37137821018525025,
+   "subject_iou": 0.4904169614762632,
+   "judge_subject": 8.88888888888889,
+   "judge_layout": 6.388888888888889,
+   "judge_overall": 7.027777777777778,
+   "subject_found": 0.9166666666666666
+  },
+  "drawing": {
+   "n": 36,
+   "layout_corr": 0.20070840468671128,
+   "subject_iou": 0.0,
+   "judge_subject": 0.9444444444444444,
+   "judge_layout": 2.0555555555555554,
+   "judge_overall": 1.0,
+   "subject_found": 0.0
+  },
+  "drawing_key": {
+   "n": 36,
+   "layout_corr": 0.3360416601777471,
+   "subject_iou": 0.44481881836597204,
+   "judge_subject": 6.833333333333333,
+   "judge_layout": 4.333333333333333,
+   "judge_overall": 4.833333333333333,
+   "subject_found": 0.8333333333333334
+  },
+  "zooms_key": {
+   "n": 36,
+   "layout_corr": 0.7246565126031456,
+   "subject_iou": 0.6130862431997031,
+   "judge_subject": 8.527777777777779,
+   "judge_layout": 6.916666666666667,
+   "judge_overall": 7.055555555555555,
+   "subject_found": 0.8888888888888888
+  }
+ },
+ "by_kind": {
+  "generated object": {
+   "n": 6,
+   "high_subject_match": 0.5,
+   "low_subject_match": 0.6666666666666666,
+   "high_scene": 2.8333333333333335,
+   "low_scene": 4.666666666666667,
+   "high_tone_r": 0.5684928830833262,
+   "faithful_tone_r": 0.6472201315616664,
+   "drawing_key_judge": 8.666666666666666,
+   "caption_judge": 8.0
+  },
+  "photo of an object": {
+   "n": 10,
+   "high_subject_match": 0.1,
+   "low_subject_match": 0.2222222222222222,
+   "high_scene": 1.7,
+   "low_scene": 2.0,
+   "high_tone_r": 0.6009420577681407,
+   "faithful_tone_r": 0.7717387150953988,
+   "drawing_key_judge": 8.1,
+   "caption_judge": 7.6
+  },
+  "scene": {
+   "n": 20,
+   "high_subject_match": 0.15,
+   "low_subject_match": 0.10526315789473684,
+   "high_scene": 1.55,
+   "low_scene": 1.1578947368421053,
+   "high_tone_r": 0.4684335186913421,
+   "faithful_tone_r": 0.6845013298926542,
+   "drawing_key_judge": 7.25,
+   "caption_judge": 6.45
+  }
+ },
+ "seconds": {
+  "low": 13.149999999999999,
+  "high": 9.62222222222222
+ },
+ "generate2": {
+  "caption_only": {
+   "n": 36,
+   "layout_corr": 0.37120484459142467,
+   "subject_iou": 0.5122957774107033,
+   "judge_subject": 8.88888888888889,
+   "judge_layout": 6.388888888888889,
+   "judge_overall": 7.027777777777778,
+   "subject_found": 0.9166666666666666
+  },
+  "drawing": {
+   "n": 36,
+   "layout_corr": 0.20066179372919715,
+   "subject_iou": 0.0,
+   "judge_subject": 0.9444444444444444,
+   "judge_layout": 2.0555555555555554,
+   "judge_overall": 1.0,
+   "subject_found": 0.0
+  },
+  "drawing_key": {
+   "n": 36,
+   "layout_corr": 0.33606688916394867,
+   "subject_iou": 0.4356133655758085,
+   "judge_subject": 6.833333333333333,
+   "judge_layout": 4.333333333333333,
+   "judge_overall": 4.833333333333333,
+   "subject_found": 0.8333333333333334
+  },
+  "base_decoded_key": {
+   "n": 36,
+   "layout_corr": 0.5018800514299352,
+   "subject_iou": 0.41241669179349216,
+   "judge_subject": 7.138888888888889,
+   "judge_layout": 4.888888888888889,
+   "judge_overall": 5.194444444444445,
+   "subject_found": 0.9166666666666666
+  },
+  "base_decoded_caption": {
+   "n": 36,
+   "layout_corr": 0.5183303008414016,
+   "subject_iou": 0.5352743917977848,
+   "judge_subject": 8.416666666666666,
+   "judge_layout": 5.916666666666667,
+   "judge_overall": 6.611111111111111,
+   "subject_found": 0.9444444444444444
+  },
+  "zooms_key": {
+   "n": 36,
+   "layout_corr": 0.7246663858332102,
+   "subject_iou": 0.5886069264242474,
+   "judge_subject": 8.527777777777779,
+   "judge_layout": 6.916666666666667,
+   "judge_overall": 7.055555555555555,
+   "subject_found": 0.8888888888888888
+  },
+  "zooms_decoded_caption": {
+   "n": 36,
+   "layout_corr": 0.749044907227208,
+   "subject_iou": 0.6704443150724597,
+   "judge_subject": 9.13888888888889,
+   "judge_layout": 7.527777777777778,
+   "judge_overall": 7.722222222222222,
+   "subject_found": 0.9166666666666666
+  }
+ },
+ "analysis": {
+  "adaptive": {
+   "58_5": 0.6913377801803988,
+   "58_10": 0.7103336048115829,
+   "116_5": 0.7582848903283167,
+   "116_10": 0.7937403972594994,
+   "232_5": 0.8206824854627631,
+   "232_10": 0.8789446602765896
+  },
+  "jpeg": {
+   "base": {
+    "bytes": 2927.3333333333335,
+    "ssim": 0.9027020045239702
+   },
+   "tiles2": {
+    "bytes": 14159.138888888889,
+    "ssim": 0.9735744620889063
+   },
+   "tiles4": {
+    "bytes": 58660.52777777778,
+    "ssim": 0.9840232834871837
+   }
+  },
+  "figure_ground_faithful": 4.102556170844696,
+  "figure_ground_high": 4.6220890199770395
+ },
+ "greedy_curve": [
+  [
+   0,
+   0.6028528242139171
+  ],
+  [
+   500,
+   0.6045420815832018
+  ],
+  [
+   1000,
+   0.6054193502579746
+  ],
+  [
+   2000,
+   0.6075645207396247
+  ],
+  [
+   4000,
+   0.6264477455647864
+  ],
+  [
+   8000,
+   0.6530206753989337
+  ],
+  [
+   16000,
+   0.6858551968136581
+  ],
+  [
+   32000,
+   0.7278528637135672
+  ],
+  [
+   64000,
+   0.7587338064343391
+  ]
+ ]
+}
