@@ -18,9 +18,13 @@ def sms(scene):
     if not tm:
         g = scene.frame()
         goal = g.cell_of(scene.goal[1]) if scene.goal else None
-        tm = textmap.render_raster(g, g.cell_of(scene.you), goal, g.cells_along(scene.route, interpolate=False),
-                                   min_rank=1 if focused and scene.walk else 2, outline=focused)
+        # A walking step is zoomed in further than its route's grid: join the points up.
+        tm = textmap.render_raster(g, g.cell_of(scene.you), goal, g.cells_along(scene.route, interpolate=scene.walk),
+                                   min_rank=1 if focused and scene.walk else 2, outline=focused,
+                                   landmark_cells=[c for c in (g.cell_of(p) for _, p in scene.landmarks) if c])
     legend = textmap.legend(tm["keys"], scene.hazard, scene.goal and scene.goal[0])
+    if "landmark" in tm["keys"]:
+        legend.append("¤ " + ", ".join(name for name, _ in scene.landmarks))
     if not scene.alert:  # directions: a destination and a route, not a shelter and a way out
         legend = [l.replace("way out", "route").replace("shelter:", "destination:") for l in legend]
     lines = [scene.text, "", tm["title"]] + tm["rows"] + [""] + legend

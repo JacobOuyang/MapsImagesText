@@ -24,6 +24,7 @@ LANDMARK_M = 35    # a turn's cross street must pass this close to the turn
 TURN_DEG = 35      # heading change that counts as a turn
 MAX_TURNS = 6
 NEAR_M = 90        # a landmark street is drawn this far either side of its turn
+CLIP_FRAC = 0.2    # one walking step: roads are drawn only this close to the route (a fifth of the view's half-width)
 
 
 def _rank(rd):
@@ -95,8 +96,9 @@ def _simplify(pts, tol):
     return sorted(keep)
 
 
-def select(scene):
-    """Scene -> the roads to draw (a subset of scene.roads)."""
+def select(scene, minimal=False):
+    """Scene -> the roads to draw (a subset of scene.roads). minimal=True (one walking step): only the streets the
+    route walks along and the cross street at its turn."""
     roads = scene.roads
     if not roads:
         return []
@@ -107,10 +109,13 @@ def select(scene):
 
     # Roads walked along: the nearest road to at least 2 route points. (In an old town several streets pass
     # within a few metres of the route; only the nearest one is the one walked.)
+    # A route drawn on a coarse grid sits up to ~0.7 cell off the street centreline: scale the test to its spacing.
+    hops = sorted(math.hypot(bx - ax, by - ay) for (ax, ay), (bx, by) in zip(rxy, rxy[1:]))
+    walked_m = max(WALKED_M, 0.8 * hops[len(hops) // 2]) if hops else WALKED_M
     hits, crossed = {}, set()
     for p in rxy:
         d = segs.dist(p)
-        if len(d) and d.min() <= WALKED_M:
+        if len(d) and d.min() <= walked_m:
             o = int(segs.owner[d.argmin()])
             hits[o] = hits.get(o, 0) + 1
             crossed |= {int(segs.owner[i]) for i in np.nonzero(d <= 6)[0]}
@@ -124,7 +129,7 @@ def select(scene):
 
     # The other pieces of each walked street along the route, so it reads as one street.
     for p in rxy[::3]:
-        keep |= {o for o in segs.roads_near(p, WALKED_M) if roads[o]["name"] and norm_road(roads[o]["name"]) in walked_names}
+        keep |= {o for o in segs.roads_near(p, walked_m) if roads[o]["name"] and norm_road(roads[o]["name"]) in walked_names}
 
     # Landmarks: the named cross street at each turn, biggest first, drawn near the turn.
     for ti in turns(rxy)[:MAX_TURNS]:
@@ -133,6 +138,12 @@ def select(scene):
         if cands:
             best = max(cands, key=lambda o: (_rank(roads[o]), -near[o]))
             keep |= near_by_name(best, rxy[ti], NEAR_M)
+
+    if minimal:  # only the parts near the route: a square mapped as one closed way would be drawn all round
+        out = []
+        for i in sorted(keep):
+            out += _clip(roads[i], rxy, proj, max(walked_m, CLIP_FRAC * scene.half_m))
+        return out
 
     # Main roads: crossed by the route when walking; all in view for an alert (the roads people know).
     if scene.alert:
@@ -154,6 +165,28 @@ def select(scene):
     return [roads[i] for i in sorted(keep)]
 
 
+def _clip(rd, rxy, proj, m):
+    """The pieces of a road within m of the route, as road dicts of their own."""
+    xy = [proj.to_xy(p) for p in rd["pts"]]
+    dense = []
+    for (ax, ay), (bx, by) in zip(xy, xy[1:]):
+        n = max(1, int(math.hypot(bx - ax, by - ay) / 5))
+        dense += [(ax + (bx - ax) * k / n, ay + (by - ay) * k / n) for k in range(n)]
+    dense.append(xy[-1])
+    R = np.array(rxy, float).reshape(-1, 2)
+    D = np.array(dense)
+    near = np.hypot(D[:, None, 0] - R[None, :, 0], D[:, None, 1] - R[None, :, 1]).min(1) <= m
+    pieces, run = [], []
+    for p, ok in zip(dense, near):
+        if ok:
+            run.append(proj.to_latlon(p))
+        elif run:
+            pieces.append(run)
+            run = []
+    pieces.append(run)
+    return [dict(rd, pts=piece) for piece in pieces if len(piece) > 1]
+
+
 def _same_name(roads, i):
     n = roads[i]["name"]
     return {i} if not n else {j for j, rd in enumerate(roads) if rd["name"] and norm_road(rd["name"]) == norm_road(n)}
@@ -170,12 +203,14 @@ def ahead(route, metres):
     return out
 
 
-def fit(points, pad_m=60, min_half_m=150, aspect=0.9):
+def fit(points, pad_m=None, min_half_m=None, aspect=0.9):
     """A square view (centre, half-width) that holds `points` with a margin. Height is checked against
-    `aspect` because the narrow monospace map is that much shorter than it is wide."""
+    `aspect` because the narrow monospace map is that much shorter than it is wide. By default the margin is 15%
+    of what is shown, so a 40 m step and a 2 km walk are framed the same way."""
     proj = geo.LocalProjection(points[0])
     xy = [proj.to_xy(p) for p in points]
     xs, ys = [x for x, _ in xy], [y for _, y in xy]
     cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
-    half = max((max(xs) - min(xs)) / 2, (max(ys) - min(ys)) / 2 / aspect) + pad_m
-    return proj.to_latlon((cx, cy)), max(min_half_m, half)
+    span = max((max(xs) - min(xs)) / 2, (max(ys) - min(ys)) / 2 / aspect)
+    pad = pad_m if pad_m is not None else max(10, 0.15 * span)
+    return proj.to_latlon((cx, cy)), max(min_half_m if min_half_m is not None else 30, span + pad)

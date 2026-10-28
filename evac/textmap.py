@@ -33,6 +33,7 @@ TOKENS = {
     "you": " \U0001F534 ",  # red dot emoji (17 px) padded to TWO cells (-0.4 px); see _place_you
     "skip": "",                   # the cell the two-cell "you" marker covers
     "shelter": "S",               # +1.2%
+    "landmark": "¤",              # exactly one digit wide
     "avenue": " | ",     # | padded (exact)
 }
 # Width error of each token as a fraction of one cell, for the drift check.
@@ -82,7 +83,7 @@ def _join(rows, labels):
 
 # ---------- raster layout ----------
 
-PRIORITY = ["you", "shelter", "route", "danger", "closed", "zone", "water", "road", "blank"]
+PRIORITY = ["you", "shelter", "landmark", "route", "danger", "closed", "zone", "water", "road", "blank"]
 
 
 BUBBLE_PT = 255   # usable text width of an iPhone Messages bubble at 17 pt (~264 minus slack)
@@ -94,7 +95,7 @@ def _fits(label, cells):
     return cells * CELL_PT + len(label) * AVG_CHAR_PT <= BUBBLE_PT
 
 
-def render_raster(g, user_cell, shelter_cell, path, cols=16, min_rank=2, outline=False):
+def render_raster(g, user_cell, shelter_cell, path, cols=16, min_rank=2, outline=False, landmark_cells=()):
     """Downsample the routing grid to `cols` columns (2 routing cells -> 1 text cell, etc.).
     min_rank=1 also draws side streets (a focused walking map has only a few); outline=True draws only the
     zone's edge, not its whole area."""
@@ -141,6 +142,8 @@ def render_raster(g, user_cell, shelter_cell, path, cols=16, min_rank=2, outline
             if ups[r] > 1:
                 nxt = rows[coarse[i + 1][0]][coarse[i + 1][1]] if i + 2 < len(coarse) else None
                 rows[r][c] = nxt if nxt in ("left", "right") else "road"
+    for r, c in landmark_cells:
+        rows[r // f][c // f] = "landmark"
     if shelter_cell:
         rows[shelter_cell[0] // f][shelter_cell[1] // f] = "shelter"
     if user_cell:

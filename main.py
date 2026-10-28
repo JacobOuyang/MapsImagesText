@@ -22,7 +22,8 @@ def main():
                     "columns; the simulator's WhatsApp view uses 58)")
     ap.add_argument("--photo", help="photo file: print the SMS and WhatsApp text versions")
     ap.add_argument("--radar", help="lat,lon: print the weather radar as text")
-    ap.add_argument("--walk", help="destination: print walking directions from --at")
+    ap.add_argument("--walk", help="destination: print walking directions from --at (or --from)")
+    ap.add_argument("--from", dest="start", help="with --walk: a place to start from instead of --at")
     ap.add_argument("--ask", help="any message: Muse picks the tools (add --photo to attach a photo)")
     ap.add_argument("-v", "--verbose", action="store_true")
     a = ap.parse_args()
@@ -44,7 +45,7 @@ def main():
         print(r["sms"], "\n\n" + r["mono"])
         return print("\nWhatsApp text %d bytes (%d gzipped), radar picture %d bytes" % (r["mono_bytes"], r["mono_gzip"], r["image"]["bytes"]))
     if a.walk:
-        r = directions.run(at, a.walk)
+        r = directions.run(at, a.walk, start=a.start)
         if a.verbose:
             print("\n".join(r["log"]), "\n")
         if "error" in r:

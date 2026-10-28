@@ -120,6 +120,14 @@ def render(scene, width=WIDTH, fmt="JPEG", quality=82):
             d.ellipse([x - 15, y - 15, x + 15, y + 15], fill="#ffffff", outline="#1a73e8", width=5)
             d.text((x, y), str(n), font=_font(10, bold=True), fill="#1a73e8", anchor="mm")
 
+    # Landmarks: an orange star with its name.
+    f_lm = _font(11, bold=True)
+    for name, p in scene.landmarks:
+        x, y = px(p)
+        if 0 <= x < W and 0 <= y < H:
+            d.regular_polygon((x, y, 17), 5, fill="#f29900", outline="#ffffff")
+            d.text((x + 22, y), name, font=f_lm, fill="#b06f00", anchor="lm", stroke_width=4, stroke_fill="#ffffff")
+
     # Road names, biggest roads first, skipping any that would overlap.
     boxes = []
     f_lab = _font(11, bold=True)
@@ -194,6 +202,8 @@ def render(scene, width=WIDTH, fmt="JPEG", quality=82):
         items.append(("route", "Way out" if center else "Route"))
     if shelter:
         items.append(("shelter", "Shelter" if center else "Destination"))
+    if scene.landmarks:
+        items.append(("landmark", "Landmark"))
     lx, ly, f_leg = 12 * SS, H - (16 + 18 * len(items)) * SS, _font(11)
     d.rectangle([lx - 6 * SS, ly - 8 * SS, lx + 118 * SS, H - 10 * SS], fill="#ffffff", outline="#cccccc")
     for i, (k, text) in enumerate(items):
@@ -206,6 +216,8 @@ def render(scene, width=WIDTH, fmt="JPEG", quality=82):
             d.line([(lx, y), (lx + 12 * SS, y)], fill="#d70015", width=10)
         elif k == "route":
             d.line([(lx, y), (lx + 12 * SS, y)], fill="#1a73e8", width=10)
+        elif k == "landmark":
+            d.regular_polygon((lx + 6 * SS, y, 8 * SS), 5, fill="#f29900")
         else:
             d.ellipse([lx, y - 6 * SS, lx + 12 * SS, y + 6 * SS], fill="#1e8e3e")
         d.text((lx + 20 * SS, y), text, font=f_leg, fill="#333333", anchor="lm")

@@ -33,6 +33,7 @@ class Scene:
     center: Optional[tuple] = None               # (lat, lon) the view is centred on (None: you)
     focus: Optional[list] = None                 # the roads to draw (evac/focus.py); None draws every road
     marks: list = field(default_factory=list)    # [(number, (lat, lon))]: where each numbered step starts
+    landmarks: list = field(default_factory=list)  # [(name, (lat, lon))]: things to look out for on the way
 
     @property
     def alert(self):

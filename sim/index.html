@@ -177,7 +177,7 @@
 <section class="tabsec" id="sec-photo">
   <div class="panel controls">
     <h3>A friend sends you a photo, but your connection can't load it</h3>
-    <p>The server looks at it with Muse Spark and sends back what's in it, plus the photo drawn in text.</p>
+    <p>The server looks at it with Muse Spark and sends back what's in it, plus the outline of the one object it shows, cropped to it and drawn as wide as the maps.</p>
     <div class="chips" id="photoSamples"></div>
     <div class="row2"><label class="inline">Or your own: <input type="file" id="photoFile" accept="image/*"></label>
       <span class="status-line" id="photoStatus"></span></div>
@@ -206,17 +206,18 @@
     <p>Asked directly, Muse Spark answers from memory: it can't see where you're standing, some turns are wrong and its sketch isn't to scale. Here the route comes from real street and footpath data around your GPS, and Muse only rewords it.</p>
     <div class="chips" id="walkFrom"></div>
     <div class="row2">
+      <input type="text" id="walkFromText" aria-label="Start" placeholder="From (blank: your GPS)">
       <input type="text" id="walkTo" aria-label="Destination" placeholder="Where to?">
       <button class="go" id="walkGo">Text directions</button>
       <span class="status-line" id="walkStatus"></span>
     </div>
     <div class="row2" id="walkMove" hidden>
       <span class="status-line">Simulate the phone's GPS:</span>
-      <button class="chip" id="walk150">Walk 150 m along the route</button>
+      <button class="chip" id="walk150">Walk 60 m along the route</button>
       <button class="chip" id="walkAstray">Take a wrong turn</button>
       <span class="status-line" id="moveStatus"></span>
     </div>
-    <p class="hint">Each map shows only the next stretch of the walk: the route, numbered turns, the streets it uses and the cross streets at its turns. As you move, the server sends a one-line update while you're on track and a new map at turns or after a wrong turn.</p>
+    <p class="hint">Each message is only the current step, as far as the next intersection, and which way to turn there; its map shows just that stretch. As you move, the server sends a one-line update while you're on the same street, and the next step (with its map) at each intersection or after a wrong turn.</p>
   </div>
   <div class="triple" id="walkOut"></div>
 </section>
@@ -454,10 +455,11 @@ async function sendRadar() {
 async function sendWalk() {
   const to = $('walkTo').value.trim();
   if (!to) { $('walkStatus').textContent = 'Type a destination first.'; return; }
-  results.walk = {request: `You are at ${walkFrom[0].toFixed(4)}, ${walkFrom[1].toFixed(4)} (from GPS)`, out: 'Walk to ' + to, pending: true};
+  const from = $('walkFromText').value.trim();
+  results.walk = {request: `You are at ${walkFrom[0].toFixed(4)}, ${walkFrom[1].toFixed(4)} (from GPS)`, out: (from ? `Walk from ${from} to ` : 'Walk to ') + to, pending: true};
   showResult('walk'); $('walkStatus').textContent = 'Routing on street data (a new city can take a minute)…';
   $('walkMove').hidden = true; $('moveStatus').textContent = '';
-  const res = await post('/api/directions', {lat: walkFrom[0], lon: walkFrom[1], to});
+  const res = await post('/api/directions', {lat: walkFrom[0], lon: walkFrom[1], to, from});
   Object.assign(results.walk, {pending: false, res, more: []});
   $('walkStatus').textContent = res.error ? '' : `Done in ${res.seconds} s`;
   $('walkMove').hidden = !res.trip;
@@ -466,9 +468,9 @@ async function sendWalk() {
 async function moveWalk(astray) {
   const x = results.walk;
   if (!x || !x.res || !x.res.trip) return;
-  const u = {meta: astray ? 'GPS: you took a wrong turn' : 'GPS: you walked 150 m', pending: true};
+  const u = {meta: astray ? 'GPS: you took a wrong turn' : 'GPS: you walked 60 m', pending: true};
   x.more.push(u); showResult('walk'); $('moveStatus').textContent = 'Sending the new position…';
-  const res = await post('/api/directions/move', {trip: x.res.trip, metres: 150, astray});
+  const res = await post('/api/directions/move', {trip: x.res.trip, metres: 60, astray});
   Object.assign(u, {pending: false, res});
   if (res.you) u.meta += ` (now at ${res.you[0].toFixed(5)}, ${res.you[1].toFixed(5)})`;
   $('moveStatus').textContent = res.error ? '' : `${res.state}: ${res.map ? 'new map sent' : 'text only, no map'} (${res.seconds} s)`;
@@ -512,8 +514,12 @@ $('erSend').onclick = sendAlert; $('textMap').onclick = textMap;
 $('erInput').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAlert(); } };
 
 fetch('/api/samples').then(r => r.json()).then(d => {
-  if (!d.photos.length) $('photoSamples').appendChild(el('span', 'status-line', 'No sample photos on this machine; upload one.'));
-  for (const name of d.photos) chip('photoSamples', name, () => fetch('/api/sample?name=' + encodeURIComponent(name)).then(r => r.blob()).then(b => loadPhoto(b, name)));
+  if (!d.photos.length && !d.objects.length) $('photoSamples').appendChild(el('span', 'status-line', 'No sample photos on this machine; upload one.'));
+  const send = name => () => fetch('/api/sample?name=' + encodeURIComponent(name)).then(r => r.blob()).then(b => loadPhoto(b, name));
+  if (d.objects.length) $('photoSamples').appendChild(el('span', 'status-line', 'One object:'));
+  for (const name of d.objects) chip('photoSamples', name, send(name));
+  if (d.photos.length) $('photoSamples').appendChild(el('span', 'status-line', 'Scenes:'));
+  for (const name of d.photos) chip('photoSamples', name, send(name));
 });
 $('photoFile').onchange = e => { const f = e.target.files[0]; if (f) loadPhoto(f, f.name); };
 for (const [name, ll] of Object.entries(RADAR_PLACES)) chip('radarPlaces', name, () => { $('radarAt').value = ll.join(', '); sendRadar(); });

@@ -18,7 +18,7 @@ from . import imagemap, llm
 
 # Lightest to darkest; all exactly one digit wide in SF Pro 17 px (ink measured on a canvas: 0, 24, 52).
 BLANK = "\u2007"  # figure space: a blank SMS row that keeps its height
-SMS_TONES = " +#"  # three flat tones for a photo drawn as its main regions
+SMS_TONES = BLANK + "+#"  # three flat tones for a photo drawn as its main regions
 SMS_CELL = 22 / 10.28   # iMessage line height / digit width
 MONO_CELL = 16.9 / 7.53  # WhatsApp monospace line height / Menlo cell width at 12.5 px
 PROMPT = ("Describe this photo for someone whose phone could not load it. Reply as JSON: "
@@ -49,10 +49,17 @@ def describe(jpeg):
 
 # ---------- outlines: the bare minimum of a photo ----------
 # A tone sketch shades every pixel, so ripples, mist and stripes crowd out the thing the photo is of. Instead:
-# find the subject (whatever differs from the colours along the photo's border), clean it to its main pieces,
-# zoom in if it is small, and draw only its edge. Photos with no clear subject (a landscape) get the borders of
-# their few biggest colour regions instead: horizon, water line, cliff. SAM 3.1 would give a real subject mask;
-# this is the no-model stand-in.
+# find the one object the photo is of (whatever differs from the main colours along its border), crop to it so it
+# fills the width a map gets, and draw only its contour. Photos with no single object (a landscape) get the
+# borders of their few biggest colour regions instead. SAM 3.1 would give a real object mask; this is the
+# no-model stand-in.
+
+WORK_COLS = 240  # the object is found on a grid this wide (square pixels), then cropped and drawn smaller
+# Marching squares: the four corners of a cell (top-left, top-right, bottom-right, bottom-left; 1 = inside) ->
+# the box-drawing glyph that joins the edge midpoints the contour crosses. All one cell wide in Menlo.
+CONTOUR = {0b1000: "╯", 0b0100: "╰", 0b0010: "╭", 0b0001: "╮", 0b1100: "─", 0b1001: "│", 0b1010: "╳"}
+CONTOUR.update({0b1111 ^ k: v for k, v in list(CONTOUR.items())})
+
 
 def _kmeans(X, k, iters=20):
     C = X[np.argsort(X[:, 0])[np.linspace(0, len(X) - 1, k).astype(int)]].copy()  # spread over lightness
@@ -77,7 +84,7 @@ def _otsu(v):
 
 
 def _colour(img, cols, rows):
-    """Blurred YCbCr at twice the cell resolution, lightness weighted down so colour separates subjects."""
+    """Blurred YCbCr at twice the grid resolution, lightness weighted down so colour separates objects."""
     sm = img.filter(ImageFilter.GaussianBlur(max(img.size) / 200)).convert("YCbCr")
     return np.asarray(sm.resize((cols * 2, rows * 2), Image.BOX), float) * np.array([0.7, 1.2, 1.2])
 
@@ -86,54 +93,69 @@ def _components(m):
     """Connected True regions of a bool array, as lists of cells, biggest first."""
     rows, cols = m.shape
     seen, out = np.zeros_like(m, bool), []
-    for r in range(rows):
-        for c in range(cols):
-            if m[r, c] and not seen[r, c]:
-                comp, stack = [], [(r, c)]
-                seen[r, c] = True
-                while stack:
-                    y, x = stack.pop()
-                    comp.append((y, x))
-                    for yy, xx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
-                        if 0 <= yy < rows and 0 <= xx < cols and m[yy, xx] and not seen[yy, xx]:
-                            seen[yy, xx] = True
-                            stack.append((yy, xx))
-                out.append(comp)
+    for r, c in zip(*np.nonzero(m)):
+        if seen[r, c]:
+            continue
+        comp, stack = [], [(r, c)]
+        seen[r, c] = True
+        while stack:
+            y, x = stack.pop()
+            comp.append((y, x))
+            for yy, xx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1)):
+                if 0 <= yy < rows and 0 <= xx < cols and m[yy, xx] and not seen[yy, xx]:
+                    seen[yy, xx] = True
+                    stack.append((yy, xx))
+        out.append(comp)
     return sorted(out, key=len, reverse=True)
 
 
 def subject_mask(img, cols, rows):
-    """bool (rows, cols): the main subject, its biggest pieces only, holes filled."""
+    """bool (rows, cols): pixels unlike the background. The background is the colours that make up most of the
+    photo's border; an object touching the edge (a penguin cut off at the bottom) adds colours that cover only a
+    small part of it, so they don't count."""
     A = _colour(img, cols, rows)
-    C, _ = _kmeans(np.concatenate([A[0], A[-1], A[:, 0], A[:, -1]]), 4)  # the background's colours
-    d = np.sqrt(((A[:, :, None] - C[None, None]) ** 2).sum(3)).min(2)
+    C, a = _kmeans(np.concatenate([A[0], A[-1], A[:, 0], A[:, -1]]), 4)
+    share = np.bincount(a, minlength=len(C)) / len(a)
+    bg = C[(share >= 0.15) | (share == share.max())]
+    d = np.sqrt(((A[:, :, None] - bg[None, None]) ** 2).sum(3)).min(2)
     m = Image.fromarray(((d > max(_otsu(d.ravel()), 18)) * 255).astype(np.uint8)).resize((cols, rows), Image.BOX)
-    m = m.filter(ImageFilter.MedianFilter(3)).filter(ImageFilter.MaxFilter(3)).filter(ImageFilter.MinFilter(3))
-    m = np.asarray(m) > 110  # median: drop specks; max then min: close gaps such as a zebra's stripes
-    comps = _components(m)
+    k = max(3, cols // 34) | 1  # 7 on the working grid: closes icing lines on a cookie, stripes on a zebra
+    m = m.filter(ImageFilter.MedianFilter(3)).filter(ImageFilter.MaxFilter(k)).filter(ImageFilter.MinFilter(k))
+    return np.asarray(m) > 110  # median: drop specks; max then min: close gaps
+
+
+def single_object(m):
+    """The biggest piece of a mask, with its holes filled."""
     keep = np.zeros_like(m)
-    for comp in comps:
-        if len(comp) >= max(3, 0.3 * len(comps[0])):
-            for y, x in comp:
-                keep[y, x] = True
-    for comp in _components(~keep):  # fill holes: background pieces that don't reach the edge
-        if not any(y in (0, rows - 1) or x in (0, cols - 1) for y, x in comp):
-            for y, x in comp:
-                keep[y, x] = True
+    comps = _components(m)
+    if comps:
+        ys, xs = zip(*comps[0])
+        keep[list(ys), list(xs)] = True
+    for comp in _components(~keep):  # background pieces that don't reach the edge are holes
+        if not any(y in (0, m.shape[0] - 1) or x in (0, m.shape[1] - 1) for y, x in comp):
+            ys, xs = zip(*comp)
+            keep[list(ys), list(xs)] = True
     return keep
+
+
+def contour(mask, cols, rows):
+    """A high-resolution mask -> rows of box-drawing characters tracing its edge as one continuous line."""
+    blur = mask.shape[1] / cols / 2  # smooth away details smaller than half a character
+    im = Image.fromarray(mask.astype(np.uint8) * 255).filter(ImageFilter.GaussianBlur(blur))
+    k = np.asarray(im.resize((cols + 1, rows + 1), Image.BOX)) > 127
+    code = (k[:-1, :-1].astype(int) << 3) | (k[:-1, 1:] << 2) | (k[1:, 1:] << 1) | k[1:, :-1]
+    return [[CONTOUR.get(int(v), " ") for v in row] for row in code]
 
 
 def layout_regions(img, cols, rows, k=3):
     """int (rows, cols): the photo split into k colour regions, small islands merged into their surroundings."""
     A = _colour(img, cols, rows)
-    small = A.reshape(rows, 2, cols, 2, 3).mean((1, 3))
-    C, a = _kmeans(small.reshape(-1, 3), k)
+    C, a = _kmeans(A.reshape(rows, 2, cols, 2, 3).mean((1, 3)).reshape(-1, 3), k)
     L = a.reshape(rows, cols)
     for _ in range(3):
         for j in range(k):
             for comp in _components(L == j):
                 if len(comp) < cols * rows // 25:
-                    y, x = comp[0]
                     nb = [L[yy, xx] for y, x in comp for yy, xx in ((y - 1, x), (y + 1, x), (y, x - 1), (y, x + 1))
                           if 0 <= yy < rows and 0 <= xx < cols and L[yy, xx] != j]
                     if nb:
@@ -159,47 +181,25 @@ def edges(L, cell_aspect):
     return out
 
 
-def _crop_to(img, m):
-    """Zoom on a small subject: the photo cropped to the mask's box with a margin, or None."""
-    ys, xs = np.nonzero(m)
-    if not len(xs):
-        return None
-    rows, cols = m.shape
-    x0, x1, y0, y1 = xs.min() / cols, (xs.max() + 1) / cols, ys.min() / rows, (ys.max() + 1) / rows
-    w, h = x1 - x0, y1 - y0
-    cx, cy = (x0 + x1) / 2, (y0 + y1) / 2
-    w, h = max(w * 1.8, h * 1.8 * img.height / img.width), max(h * 1.8, w * 1.8 * img.width / img.height)
-    w, h = max(w, 0.25), max(h, 0.25)  # at least a quarter of the photo, in the photo's own shape
-    x0, x1 = max(0, cx - w / 2), min(1, cx + w / 2)
-    y0, y1 = max(0, cy - h / 2), min(1, cy + h / 2)
-    if (x1 - x0) * (y1 - y0) > 0.6:
-        return None
-    return img.crop((int(x0 * img.width), int(y0 * img.height), int(x1 * img.width), int(y1 * img.height)))
-
-
 def _trim(rows):
     """Rows as strings, without the empty ones above and below the drawing."""
     out = ["".join(r) for r in rows]
-    busy = [i for i, r in enumerate(out) if r.strip()]
+    busy = [i for i, r in enumerate(out) if r.strip(" " + BLANK)]
     return out[busy[0]:busy[-1] + 1] if busy else out
 
 
-def outline(img, cols, cell_aspect):
-    """-> (kind, picture, rows of characters). kind: "subject", "subject, zoomed in" or "layout"."""
-    rows = lambda im: max(4, round(cols * im.height / im.width / cell_aspect))
-    m = subject_mask(img, cols, rows(img))
-    kind = "subject"
-    if 0 < m.mean() < 0.06:
-        crop = _crop_to(img, m)
-        if crop is not None:
-            img, kind = crop, "subject, zoomed in"
-            m = subject_mask(img, cols, rows(img))
-    if 0.04 <= m.mean() <= 0.7 and len(_components(m)) <= 4:
-        return kind, img, edges(m.astype(int), cell_aspect), m
-    return "layout", img, None, None
+def find_object(img):
+    """-> the object's mask cropped to it (with a margin), on the working grid, or None if there is no single
+    object (nothing stands out, or everything does)."""
+    m = single_object(subject_mask(img, WORK_COLS, max(8, round(WORK_COLS * img.height / img.width))))
+    if not 0.01 <= m.mean() <= 0.85:
+        return None
+    ys, xs = np.nonzero(m)
+    pad_y, pad_x = max(2, int((ys.max() - ys.min()) * 0.06)), max(2, int((xs.max() - xs.min()) * 0.06))
+    return m[max(0, ys.min() - pad_y): ys.max() + pad_y + 1, max(0, xs.min() - pad_x): xs.max() + pad_x + 1]
 
 
-def run(data, sms_cols=18, mono_cols=58, description=None):
+def run(data, sms_cols=24, mono_cols=58, description=None):  # the widths the maps use
     img = ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB")
     small = img.copy()
     small.thumbnail((1024, 1024))
@@ -208,23 +208,24 @@ def run(data, sms_cols=18, mono_cols=58, description=None):
     d = description or describe(buf.getvalue())
 
     lines = ["Photo: " + d["caption"]] + ["- " + x for x in d["details"]]
-    kind, view, mono_rows, mask = outline(img, mono_cols, MONO_CELL)
-    if kind == "layout":  # no clear subject: the borders between its few big regions
-        L, _ = layout_regions(view, mono_cols, max(4, round(mono_cols * view.height / view.width / MONO_CELL)))
+    obj = find_object(img)
+    if obj is not None:  # one object, cropped so it fills the width: its contour, and a solid silhouette for SMS
+        kind = "object"
+        mono_rows = contour(obj, mono_cols, max(4, round(mono_cols * obj.shape[0] / obj.shape[1] / MONO_CELL)))
+        rows = max(3, round(sms_cols * obj.shape[0] / obj.shape[1] / SMS_CELL))
+        m = np.asarray(Image.fromarray(obj.astype(np.uint8) * 255).resize((sms_cols, rows), Image.BOX)) > 100
+        sms_rows = [["#" if v else BLANK for v in row] for row in m]
+    else:  # no single object: the borders between its few big regions, and 3 flat tones for SMS
+        kind = "layout"
+        L, _ = layout_regions(img, mono_cols, max(4, round(mono_cols * img.height / img.width / MONO_CELL)))
         mono_rows = edges(L, MONO_CELL)
-        L, light = layout_regions(view, sms_cols, max(3, round(sms_cols * view.height / view.width / SMS_CELL)))
+        L, light = layout_regions(img, sms_cols, max(3, round(sms_cols * img.height / img.width / SMS_CELL)))
         tone = {j: SMS_TONES[i] for i, j in enumerate(np.argsort(-light))}  # lightest region blank, darkest #
         sms_rows = [[tone[v] for v in row] for row in L]
-    else:  # the subject as a solid shape: at 18 columns a filled silhouette reads better than its edge
-        # Shrunk from the WhatsApp mask: re-detecting at 18 columns can lose a small subject entirely.
-        rows = max(3, round(sms_cols * view.height / view.width / SMS_CELL))
-        m = np.asarray(Image.fromarray(mask.astype(np.uint8) * 255).resize((sms_cols, rows), Image.BOX)) > 60
-        sms_rows = [["#" if v else " " for v in row] for row in m]
-    what = {"subject": "outline of the main subject", "subject, zoomed in": "outline of the main subject, zoomed in",
-            "layout": "outlines of the main shapes"}[kind]
-    names = [x["name"] for x in d["subjects"]][:3]
-    key = "(%s%s)" % (what, ": " + ", ".join(names) if names and kind != "layout" else "")
-    sms = "\n".join(lines + [""] + [r.rstrip() or BLANK for r in _trim(sms_rows)] + [key])
+    names = [x["name"] for x in d["subjects"]][:1]
+    key = ("(outline of %s, cropped to it)" % (names[0] if names else "the main object") if kind == "object"
+           else "(outlines of the main shapes)")
+    sms = "\n".join(lines + [""] + [r.rstrip(BLANK) or BLANK for r in _trim(sms_rows)] + [key])
     mono = "\n".join([r.rstrip() for r in _trim(mono_rows)] + [key])
     return {"caption": d["caption"], "details": d["details"], "subjects": d["subjects"], "outline": kind,
             "sms": sms, "text": "\n".join(lines), "mono": mono,

@@ -5,7 +5,7 @@
 POST /api/alert {"text", "lat", "lon"} -> {"message" (SMS), "text", "laptop" (WhatsApp map), "small", "image", ...}
 POST /api/photo {"image": data URL} -> {"sms", "text", "mono", "small", "parts", sizes, ...}
 POST /api/radar {"lat", "lon"} -> {"sms", "text", "mono", "small", "image", "parts", ...}
-POST /api/directions {"lat", "lon", "to"} -> {"sms", "text", "mono", "small", "image", "parts", "trip", ...}
+POST /api/directions {"lat", "lon", "to", "from"?} -> {"sms", "text", "mono", "small", "image", "parts", "trip", ...}
 POST /api/directions/move {"trip", "metres" | "astray": true} -> the update after a simulated GPS fix
 "small" is the slow-connection picture (~400 px WebP); "image" the full JPEG.
 POST /api/message {"text", "lat", "lon", "image"?} -> router: Muse picks tools; same versions + "tools" it called
@@ -15,6 +15,7 @@ import base64
 import io
 import json
 import os
+import subprocess
 import sys
 import time
 import traceback
@@ -43,13 +44,35 @@ def sms_parts(text):
 
 TRIPS = {}  # trip id -> directions.Trip, for the simulated walk
 SAMPLE_DIR = "/Library/Desktop Pictures"  # macOS ships photos here; used as sample "photos a friend sent"
+# One object each, the simplest case for an outline: macOS's account pictures (HEIC, converted with sips).
+OBJECT_DIR = "/Library/User Pictures"
+OBJECTS = ["Fun/Fortune Cookie", "Fun/Gingerbread Man", "Animals/Penguin", "Animals/Owl", "Animals/Parrot",
+           "Instruments/Guitar", "Instruments/Violin", "Flowers/Sunflower", "Flowers/Red Rose", "Nature/Leaf"]
+CONVERTED = os.path.join(ROOT, "..", "cache", "samples")
+
+
+def sample_objects():
+    return {o.split("/")[1]: os.path.join(OBJECT_DIR, o + ".heic") for o in OBJECTS
+            if os.path.exists(os.path.join(OBJECT_DIR, o + ".heic"))}
 
 
 def sample_photos():
     try:
-        return sorted(f[:-4] for f in os.listdir(SAMPLE_DIR) if f.endswith(".jpg") and not f.startswith(("Abstract", "Chroma")))
+        return {f[:-4]: os.path.join(SAMPLE_DIR, f) for f in sorted(os.listdir(SAMPLE_DIR))
+                if f.endswith(".jpg") and not f.startswith(("Abstract", "Chroma"))}
     except OSError:
-        return []
+        return {}
+
+
+def sample_path(name):
+    path = sample_objects().get(name) or sample_photos().get(name)
+    if path and path.endswith(".heic"):  # Pillow can't read HEIC; macOS's sips can
+        os.makedirs(CONVERTED, exist_ok=True)
+        jpg = os.path.join(CONVERTED, name + ".jpg")
+        if not os.path.exists(jpg):
+            subprocess.run(["sips", "-s", "format", "jpeg", path, "--out", jpg], capture_output=True, check=True)
+        path = jpg
+    return path
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -68,12 +91,12 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/api/samples":
-            return self.send_json({"photos": sample_photos()})
+            return self.send_json({"objects": list(sample_objects()), "photos": list(sample_photos())})
         if self.path.startswith("/api/sample?name="):
-            name = unquote(self.path.split("=", 1)[1])
-            if name not in sample_photos():
+            path = sample_path(unquote(self.path.split("=", 1)[1]))
+            if not path:
                 return self.send_error(404)
-            img = Image.open(os.path.join(SAMPLE_DIR, name + ".jpg")).convert("RGB")
+            img = Image.open(path).convert("RGB")
             img.thumbnail((1600, 1600))
             buf = io.BytesIO()
             img.save(buf, "JPEG", quality=85)
@@ -110,7 +133,7 @@ class Handler(SimpleHTTPRequestHandler):
                 out = radar.run((float(body["lat"]), float(body["lon"])))
                 out["parts"] = sms_parts(out["sms"])
             elif self.path == "/api/directions":
-                out = directions.run((float(body["lat"]), float(body["lon"])), body["to"])
+                out = directions.run((float(body["lat"]), float(body["lon"])), body["to"], start=body.get("from") or None)
                 out.pop("scene", None)  # the page gets the rendered versions, not the Scene object
                 trip = out.pop("trip", None)
                 if trip:

@@ -20,7 +20,7 @@ ANY = " ·░▒▓≈"  # what the YOU / hazard / shelter labels may cover
 YOU = "\U0001F534"  # red dot, the same "you" as the SMS map. Emoji are the only way to get colour in a WhatsApp
 # monospace block. In Menlo it is 1.66 cells wide, so it takes two cells and leaves its row ~1/3 cell short.
 LEGEND = [("you", YOU + " you"), ("danger", "◆ incident   ░▒▓ danger zone, darker is closer"), ("closed", "× road closed"),
-          ("route", "→ way out"), ("shelter", "⌂ shelter"), ("major", "━ main road   ─ street"),
+          ("route", "→ way out"), ("shelter", "⌂ shelter"), ("landmark", "★ landmark"), ("major", "━ main road   ─ street"),
           ("water", "≈ water"), ("veg", "· trees / park")]
 
 
@@ -180,6 +180,12 @@ def render(scene, cols=COLS):
             cells[edge[0]][edge[1]] = ("⌂", "shelter")
             taken[edge[0]][edge[1]] = True
             place(edge, "%s %.1f km" % (shelter[0][:16].rstrip(), km), "shelter label", ANY)
+    for name, p in scene.landmarks:  # things to look out for: a star and the name beside it
+        lc = g.cell_of(p)
+        if lc:
+            cells[lc[0]][lc[1]] = ("★", "landmark")
+            taken[lc[0]][lc[1]] = True
+            place(lc, name[:26], "landmark label", ANY + "─━│┃╱╲┼╋╳")
     if ucell:
         r, c = ucell[0], min(ucell[1], cols - 2)
         cells[r][c], cells[r][c + 1] = (YOU, "you"), ("", "you")

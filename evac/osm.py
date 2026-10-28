@@ -39,6 +39,43 @@ def fetch_roads(south, west, north, east, kinds=None):
     return roads
 
 
+# Things a walker can see and recognise, and how notable each kind is (3: you can't miss it).
+LANDMARK_TAGS = {
+    "tourism": ("attraction|museum|viewpoint", 3), "historic": (".", 3),
+    "amenity": ("place_of_worship|theatre|cinema|fountain|hospital|marketplace|townhall", 3),
+    "railway": ("station|subway_entrance", 3),
+    "amenity ": ("pharmacy|bank|post_office|police", 2), "shop": ("supermarket|department_store|mall", 2),
+    "amenity  ": ("cafe|restaurant|bar|pub|fast_food", 1),
+}
+
+
+def fetch_landmarks(south, west, north, east):
+    """Named places a walker can spot (churches, monuments, stations, pharmacies, cafés...):
+    [{"name", "kind", "rank", "lat", "lon"}]. Nice to have, so one quick try; [] if it fails."""
+    bbox = "(%f,%f,%f,%f)" % (south, west, north, east)
+    q = "[out:json][timeout:25];(%s);out center tags;" % "".join(
+        'nwr["name"]["%s"~"^(%s)$"]%s;' % (k.strip(), v, bbox) if v != "." else 'nwr["name"]["%s"]%s;' % (k.strip(), bbox)
+        for k, (v, _) in LANDMARK_TAGS.items())
+    try:
+        elements = _overpass(q, mirrors=OVERPASS_MIRRORS[:2], timeout=30)
+    except Exception:
+        return []
+    out = []
+    for el in elements:
+        tags, c = el.get("tags", {}), el.get("center") or el
+        if "lat" not in c:
+            continue
+        rank, kind = 0, ""
+        for k, (v, r) in LANDMARK_TAGS.items():
+            val = tags.get(k.strip())
+            if val and (v == "." or re.fullmatch(v, val)) and r > rank:
+                rank, kind = r, val
+        if rank:
+            out.append({"name": tags.get("name:en") or tags["name"], "kind": kind.replace("_", " "), "rank": rank,
+                        "lat": c["lat"], "lon": c["lon"]})
+    return out
+
+
 def fetch_places(south, west, north, east):
     """Cities and towns in the bbox, biggest first: [{"name", "pop", "lat", "lon"}]. Nice-to-have labels, so
     only one quick try."""
