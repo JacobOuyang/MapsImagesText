@@ -2,7 +2,7 @@
 import os
 import re
 
-from . import geo, grid, imagery, llm, notice, osm, segment, textmap
+from . import geo, grid, imagemap, imagery, laptopmap, llm, notice, osm, segment, textmap
 
 ALERT_BUFFER_M = 3000   # outside the zone but this close still gets a map
 DEFAULT_RADIUS_M = 150  # no radius given: treat it as a point incident (a building, an intersection)
@@ -35,7 +35,7 @@ def fmt_dist(m):
     return "%d m" % round(m, -1) if m < 1000 else "%.1f km" % (m / 1000)
 
 
-def run(sms, user=None, cols=40, seg_backend="color", out_dir="out"):
+def run(sms, user=None, cols=40, seg_backend="color", out_dir="out", laptop=False, image=False):
     n = notice.parse(sms)
     user = geo.current_location(user)
     log = ["notice (%s): %s" % (n.get("_parser"), {k: v for k, v in n.items() if not k.startswith("_")})]
@@ -67,7 +67,8 @@ def run(sms, user=None, cols=40, seg_backend="color", out_dir="out"):
     img = imagery.fetch_aerial(s, w, nn, e)
     os.makedirs(out_dir, exist_ok=True)
     img.save(os.path.join(out_dir, "aerial.png"))
-    g.add_terrain(segment.segment(img, seg_backend))
+    masks = segment.segment(img, seg_backend)
+    g.add_terrain(masks)
     roads = []
     try:
         roads = osm.fetch_roads(s, w, nn, e)
@@ -93,11 +94,29 @@ def run(sms, user=None, cols=40, seg_backend="color", out_dir="out"):
         tm = textmap.render_raster(g, ucell, scell, path)
     log.append("text map: %d rows, worst row drift %.2f cells" % (len(tm["rows"]), tm["drift"]))
 
-    msg = compose(n, inside, d, radius, shelter, steps, tm)
-    return {"affected": True, "inside": inside, "map": tm, "steps": steps, "message": msg, "log": log}
+    text = instructions(n, inside, d, radius, shelter, steps)
+    msg = compose(text, tm, n, shelter)
+    wide = None
+    if laptop:  # same view and roads, drawn wide for a monospace screen; laptop=True or a column count
+        try:
+            wide = laptopmap.render(n, user, center, radius, roads, shelter, half,
+                                    cols=laptop if laptop is not True else laptopmap.COLS)
+            log.append("laptop map: %dx%d, %d m per char, %.1f KB (%.1f KB gzipped) vs %.0f KB aerial JPEG"
+                       % (wide["cols"], wide["rows"], wide["m_per_char"], wide["bytes"] / 1e3, wide["gzip"] / 1e3, wide["aerial_bytes"] / 1e3))
+        except Exception as ex:
+            log.append("laptop map failed (%s)" % ex)
+    picture = None
+    if image:  # the high-data version: an ordinary picture map of the same view
+        try:
+            picture = imagemap.render(n, g, img, masks, roads, center, radius, user, shelter, path)
+            log.append("image map: %dx%d JPEG, %.0f KB" % (picture["width"], picture["height"], picture["bytes"] / 1e3))
+        except Exception as ex:
+            log.append("image map failed (%s)" % ex)
+    return {"affected": True, "inside": inside, "map": tm, "steps": steps, "text": text, "message": msg,
+            "laptop": wide, "image": picture, "log": log}
 
 
-def compose(n, inside, d, radius, shelter, steps, tm):
+def instructions(n, inside, d, radius, shelter, steps):
     head = ("EVACUATE NOW - you are INSIDE the %s zone." if inside and n.get("order") == "mandatory"
             # Big zones: how far to the zone's edge. Point incidents: how far to the incident itself.
             else "You are inside the %s zone." if inside else "Heads up: %s incident %s from you." % ("%s", fmt_dist(d - radius if radius >= 1000 else d)))
@@ -119,6 +138,10 @@ def compose(n, inside, d, radius, shelter, steps, tm):
             ]).strip()
         except Exception as e:  # keep the template text so a flaky API never blocks the alert
             print("[compose] LLM rewrite failed (%s); using template" % e)
+    return text
+
+
+def compose(text, tm, n, shelter):
     lines = [text, "", tm["title"]] + tm["rows"] + [""] + textmap.legend(tm["keys"], n.get("hazard"), shelter and shelter[0])
     if tm["footer"]:
         lines.append(tm["footer"])

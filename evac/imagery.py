@@ -21,17 +21,24 @@ def _lonlat_to_px(lat, lon, z):
 
 def fetch_aerial(south, west, north, east, max_px=1024):
     """Return a PIL image exactly covering the bbox, at the highest zoom that fits in max_px."""
-    for z in range(19, 8, -1):
+    return fetch_tiles(south, west, north, east, TILE_URL, max_px=max_px)
+
+
+def fetch_tiles(south, west, north, east, url, max_px=1024, z=None, mode="RGB"):
+    """Stitch and crop XYZ tiles from `url` ({z}/{x}/{y}) to the bbox. z=None picks the most detailed zoom
+    that fits in max_px."""
+    zooms = [z] if z is not None else range(19, 2, -1)
+    for z in zooms:
         x0, y0 = _lonlat_to_px(north, west, z)
         x1, y1 = _lonlat_to_px(south, east, z)
         if max(x1 - x0, y1 - y0) <= max_px:
             break
     tx0, ty0, tx1, ty1 = int(x0 // TILE), int(y0 // TILE), int(x1 // TILE), int(y1 // TILE)
-    canvas = Image.new("RGB", ((tx1 - tx0 + 1) * TILE, (ty1 - ty0 + 1) * TILE))
+    canvas = Image.new(mode, ((tx1 - tx0 + 1) * TILE, (ty1 - ty0 + 1) * TILE))
     for tx in range(tx0, tx1 + 1):
         for ty in range(ty0, ty1 + 1):
-            r = requests.get(TILE_URL.format(z=z, x=tx, y=ty), headers=UA, timeout=20)
+            r = requests.get(url.format(z=z, x=tx, y=ty), headers=UA, timeout=20)
             r.raise_for_status()
-            canvas.paste(Image.open(io.BytesIO(r.content)).convert("RGB"), ((tx - tx0) * TILE, (ty - ty0) * TILE))
+            canvas.paste(Image.open(io.BytesIO(r.content)).convert(mode), ((tx - tx0) * TILE, (ty - ty0) * TILE))
     ox, oy = tx0 * TILE, ty0 * TILE
     return canvas.crop((int(x0 - ox), int(y0 - oy), int(x1 - ox), int(y1 - oy)))

@@ -17,31 +17,15 @@ OVERPASS_MIRRORS = [
 ]
 # Highway types worth routing on during an evacuation (skip footpaths/service alleys for driving).
 DRIVABLE = "motorway|trunk|primary|secondary|tertiary|unclassified|residential|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link"
+# For walking directions: no motorways, plus pedestrian streets, footways and steps. Service roads and trail
+# paths are left out: in a big city they multiply the download and made Overpass time out.
+WALKABLE = "trunk|primary|secondary|tertiary|unclassified|residential|living_street|pedestrian|footway|steps|primary_link|secondary_link|tertiary_link"
 
 
-def fetch_roads(south, west, north, east):
-    """Return a list of roads: {"name", "kind", "pts": [(lat, lon), ...]}."""
-    q = '[out:json][timeout:25];way["highway"~"^(%s)$"](%f,%f,%f,%f);out geom tags;' % (DRIVABLE, south, west, north, east)
-    # Cache on disk: Overpass is flaky and a live demo shouldn't depend on it.
-    cache = os.path.join(CACHE_DIR, hashlib.md5(q.encode()).hexdigest() + ".json")
-    if os.path.exists(cache):
-        with open(cache) as f:
-            elements = json.load(f)
-    else:
-        err = None
-        for url in OVERPASS_MIRRORS:  # public instances 429/502 often; try the next one
-            try:
-                r = requests.post(url, data={"data": q}, headers=UA, timeout=60)
-                r.raise_for_status()
-                elements = r.json().get("elements", [])
-                break
-            except Exception as e:
-                err = e
-        else:
-            raise err
-        os.makedirs(CACHE_DIR, exist_ok=True)
-        with open(cache, "w") as f:
-            json.dump(elements, f)
+def fetch_roads(south, west, north, east, kinds=None):
+    """Return a list of roads: {"name", "kind", "pts": [(lat, lon), ...]}. kinds: highway regex (default DRIVABLE)."""
+    q = '[out:json][timeout:25];way["highway"~"^(%s)$"](%f,%f,%f,%f);out geom tags;' % (kinds or DRIVABLE, south, west, north, east)
+    elements = _overpass(q)
     roads = []
     for el in elements:
         if "geometry" not in el:
@@ -53,6 +37,47 @@ def fetch_roads(south, west, north, east):
             "pts": [(g["lat"], g["lon"]) for g in el["geometry"]],
         })
     return roads
+
+
+def fetch_places(south, west, north, east):
+    """Cities and towns in the bbox, biggest first: [{"name", "pop", "lat", "lon"}]. Nice-to-have labels, so
+    only one quick try."""
+    q = '[out:json][timeout:10];node["place"~"^(city|town)$"](%f,%f,%f,%f);out tags;' % (south, west, north, east)
+    out = []
+    for el in _overpass(q, mirrors=OVERPASS_MIRRORS[:1], timeout=12):
+        tags = el.get("tags", {})
+        try:
+            pop = int(re.sub(r"[^0-9]", "", tags.get("population", "")) or 0)
+        except ValueError:
+            pop = 0
+        if tags.get("name"):
+            out.append({"name": tags.get("name:en") or tags["name"], "pop": pop + (10 ** 9 if tags.get("place") == "city" else 0),
+                        "lat": el["lat"], "lon": el["lon"]})
+    return sorted(out, key=lambda p: -p["pop"])
+
+
+def _overpass(q, mirrors=OVERPASS_MIRRORS, timeout=60):
+    # Cache on disk: Overpass is flaky and a live demo shouldn't depend on it.
+    cache = os.path.join(CACHE_DIR, hashlib.md5(q.encode()).hexdigest() + ".json")
+    if os.path.exists(cache):
+        with open(cache) as f:
+            elements = json.load(f)
+    else:
+        err = None
+        for url in mirrors:  # public instances 429/502 often; try the next one
+            try:
+                r = requests.post(url, data={"data": q}, headers=UA, timeout=timeout)
+                r.raise_for_status()
+                elements = r.json().get("elements", [])
+                break
+            except Exception as e:
+                err = e
+        else:
+            raise err
+        os.makedirs(CACHE_DIR, exist_ok=True)
+        with open(cache, "w") as f:
+            json.dump(elements, f)
+    return elements
 
 
 ABBREV = {"blvd": "boulevard", "dr": "drive", "st": "street", "ave": "avenue", "av": "avenue", "rd": "road",

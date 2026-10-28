@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Alert Map Simulator</title>
+<title>Low-Data Simulator</title>
 <style>
   :root {
     --bg: #f2f2f7; --ink: #111; --quiet: #6e6e73; --line: #d1d1d6; --panel: #fff;
@@ -59,15 +59,65 @@
   .gps input { width: 50%; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; font: 13px ui-monospace, monospace; }
   select { padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line); font: 13px system-ui; }
   .hint { color: var(--quiet); font-size: 12px; margin-top: 6px; }
+  /* tabs + clear */
+  .bar { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+  .tab { border: 1px solid var(--line); background: #fff; padding: 6px 14px; border-radius: 8px; cursor: pointer; font: 13px system-ui; }
+  .tab.on { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .clear { margin-left: auto; border: 1px solid var(--line); background: #fff; padding: 6px 14px; border-radius: 8px; cursor: pointer; font: 13px system-ui; color: #c4271b; }
+  .clear:hover { border-color: #c4271b; }
+  .tabsec { display: none; gap: 20px 28px; padding: 16px 24px 24px; flex-wrap: wrap; align-items: flex-start; }
+  body[data-tab="emergency"] #sec-emergency, body[data-tab="photo"] #sec-photo,
+  body[data-tab="radar"] #sec-radar, body[data-tab="walk"] #sec-walk { display: flex; }
+  .controls { width: auto; flex-basis: 100%; }
+  .controls p { margin: 0 0 8px; color: var(--quiet); }
+  .row2 { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+  .row2 input[type=text] { padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; font: 13px system-ui; width: 320px; }
+  .go { border: 0; background: var(--blue); color: #fff; padding: 7px 14px; border-radius: 8px; cursor: pointer; font: 13px system-ui; }
+  .go:disabled { background: #b8d8fd; cursor: default; }
+  .status-line { color: var(--quiet); font-size: 12px; }
+
+  /* the same result three ways */
+  .triple { display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start; flex-basis: 100%; }
+  .ccard { display: flex; flex-direction: column; gap: 6px; }
+  .ccard h2 { margin: 0; font-size: 15px; } .ccard h2 em { font-style: normal; color: var(--quiet); font-weight: 500; }
+  .ccard .sub { color: var(--quiet); font-size: 12px; width: 0; min-width: 100%; min-height: 32px; }  /* never widens its card */
+  .wa-pane { width: 780px; height: 760px; display: flex; flex-direction: column; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .wa-head { display: flex; gap: 10px; align-items: center; padding: 8px 16px; background: #f0f2f5; }
+  .wa-head .avatar { margin: 0; width: 40px; height: 40px; font-size: 14px; flex: none; }
+  .wa-head b { display: block; font-weight: 500; font-size: 15px; color: #111b21; }
+  .wa-head small { display: block; color: #667781; font-size: 12.5px; }
+  .lthread { flex: 1; overflow-y: auto; padding: 14px 20px; background: #efeae2; display: flex; flex-direction: column; gap: 4px; }
+  .wa-msg { max-width: 65%; padding: 6px 9px 18px; border-radius: 8px; font: 14.2px/19px system-ui; color: #111b21;
+            white-space: pre-wrap; overflow-wrap: break-word; position: relative; box-shadow: 0 1px .5px rgba(11,20,26,.13); }
+  .wa-msg.in { align-self: flex-start; background: #fff; border-top-left-radius: 0; }
+  .wa-msg.out { align-self: flex-end; background: #d9fdd3; border-top-right-radius: 0; }
+  .wa-msg .time { position: absolute; right: 8px; bottom: 3px; font-size: 11px; color: #667781; }
+  /* WhatsApp shows ```text``` in monospace but can't colour it; wraps like WhatsApp would if too wide */
+  .wa-msg pre.map { margin: 6px 0 0; font: 12.5px/1.35 Menlo, Monaco, "Courier New", monospace; white-space: pre-wrap; color: #111b21; }
+  .lmeta { align-self: center; font-size: 12px; color: #54656f; background: #fff; border-radius: 7px; padding: 4px 10px; margin: 6px 0; box-shadow: 0 1px .5px rgba(11,20,26,.13); }
+  .hi { width: 500px; height: 760px; overflow-y: auto; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
+  .hi .hbar { background: #f2f2f7; padding: 8px 12px; font-size: 12px; color: var(--quiet); border-bottom: 1px solid var(--line); }
+  .hi .hbody { padding: 14px; font: 14px/20px system-ui; white-space: pre-wrap; }
+  .hi img { width: 100%; display: block; border-radius: 8px; margin-top: 10px; border: 1px solid var(--line); }
+  .hi .empty { color: var(--quiet); padding: 40px 14px; text-align: center; }
+
   pre.log { margin: 0; max-height: 220px; overflow: auto; font: 11px/15px ui-monospace, monospace; white-space: pre-wrap; color: #333; }
 </style>
 </head>
-<body>
+<body data-tab="emergency">
 <header class="top">
-  <h1>Alert Map Simulator</h1>
-  <p>The left phone sends an alert. Each person's phone gets the alert plus a reply worked out for their GPS. Text <b>MAP</b> from a person's phone to get a fresh reply after moving them.</p>
+  <h1>Low-Data Simulator</h1>
+  <p>A server with a good connection does the work; the person gets the result three ways: SMS (no data at all), WhatsApp text (a trickle of data) or a picture (a working connection).</p>
+  <div class="bar">
+    <button class="tab on" data-tab="emergency">Emergency</button>
+    <button class="tab" data-tab="photo">Photo</button>
+    <button class="tab" data-tab="radar">Weather radar</button>
+    <button class="tab" data-tab="walk">Directions abroad</button>
+    <button class="clear" id="clear" title="Clear every thread, result and the log">Clear</button>
+  </div>
 </header>
-<main>
+
+<section class="tabsec" id="sec-emergency">
   <div class="col">
     <div class="who">Emergency Response · (555) 010-0911</div>
     <div class="phone">
@@ -86,20 +136,10 @@
       <div id="recipients"></div>
     </div>
   </div>
-
   <div class="col">
     <div class="who" id="userWho"></div>
-    <div class="phone">
-      <div class="status"><span>9:41</span><span>●●● ▮</span></div>
-      <div class="contact"><div class="avatar alert">ER</div><div class="name">Emergency Response</div></div>
-      <div class="thread" id="userThread"></div>
-      <div class="composer">
-        <textarea id="userInput" placeholder="Text Message"></textarea>
-        <button id="userSend" title="Send">↑</button>
-      </div>
-    </div>
     <div class="panel">
-      <h3>Phone owner</h3>
+      <h3>Who this is</h3>
       <select id="profile"></select>
       <h3 style="margin-top:12px">GPS for this person</h3>
       <div class="chips" id="places"></div>
@@ -108,14 +148,55 @@
         <input id="lon" aria-label="Longitude">
       </div>
       <div class="hint" id="gpsHint">Pick a place or type coordinates.</div>
+      <div class="row2"><button class="go" id="textMap">Text MAP from this person</button></div>
     </div>
   </div>
-
   <div class="col">
     <div class="who">Pipeline log</div>
     <div class="panel" style="width:360px"><pre class="log" id="log">Nothing sent yet.</pre></div>
   </div>
-</main>
+  <div class="triple" id="emTriple"></div>
+</section>
+
+<section class="tabsec" id="sec-photo">
+  <div class="panel controls">
+    <h3>A friend sends you a photo, but your connection can't load it</h3>
+    <p>The server looks at it with Muse Spark and sends back what's in it, plus the photo drawn in text.</p>
+    <div class="chips" id="photoSamples"></div>
+    <div class="row2"><label class="inline">Or your own: <input type="file" id="photoFile" accept="image/*"></label>
+      <span class="status-line" id="photoStatus"></span></div>
+  </div>
+  <div class="triple" id="photoOut"></div>
+</section>
+
+<section class="tabsec" id="sec-radar">
+  <div class="panel controls">
+    <h3>Is rain coming? Text RADAR</h3>
+    <p>The server reads the latest weather radar around you and sends it back as text, with a 2-hour forecast for your spot.</p>
+    <div class="chips" id="radarPlaces"></div>
+    <div class="row2">
+      <input type="text" id="radarAt" aria-label="Latitude, longitude" placeholder="lat, lon">
+      <button class="go" id="radarGo">Text RADAR</button>
+      <button class="chip" id="findRain">Find heavy rain right now</button>
+      <span class="status-line" id="radarStatus"></span>
+    </div>
+  </div>
+  <div class="triple" id="radarOut"></div>
+</section>
+
+<section class="tabsec" id="sec-walk">
+  <div class="panel controls">
+    <h3>Roaming abroad on a capped plan: walking directions by text</h3>
+    <p>Asked directly, Muse Spark answers from memory: it can't see where you're standing, some turns are wrong and its sketch isn't to scale. Here the route comes from real street and footpath data around your GPS, and Muse only rewords it.</p>
+    <div class="chips" id="walkFrom"></div>
+    <div class="row2">
+      <input type="text" id="walkTo" aria-label="Destination" placeholder="Where to?">
+      <button class="go" id="walkGo">Text directions</button>
+      <span class="status-line" id="walkStatus"></span>
+    </div>
+  </div>
+  <div class="triple" id="walkOut"></div>
+</section>
 
 <script>
 const TEMPLATES = {
@@ -133,56 +214,101 @@ const PLACES = {
   'Santa Monica: outside zone': [34.0195, -118.4912],
   'South Pasadena: by the park': [34.1065, -118.1880],
 };
+const RADAR_PLACES = {'New York': [40.7128, -74.0060], 'Los Angeles': [34.0522, -118.2437], 'London': [51.5074, -0.1278],
+  'Mumbai': [19.0760, 72.8777], 'Miami': [25.7617, -80.1918], 'São Paulo': [-23.5505, -46.6333]};
+const WALK_FROM = {
+  'Lisbon: Rossio station': [[38.7139, -9.1406], 'Castelo de São Jorge, Lisbon'],
+  'Paris: Gare du Nord': [[48.8809, 2.3553], 'Sacré-Cœur, Paris'],
+  'Rome: Termini': [[41.9010, 12.5016], 'Colosseum, Rome'],
+  'Tokyo: Shibuya station': [[35.6580, 139.7016], 'Meiji Jingu, Tokyo'],
+};
 const people = {
   bob:     {name: 'Bob the Builder', initials: 'BB', gps: PLACES['Midtown: 47 St near Park Av'], thread: [], send: true},
   wendy:   {name: 'Wendy',           initials: 'W',  gps: PLACES['Midtown: 5 Av & 43 St'],       thread: [], send: true},
   pickles: {name: 'Farmer Pickles',  initials: 'FP', gps: PLACES['Palisades: inside fire zone'], thread: [], send: true},
 };
 const erThread = [];
-let current = 'bob', lastAlert = null;
+let current = 'bob', lastAlert = null, walkFrom = WALK_FROM['Lisbon: Rossio station'][0];
 const $ = id => document.getElementById(id);
+const kb = b => (b / 1000).toFixed(1) + ' KB';
+const now = () => new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
 
 function bubble(dir, text) {
-  const row = document.createElement('div'); row.className = 'row ' + dir;
-  const b = document.createElement('div'); b.className = 'bubble'; b.textContent = text;
-  row.appendChild(b); return row;
+  const row = el('div', 'row ' + dir); row.appendChild(el('div', 'bubble', text)); return row;
 }
-function render(el, items) {
-  el.innerHTML = '';
+function render(box, items) {
+  box.innerHTML = '';
   for (const it of items) {
-    if (it.kind === 'meta') { const m = document.createElement('div'); m.className = 'meta'; m.textContent = it.text; el.appendChild(m); continue; }
-    if (it.sender) { const s = document.createElement('div'); s.className = 'sender'; s.textContent = it.sender; el.appendChild(s); }
+    if (it.kind === 'meta') { box.appendChild(el('div', 'meta', it.text)); continue; }
+    if (it.sender) box.appendChild(el('div', 'sender', it.sender));
     if (it.kind === 'typing') {
-      const row = document.createElement('div'); row.className = 'row in';
-      const b = document.createElement('div'); b.className = 'bubble typing'; b.innerHTML = '<i></i><i></i><i></i>';
-      row.appendChild(b); el.appendChild(row); continue;
+      const row = el('div', 'row in'), b = el('div', 'bubble typing'); b.innerHTML = '<i></i><i></i><i></i>';
+      row.appendChild(b); box.appendChild(row); continue;
     }
-    el.appendChild(bubble(it.dir, it.text));
+    box.appendChild(bubble(it.dir, it.text));
   }
-  el.scrollTop = el.scrollHeight;
+  box.scrollTop = box.scrollHeight;
 }
+function renderWa(box, items) {
+  box.innerHTML = '';
+  for (const it of items) {
+    if (it.kind === 'meta') { box.appendChild(el('div', 'lmeta', it.text)); continue; }
+    const b = el('div', 'wa-msg ' + (it.dir || 'in'));
+    if (it.kind === 'typing') { b.textContent = 'typing…'; b.style.color = '#00a884'; box.appendChild(b); continue; }
+    b.textContent = it.mono !== undefined ? it.plain : it.text;
+    if (it.mono) b.appendChild(el('pre', 'map', it.mono));
+    b.appendChild(el('span', 'time', now()));
+    box.appendChild(b);
+  }
+  box.scrollTop = box.scrollHeight;
+}
+
+// One result, three ways. r: {sms, parts, plain, mono, monoBytes, monoGzip, img: {data_url, bytes, width, height}, imgLabel}
+function triple(box, items, r, labels) {
+  box.innerHTML = '';
+  const card = (title, em, sub) => { const c = el('div', 'ccard'), h = el('h2', '', title); h.appendChild(el('em', '', ' · ' + em));
+    c.append(h, el('div', 'sub', sub)); box.appendChild(c); return c; };
+  const low = card('Low data', 'SMS on an iPhone', r && r.parts ? `${r.parts} SMS part${r.parts === 1 ? '' : 's'} (about ${kb(r.parts * 140)}). Works with no mobile data at all; the iPhone joins the parts into one bubble.` : 'Works with no mobile data at all.');
+  const phone = el('div', 'phone'); phone.innerHTML = `<div class="status"><span>9:41</span><span>●●● ▮</span></div><div class="contact"><div class="avatar alert">${labels.initials}</div><div class="name">${labels.from}</div></div>`;
+  const th = el('div', 'thread'); phone.appendChild(th); low.appendChild(phone);
+  const mid = card('Medium data', 'WhatsApp on a laptop', r && r.monoBytes ? `${labels.what} is ${kb(r.monoBytes)} of text (${kb(r.monoGzip)} compressed). Needs only a trickle of data, like free in-flight messaging.` : 'Needs only a trickle of data, like free in-flight messaging.');
+  const pane = el('div', 'wa-pane'); pane.innerHTML = `<div class="wa-head"><div class="avatar alert">${labels.initials}</div><div><b>${labels.from}</b><small>${labels.sub}</small></div></div>`;
+  const wt = el('div', 'lthread'); pane.appendChild(wt); mid.appendChild(pane);
+  const ratio = r && r.img && r.monoGzip ? `, ${Math.round(r.img.bytes / r.monoGzip)}× the compressed text` : '';
+  const high = card('High data', labels.hiName, r && r.img ? `${r.imgLabel || 'Picture'} is ${kb(r.img.bytes)} (${r.img.width}×${r.img.height} JPEG)${ratio}. Needs a working connection.` : 'Needs a working connection to load a picture.');
+  const hi = el('div', 'hi'); hi.appendChild(el('div', 'hbar', labels.hiBar)); high.appendChild(hi);
+  render(th, items.map(it => it.mono !== undefined ? {dir: 'in', text: it.sms} : it));
+  renderWa(wt, items);
+  if (r && r.img) { const b = el('div', 'hbody', r.plain); const im = el('img'); im.src = r.img.data_url; im.alt = labels.alt; b.appendChild(im); hi.appendChild(b); }
+  else hi.appendChild(el('div', 'empty', r && r.error ? r.error : labels.empty));
+}
+
+// ---------- Emergency ----------
 function refresh() {
   render($('erThread'), erThread);
-  render($('userThread'), people[current].thread);
-  $('userWho').textContent = people[current].name + "'s iPhone";
+  const items = people[current].thread.map(it => it.dir === 'in' && it.parts ? {dir: 'in', text: it.text, sms: it.text, plain: it.plain, mono: it.laptop ? it.laptop.text : undefined} : it);
+  const r = [...people[current].thread].reverse().find(it => it.dir === 'in' && it.parts);
+  triple($('emTriple'), items, r && {parts: r.parts, plain: r.plain, monoBytes: r.laptop && r.laptop.bytes, monoGzip: r.laptop && r.laptop.gzip, img: r.image, imgLabel: 'Picture map'},
+    {initials: 'ER', from: 'Emergency Response', sub: 'Business account · alerts for your area', what: 'Map', hiName: 'picture map',
+     hiBar: 'Emergency alert · map for your location', alt: 'Map of the incident, closed roads and your way out', empty: 'Send an alert to see the picture map.'});
+  $('userWho').textContent = people[current].name + ' · the same reply three ways (below)';
   $('lat').value = people[current].gps[0]; $('lon').value = people[current].gps[1];
   document.querySelectorAll('#places .chip').forEach(c => c.classList.toggle('on',
     PLACES[c.textContent][0] === people[current].gps[0] && PLACES[c.textContent][1] === people[current].gps[1]));
 }
 function log(lines) { $('log').textContent = lines + '\n\n' + ($('log').textContent === 'Nothing sent yet.' ? '' : $('log').textContent); }
-
+async function post(url, body) {
+  try { const r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)}); return await r.json(); }
+  catch (e) { return {error: String(e), log: [], seconds: 0}; }
+}
 async function deliver(key, alertText) {
   const p = people[key];
   const typing = {kind: 'typing'}; p.thread.push(typing); refresh();
-  let res;
-  try {
-    const r = await fetch('/api/alert', {method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({text: alertText, lat: p.gps[0], lon: p.gps[1]})});
-    res = await r.json();
-  } catch (e) { res = {error: String(e), log: [], seconds: 0}; }
-  p.thread.splice(p.thread.indexOf(typing), 1);
+  const res = await post('/api/alert', {text: alertText, lat: p.gps[0], lon: p.gps[1]});
+  const i = p.thread.indexOf(typing); if (i >= 0) p.thread.splice(i, 1);
   if (res.message) {
-    p.thread.push({dir: 'in', text: res.message});
+    p.thread.push({dir: 'in', text: res.message, plain: res.text || res.message, laptop: res.laptop, image: res.image, parts: res.parts});
     erThread.push({kind: 'meta', text: `Reply to ${p.name}: ${res.parts} SMS part${res.parts === 1 ? '' : 's'}, ${res.seconds} s`});
   } else {
     p.thread.push({kind: 'meta', text: 'Reply failed: ' + res.error});
@@ -191,7 +317,6 @@ async function deliver(key, alertText) {
   log(`── ${p.name} @ ${p.gps.join(', ')} (${res.seconds} s)\n` + (res.log || []).join('\n') + (res.error ? '\nERROR ' + res.error : ''));
   refresh();
 }
-
 function sendAlert() {
   const text = $('erInput').value.trim(); if (!text) return;
   $('erInput').value = ''; lastAlert = text;
@@ -201,44 +326,126 @@ function sendAlert() {
   for (const k of targets) { people[k].thread.push({kind: 'meta', text: 'Emergency alert'}, {dir: 'in', text}); deliver(k, text); }
   refresh();
 }
-function sendFromUser() {
-  const text = $('userInput').value.trim(); if (!text) return;
-  $('userInput').value = '';
+function textMap() {
   const p = people[current];
-  p.thread.push({dir: 'out', text});
-  erThread.push({dir: 'in', text, sender: p.name});
-  refresh();
-  if (/^map$/i.test(text)) {
-    if (lastAlert) deliver(current, lastAlert);
-    else { p.thread.push({dir: 'in', text: 'No active alert right now.'}); refresh(); }
-  }
+  p.thread.push({dir: 'out', text: 'MAP'});
+  erThread.push({dir: 'in', text: 'MAP', sender: p.name});
+  if (lastAlert) deliver(current, lastAlert);
+  else { p.thread.push({dir: 'in', text: 'No active alert right now.'}); refresh(); }
 }
 
-// wire up
-for (const [k, t] of Object.entries(TEMPLATES)) {
-  const c = document.createElement('button'); c.className = 'chip'; c.textContent = k; c.onclick = () => { $('erInput').value = t; }; $('templates').appendChild(c);
+// ---------- Photo, radar, directions ----------
+const results = {photo: null, radar: null, walk: null};
+const LABELS = {
+  photo: {initials: 'Fr', from: 'Friend', sub: 'Photo sent to you', what: 'Text version of the photo', hiName: 'the photo itself',
+          hiBar: 'The original photo', alt: 'The photo your friend sent', empty: 'Pick a sample photo or upload one.'},
+  radar: {initials: 'WX', from: 'Weather by text', sub: 'Text RADAR for rain near you', what: 'Radar map', hiName: 'radar picture',
+          hiBar: 'Weather radar · around your location', alt: 'Weather radar around your location', empty: 'Pick a place and text RADAR.'},
+  walk: {initials: 'Go', from: 'Directions by text', sub: 'Walking directions from your GPS', what: 'Map', hiName: 'picture map',
+         hiBar: 'Walking directions · map', alt: 'Walking route on a street map', empty: 'Pick a starting point and a destination.'},
+};
+function showResult(kind) {
+  const x = results[kind], box = $(kind + 'Out');
+  if (!x) return triple(box, [], null, LABELS[kind]);
+  const items = [{kind: 'meta', text: x.request}];
+  if (x.out) items.push({dir: 'out', text: x.out});
+  if (x.pending) items.push({kind: 'typing'});
+  else if (x.res.error) items.push({kind: 'meta', text: 'Failed: ' + x.res.error});
+  else items.push({dir: 'in', sms: x.res.sms, plain: x.res.text, mono: x.res.mono});
+  const r = x.pending || x.res.error ? (x.res && x.res.error ? {error: x.res.error} : null) :
+    {parts: x.res.parts, plain: x.res.text, monoBytes: x.res.mono_bytes, monoGzip: x.res.mono_gzip, img: x.img || x.res.image, imgLabel: x.imgLabel};
+  triple(box, items, r, LABELS[kind]);
 }
+async function sendPhoto(dataUrl, name, bytes, w, h) {
+  results.photo = {request: `Friend sent a photo (${name}, ${kb(bytes)}). It didn't download.`, pending: true,
+    img: {data_url: dataUrl, bytes, width: w, height: h}, imgLabel: 'The photo'};
+  showResult('photo'); $('photoStatus').textContent = 'Working…';
+  const res = await post('/api/photo', {image: dataUrl});
+  Object.assign(results.photo, {pending: false, res});
+  $('photoStatus').textContent = res.error ? '' : `Done in ${res.seconds} s`;
+  showResult('photo');
+}
+function loadPhoto(blob, name) {
+  const fr = new FileReader();
+  fr.onload = () => { const im = new Image(); im.onload = () => sendPhoto(fr.result, name, blob.size, im.naturalWidth, im.naturalHeight); im.src = fr.result; };
+  fr.readAsDataURL(blob);
+}
+async function sendRadar() {
+  const [lat, lon] = $('radarAt').value.split(',').map(Number);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) { $('radarStatus').textContent = 'Enter coordinates as: lat, lon'; return; }
+  results.radar = {request: `Location ${lat.toFixed(3)}, ${lon.toFixed(3)}`, out: 'RADAR', pending: true};
+  showResult('radar'); $('radarStatus').textContent = 'Reading the radar…';
+  const res = await post('/api/radar', {lat, lon});
+  Object.assign(results.radar, {pending: false, res});
+  $('radarStatus').textContent = res.error ? '' : `Done in ${res.seconds} s`;
+  showResult('radar');
+}
+async function sendWalk() {
+  const to = $('walkTo').value.trim();
+  if (!to) { $('walkStatus').textContent = 'Type a destination first.'; return; }
+  results.walk = {request: `You are at ${walkFrom[0].toFixed(4)}, ${walkFrom[1].toFixed(4)} (from GPS)`, out: 'Walk to ' + to, pending: true};
+  showResult('walk'); $('walkStatus').textContent = 'Routing on street data (a new city can take a minute)…';
+  const res = await post('/api/directions', {lat: walkFrom[0], lon: walkFrom[1], to});
+  Object.assign(results.walk, {pending: false, res});
+  $('walkStatus').textContent = res.error ? '' : `Done in ${res.seconds} s`;
+  showResult('walk');
+}
+
+// ---------- wire up ----------
+const chip = (box, text, fn) => { const c = el('button', 'chip', text); c.onclick = () => fn(c); $(box).appendChild(c); return c; };
+for (const [k, t] of Object.entries(TEMPLATES)) chip('templates', k, () => { $('erInput').value = t; });
 for (const [k, p] of Object.entries(people)) {
-  const l = document.createElement('label'); l.className = 'inline';
-  l.innerHTML = `<input type="checkbox" checked> ${p.name}`;
+  const l = el('label', 'inline'); l.innerHTML = `<input type="checkbox" checked> ${p.name}`;
   l.querySelector('input').onchange = e => { p.send = e.target.checked; };
   $('recipients').appendChild(l);
-  const o = document.createElement('option'); o.value = k; o.textContent = p.name; $('profile').appendChild(o);
+  const o = el('option', '', p.name); o.value = k; $('profile').appendChild(o);
 }
-for (const name of Object.keys(PLACES)) {
-  const c = document.createElement('button'); c.className = 'chip'; c.textContent = name;
-  c.onclick = () => { people[current].gps = PLACES[name].slice(); $('gpsHint').textContent = 'Moved. Text MAP from this phone for an updated reply.'; refresh(); };
-  $('places').appendChild(c);
-}
+for (const name of Object.keys(PLACES))
+  chip('places', name, () => { people[current].gps = PLACES[name].slice(); $('gpsHint').textContent = 'Moved. Text MAP for an updated reply.'; refresh(); });
 for (const id of ['lat', 'lon']) $(id).onchange = () => {
   const lat = parseFloat($('lat').value), lon = parseFloat($('lon').value);
-  if (Number.isFinite(lat) && Number.isFinite(lon)) { people[current].gps = [lat, lon]; $('gpsHint').textContent = 'Moved. Text MAP from this phone for an updated reply.'; refresh(); }
+  if (Number.isFinite(lat) && Number.isFinite(lon)) { people[current].gps = [lat, lon]; $('gpsHint').textContent = 'Moved. Text MAP for an updated reply.'; refresh(); }
 };
 $('profile').onchange = e => { current = e.target.value; $('gpsHint').textContent = 'Pick a place or type coordinates.'; refresh(); };
-$('erSend').onclick = sendAlert; $('userSend').onclick = sendFromUser;
-for (const [id, fn] of [['erInput', sendAlert], ['userInput', sendFromUser]])
-  $(id).onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); fn(); } };
+$('erSend').onclick = sendAlert; $('textMap').onclick = textMap;
+$('erInput').onkeydown = e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendAlert(); } };
+
+fetch('/api/samples').then(r => r.json()).then(d => {
+  if (!d.photos.length) $('photoSamples').appendChild(el('span', 'status-line', 'No sample photos on this machine; upload one.'));
+  for (const name of d.photos) chip('photoSamples', name, () => fetch('/api/sample?name=' + encodeURIComponent(name)).then(r => r.blob()).then(b => loadPhoto(b, name)));
+});
+$('photoFile').onchange = e => { const f = e.target.files[0]; if (f) loadPhoto(f, f.name); };
+for (const [name, ll] of Object.entries(RADAR_PLACES)) chip('radarPlaces', name, () => { $('radarAt').value = ll.join(', '); sendRadar(); });
+$('radarAt').value = Object.values(RADAR_PLACES)[0].join(', ');
+$('radarGo').onclick = sendRadar;
+$('findRain').onclick = async () => {
+  $('radarStatus').textContent = 'Searching the world radar…';
+  const r = await fetch('/api/find_rain').then(r => r.json()).catch(e => ({error: String(e)}));
+  if (r.error) { $('radarStatus').textContent = r.error; return; }
+  $('radarAt').value = `${r.lat}, ${r.lon}`; sendRadar();
+};
+for (const [name, [ll, dest]] of Object.entries(WALK_FROM)) chip('walkFrom', name, c => {
+  walkFrom = ll; $('walkTo').value = dest;
+  document.querySelectorAll('#walkFrom .chip').forEach(x => x.classList.toggle('on', x === c));
+});
+document.querySelector('#walkFrom .chip').classList.add('on'); $('walkTo').value = WALK_FROM['Lisbon: Rossio station'][1];
+$('walkGo').onclick = sendWalk;
+$('walkTo').onkeydown = e => { if (e.key === 'Enter') sendWalk(); };
+
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => {
+  document.body.dataset.tab = t.dataset.tab;
+  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('on', x === t));
+});
+$('clear').onclick = () => {
+  erThread.length = 0; lastAlert = null;
+  for (const p of Object.values(people)) p.thread = p.thread.filter(it => it.kind === 'typing');  // replies still on their way stay
+  $('log').textContent = 'Nothing sent yet.';
+  for (const k of Object.keys(results)) { results[k] = null; showResult(k); }
+  for (const id of ['photoStatus', 'radarStatus', 'walkStatus']) $(id).textContent = '';
+  refresh();
+};
 refresh();
+for (const k of Object.keys(results)) showResult(k);
 </script>
 </body>
 </html>
