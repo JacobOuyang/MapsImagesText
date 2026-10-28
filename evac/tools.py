@@ -171,7 +171,7 @@ def rain_radar(ctx):
 
 # ---------- photos ----------
 
-@tool("Look at the photo the person was sent (it would not load on their phone): caption, details, main subjects.")
+@tool("Look at the photo the person was sent (it would not load on their phone): caption, details, the main object.")
 def describe_photo(ctx):
     if not ctx.image:
         return {"error": "no photo attached"}

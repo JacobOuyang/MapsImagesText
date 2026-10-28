@@ -14,7 +14,7 @@ import math
 import numpy as np
 from PIL import Image, ImageFilter, ImageOps
 
-from . import imagemap, llm
+from . import imagemap, llm, sam
 
 # Lightest to darkest; all exactly one digit wide in SF Pro 17 px (ink measured on a canvas: 0, 24, 52).
 BLANK = "\u2007"  # figure space: a blank SMS row that keeps its height
@@ -23,28 +23,22 @@ SMS_CELL = 22 / 10.28   # iMessage line height / digit width
 MONO_CELL = 16.9 / 7.53  # WhatsApp monospace line height / Menlo cell width at 12.5 px
 PROMPT = ("Describe this photo for someone whose phone could not load it. Reply as JSON: "
           '{"caption": one sentence, "details": [up to 3 short facts a person would want to know, including any '
-          'readable text], "subjects": [up to 4 {"name": 1-3 words, "box": [x0, y0, x1, y1] as fractions of the '
-          "width and height}]}")
+          'readable text], "object": the one main thing the photo shows, as a short noun phrase an image '
+          'segmentation model could find (e.g. "penguin", "fortune cookie", "flamingo"), or "" for a scene with '
+          'no main thing}')
 
 
 def describe(jpeg):
-    """Muse Spark's caption, details and subject boxes. Falls back to an empty description."""
+    """Muse Spark's caption, details and the main object's name (SAM's prompt). Falls back to an empty description."""
     if not llm.available():
-        return {"caption": "A photo (no description: model not configured).", "details": [], "subjects": []}
+        return {"caption": "A photo (no description: model not configured).", "details": [], "object": ""}
     part = {"type": "image_url", "image_url": {"url": "data:image/jpeg;base64," + base64.b64encode(jpeg).decode()}}
     try:
         d = llm.chat_json([{"role": "user", "content": [{"type": "text", "text": PROMPT}, part]}])
     except Exception as e:
-        return {"caption": "A photo (description failed: %s)." % e, "details": [], "subjects": []}
-    subs = []
-    for s in d.get("subjects") or []:
-        try:
-            x0, y0, x1, y1 = (min(1.0, max(0.0, float(v))) for v in s["box"])
-            if x1 > x0 and y1 > y0:
-                subs.append({"name": str(s["name"]), "box": [x0, y0, x1, y1]})
-        except (KeyError, TypeError, ValueError):
-            continue
-    return {"caption": d.get("caption") or "", "details": [str(x) for x in d.get("details") or []][:3], "subjects": subs[:4]}
+        return {"caption": "A photo (description failed: %s)." % e, "details": [], "object": ""}
+    return {"caption": d.get("caption") or "", "details": [str(x) for x in d.get("details") or []][:3],
+            "object": str(d.get("object") or "").strip()}
 
 
 # ---------- outlines: the bare minimum of a photo ----------
@@ -199,6 +193,51 @@ def find_object(img):
     return m[max(0, ys.min() - pad_y): ys.max() + pad_y + 1, max(0, xs.min() - pad_x): xs.max() + pad_x + 1]
 
 
+def sam_object(img, name):
+    """SAM 3.1 finds `name` -> (the object's mask on a working grid, cropped to it; how many SAM found; where the
+    shape came from), or None if SAM found nothing (after retrying with the name's last word: "eight ball" ->
+    "ball"). Of several matches (a flock), the biggest confident one is drawn, at the full working resolution of its
+    own crop, so a small bird in a big photo is drawn as large as a close-up.
+
+    With Meta's mask decoder installed the shape is SAM's own mask. Without it, SAM's box still says where the
+    object is: the colour method runs on that box plus a margin, whose edges really are background, and an ellipse
+    in the box stands in when even that fails (a black ball on black)."""
+    found = []
+    for prompt in dict.fromkeys([name, name.split()[-1]]):
+        try:
+            found = sam.segment(img, prompt)
+        except Exception:
+            return None
+        if found:
+            break
+    if not found:
+        return None
+    confident = [f for f in found if f["score"] >= 0.8 * found[0]["score"]]
+    f = max(confident, key=lambda f: (f["box"][2] - f["box"][0]) * (f["box"][3] - f["box"][1]))
+    x1, y1, x2, y2 = f["box"]
+    mx, my = (x2 - x1) * 0.12, (y2 - y1) * 0.12
+    X1, Y1 = max(0, int(x1 - mx)), max(0, int(y1 - my))
+    X2, Y2 = min(img.width, int(x2 + mx) + 1), min(img.height, int(y2 + my) + 1)
+    W = WORK_COLS
+    H = max(8, round(W * (Y2 - Y1) / max(1, X2 - X1)))
+    if f["mask"] is not None:
+        part = Image.fromarray(f["mask"][Y1:Y2, X1:X2].astype(np.uint8) * 255).resize((W, H), Image.BOX)
+        m, how = np.asarray(part) > 127, "SAM 3.1 mask"
+    else:
+        m, how = single_object(subject_mask(img.crop((X1, Y1, X2, Y2)), W, H)), "SAM 3.1 box, shape by colour"
+        if not 0.05 <= m.mean() <= 0.95:  # the colour method can't see it: draw the box's ellipse
+            yy, xx = np.mgrid[0:H, 0:W] + 0.5
+            k = W / (X2 - X1)
+            cx, cy, rx, ry = ((x1 + x2) / 2 - X1) * k, ((y1 + y2) / 2 - Y1) * k, (x2 - x1) * k / 2, (y2 - y1) * k / 2
+            m, how = ((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2 <= 1, "SAM 3.1 box"
+    ys, xs = np.nonzero(m)
+    if not len(xs):
+        return None
+    pad_y, pad_x = max(2, int((ys.max() - ys.min()) * 0.06)), max(2, int((xs.max() - xs.min()) * 0.06))
+    crop = m[max(0, ys.min() - pad_y): ys.max() + pad_y + 1, max(0, xs.min() - pad_x): xs.max() + pad_x + 1]
+    return crop, len(found), how
+
+
 def run(data, sms_cols=24, mono_cols=58, description=None):  # the widths the maps use
     img = ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB")
     small = img.copy()
@@ -208,7 +247,12 @@ def run(data, sms_cols=24, mono_cols=58, description=None):  # the widths the ma
     d = description or describe(buf.getvalue())
 
     lines = ["Photo: " + d["caption"]] + ["- " + x for x in d["details"]]
-    obj = find_object(img)
+    name = d.get("object") or ""
+    found = sam_object(img, name) if name and sam.available() else None
+    if found:
+        obj, total, how = found
+    else:
+        obj, total, how = find_object(img), 1, "colour"
     if obj is not None:  # one object, cropped so it fills the width: its contour, and a solid silhouette for SMS
         kind = "object"
         mono_rows = contour(obj, mono_cols, max(4, round(mono_cols * obj.shape[0] / obj.shape[1] / MONO_CELL)))
@@ -222,12 +266,12 @@ def run(data, sms_cols=24, mono_cols=58, description=None):  # the widths the ma
         L, light = layout_regions(img, sms_cols, max(3, round(sms_cols * img.height / img.width / SMS_CELL)))
         tone = {j: SMS_TONES[i] for i, j in enumerate(np.argsort(-light))}  # lightest region blank, darkest #
         sms_rows = [[tone[v] for v in row] for row in L]
-    names = [x["name"] for x in d["subjects"]][:1]
-    key = ("(outline of %s, cropped to it)" % (names[0] if names else "the main object") if kind == "object"
-           else "(outlines of the main shapes)")
+    what = (name or "the main object") if total == 1 else "1 of %d %ss" % (total, name)
+    key = ("(outline of %s, found by %s)" % (what, "SAM 3.1" if how != "colour" else "colour")
+           if kind == "object" else "(outlines of the main shapes)")
     sms = "\n".join(lines + [""] + [r.rstrip(BLANK) or BLANK for r in _trim(sms_rows)] + [key])
     mono = "\n".join([r.rstrip() for r in _trim(mono_rows)] + [key])
-    return {"caption": d["caption"], "details": d["details"], "subjects": d["subjects"], "outline": kind,
+    return {"caption": d["caption"], "details": d["details"], "object": name, "outline": kind, "shape_from": how,
             "sms": sms, "text": "\n".join(lines), "mono": mono,
             "mono_bytes": len(mono.encode()), "mono_gzip": len(gzip.compress(mono.encode())),
             "photo_bytes": len(data), "width": img.width, "height": img.height, "small": imagemap.shrink(img)}

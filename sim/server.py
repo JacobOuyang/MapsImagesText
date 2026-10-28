@@ -49,11 +49,15 @@ OBJECT_DIR = "/Library/User Pictures"
 OBJECTS = ["Fun/Fortune Cookie", "Fun/Gingerbread Man", "Animals/Penguin", "Animals/Owl", "Animals/Parrot",
            "Instruments/Guitar", "Instruments/Violin", "Flowers/Sunflower", "Flowers/Red Rose", "Nature/Leaf"]
 CONVERTED = os.path.join(ROOT, "..", "cache", "samples")
+GENERATED = os.path.join(ROOT, "samples")  # one object each, made with Muse Image (muse-image-1.0)
 
 
 def sample_objects():
-    return {o.split("/")[1]: os.path.join(OBJECT_DIR, o + ".heic") for o in OBJECTS
-            if os.path.exists(os.path.join(OBJECT_DIR, o + ".heic"))}
+    out = {f[:-4]: os.path.join(GENERATED, f) for f in sorted(os.listdir(GENERATED)) if f.endswith(".jpg")} \
+        if os.path.isdir(GENERATED) else {}
+    out.update({o.split("/")[1]: os.path.join(OBJECT_DIR, o + ".heic") for o in OBJECTS
+                if os.path.exists(os.path.join(OBJECT_DIR, o + ".heic"))})
+    return out
 
 
 def sample_photos():

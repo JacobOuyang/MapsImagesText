@@ -19,7 +19,7 @@ Ask it anything in one message; **Muse Spark** decides which tools to call:
 
 Every map and drawing shows **only what the reply is about**: the route, the streets it uses, the closures and the zone's edge. Everything else is left blank, so the way to go is the first thing you see. Walking directions go one step at a time: only the current step, as far as the next intersection, which way to turn there and a landmark to look for, with a map zoomed to just that stretch. The next step comes as you move. A photo of one object becomes that object's outline, drawn as wide as the maps.
 
-Built on the Meta Model API (Muse Spark; SAM 3.1 planned).
+Built on the Meta Model API: Muse Spark plans and words, SAM 3.1 finds objects in photos, Muse Image made the test pictures.
 
 Contents: [Architecture](#architecture) · [The router](#the-router-one-message-in-muse-picks-the-tools) · [Tools](#tools) · [Scene and renderers](#scene-one-description-four-drawings) · [Only what matters](#showing-only-what-matters) · [Emergency](#emergency-alerts) · [Photo](#photos-that-wont-load) · [Radar](#weather-radar) · [Directions](#walking-directions-abroad) · [Text-map rules](#why-the-text-maps-line-up) · [Simulator](#try-it-the-simulator) · [Command line](#run-it-from-the-command-line) · [Code](#code) · [Limits](#known-limits)
 
@@ -219,7 +219,7 @@ def walking_route(ctx, destination):
 | `nearby_towns(radius_km)` | towns with distance and direction | the town list | Overpass |
 | `rain_radar()` | rain over you, nearest rain, motion, forecast summary | radar grids and its four versions | RainViewer + Open-Meteo |
 | `rain_forecast(lat, lon)` | 15-minute rain for 2 hours at one spot | the forecast | Open-Meteo |
-| `describe_photo()` | caption, details, subject boxes | the description | Muse Spark (vision) |
+| `describe_photo()` | caption, details, the main object's name | the description | Muse Spark (vision) |
 
 `tools.call(ctx, name, args)` never raises: a missing argument, an unknown tool or a failing service (Overpass timing out, for example) comes back as `{"error": ...}`, which the model reads and works around. Every call is logged in `ctx.log`.
 
@@ -580,194 +580,202 @@ Avoid Palisades Dr.
 
 ## Photos that won't load
 
-The simplest useful case is a photo of **one thing**: what is it, and what shape is it? So the drawing is just that object's outline, cropped to it and drawn as wide as the maps (58 columns for WhatsApp, 24 for SMS), with Muse's description above it. A tone sketch (darker pixel, inkier character) was tried first; it shaded every pixel, so mist, ripples and stripes crowded out the object.
+The simplest useful case is a photo of **one thing**: what is it, and what shape is it? So the drawing is just that object's outline, cropped to it and drawn as wide as the maps (58 columns for WhatsApp, 24 for SMS), with Muse's description above it. **Muse Spark names the object and SAM 3.1 finds it.**
 
 ```mermaid
 flowchart TD
-  A["Photo a friend sent<br/>(it didn't download)"] --> B["Muse Spark: caption,<br/>up to 3 details, the object's name"]
-  A --> C["Blur, YCbCr colour on a 240-column working grid"]
-  C --> D["Background = the colours making up ≥ 15% of the photo's border (k-means)<br/>an object touching the edge doesn't count as background"]
-  D --> E["Object = pixels far from all of them (Otsu threshold)<br/>close gaps (icing lines, stripes), keep the biggest piece, fill holes"]
-  E --> Z{"1% to 85% of the photo?"}
-  Z -- yes --> CR["Crop to it, with a 6% margin"]
-  CR --> M1["WhatsApp: marching squares, 58 columns<br/>one continuous line in ─ │ ╭ ╮ ╯ ╰"]
-  CR --> S1["SMS: a solid # silhouette, 24 columns,<br/>figure spaces between"]
-  Z -- "no single object" --> LR["3 colour regions: their borders (WhatsApp),<br/>3 flat tones (SMS)"]
+  A["Photo a friend sent<br/>(it didn't download)"] --> B["Muse Spark: caption, up to 3 details,<br/>and the main object as a short noun phrase ('dog')"]
+  B --> S["SAM 3.1 (/v1/responses): every 'dog' in the photo<br/>box + confidence + mask (retry with the last word: 'eight ball' → 'ball')"]
+  S -- "found" --> P["The biggest confident match, its box + 12% margin,<br/>on a 240-column grid of its own (a small bird is drawn as large as a close-up)"]
+  P --> M{"Meta's mask decoder installed?"}
+  M -- yes --> MK["SAM's own mask"]
+  M -- "no (today)" --> CB["Colour method inside the box: its edges really are background<br/>(an ellipse in the box if even that fails)"]
+  S -- "nothing found" --> CO["Colour method on the whole photo"]
+  MK & CB & CO --> O["Crop to the shape → WhatsApp: marching squares in ─ │ ╭ ╮ ╯ ╰ (58 columns)<br/>SMS: # silhouette with figure spaces (24 columns)"]
   A --> SM["Small: 400 px WebP"]
   A --> H["High: the photo"]
 ```
 
-- **Marching squares** look at the four corners of each character cell (inside or outside the object) and pick the line piece that joins the right edge midpoints: `─` and `│` for straight runs, the rounded corners `╭ ╮ ╯ ╰` for bends. Every piece meets its neighbours, so the outline is one closed line. All six glyphs are one cell wide in Menlo (checked in the font file).
-- **The SMS version is a filled silhouette,** because at 24 columns a solid shape reads better than its edge. Blank cells are U+2007 figure spaces: an ordinary space is narrower than a digit in SF Pro, and an earlier version used them by mistake, which squashed the shape sideways.
-- **Muse's subject boxes** were the first idea for finding the object, but they were too loose: none for the flamingos, the whole frame for "waterfall". SAM 3.1 (segmentation on the Meta Model API) would give the real mask; the colour guess stands in until it is wired in.
+**SAM 3.1 on the Meta Model API.**
+- **Endpoint:** it's served on `/v1/responses`, not `/chat/completions`. The request is one user message with an `input_text` (the noun phrase) and an `input_image`, plus `metadata: {"mask_encoding": "one_bit", "include_confidence": "true"}`.
+- **Answer format:** special tokens in the output text, one record per match:
 
-The examples are macOS's account pictures in `/Library/User Pictures` (one object each; the simulator offers them as samples and converts them from HEIC with `sips`; they are not in this repo).
+  ```
+  <0f>0<|box;x1=64;y1=96;x2=191;y2=159;w=256;h=256;c=0.75|><|mask;x=0;y=0;c=0.75;data=64,128,!…|>
+  ```
 
-**A penguin against the sky.** (WhatsApp text 1697 bytes (234 compressed), photo 41495 bytes). It touches the bottom edge; counting only the border's main colours as background keeps its white chest from being treated as sky:
+  The box is in the pixels of the image sent, corners included, and the mask is the box's rows × columns.
+- **The mask isn't decoded here.** Its payload is compressed, and Meta's SAM License doesn't allow reverse-engineering it. Meta publishes the decoder, `meta-sam-parser` (Python 3.10+), which isn't installed yet. Until it is, the photo is cropped to SAM's box and the colour method finds the shape inside it.
+- **What the box alone already fixes:**
+  - **Wrong object:** the waterfall was outlined instead of the bird.
+  - **No object:** the black 8-ball on black.
+  - **Too small:** one of 28 flamingos is now drawn large instead of being lost.
+- **What still needs the mask:** thin parts (a bicycle's frame), holes (a mug's handle) and busy surroundings (a teapot on a cluttered counter).
 
-```
-Photo: A close-up profile of a king penguin against a clear blue sky.
-- Black head with bright orange-yellow markings on cheeks, beak, and chest
-- White chest and gray-black body feathers
-- No readable text in the image
+**Finding the shape without a model** (the colour method):
+1. **Background:** the colours that make up at least 15% of the border (k-means). An object touching the edge doesn't count as background.
+2. **Object:** pixels far from all of those colours (Otsu threshold).
+3. **Clean-up:** close gaps of a few pixels (icing lines, stripes), keep the biggest piece and fill its holes.
 
-              ##
-              ###
-         ######
-       #####
-      ########
-     ##########
-    #############
-    ###############
-    ###############
-    ################
-   ##################
-   ###################
-  ####################
-(outline of king penguin, cropped to it)
-```
+**Drawing the shape:** marching squares read the four corners of each character cell and pick the piece of line that joins the right edge midpoints. The six pieces are `─ │ ╭ ╮ ╯ ╰`, all one cell wide in Menlo. They always meet their neighbours, so the outline is one closed line. The SMS silhouette uses U+2007 figure spaces as blanks, because ordinary spaces are narrower in SF Pro and squash the shape.
 
-```
-                                  ╭───╮
-                                 ╭╯   ╰╮
-                                 ╰╮    ╰╮
-                                  │     │
-                            ╭──╮ ╭╯     │
-                           ╭╯  ╰─╯    ╭─╯
-                      ╭────╯       ╭──╯
-                   ╭──╯    ╭───────╯
-                  ╭╯       │
-                ╭─╯        ╰──╮
-               ╭╯             ╰─╮
-              ╭╯                ╰─╮
-             ╭╯                   ╰╮
-            ╭╯                     ╰╮
-           ╭╯                       ╰─╮
-          ╭╯                          ╰─╮
-          │                             ╰─╮
-         ╭╯                               ╰─╮
-         │                                  ╰╮
-         │                                   ╰╮
-         │                                    ╰╮
-        ╭╯                                     │
-        │                                      ╰╮
-        │                                       ╰╮
-        │                                        │
-       ╭╯                                        ╰╮
-       │                                          ╰╮
-       │                                           ╰╮
-      ╭╯                                            │
-     ╭╯                                             ╰╮
-   ╭─╯                                               ╰╮
-(outline of king penguin, cropped to it)
-```
+**Test pictures.** The simulator's **One object** samples come from two places:
+- **Generated:** six pictures made with **Muse Image** (`muse-image-1.0`, `/images/generations`, about 6 s each), on plain and busy backgrounds, in `sim/samples/`: an apple, a mug, a sneaker, a bicycle against bricks, a dog on grass and a teapot on a cluttered counter.
+- **Built in:** macOS's account pictures from `/Library/User Pictures` (a penguin, a fortune cookie and others), converted from HEIC with `sips`.
 
-**A fortune cookie on white.** (WhatsApp text 1781 bytes (245 compressed), photo 51007 bytes):
+**A dog on grass:** (WhatsApp text 2007 bytes (314 compressed), photo 88571 bytes). A busy background the colour method alone couldn't separate; SAM's box narrows it to the dog.
 
 ```
-Photo: A single golden-brown fortune cookie is centered against a plain white background.
-- No text or fortune slip is visible
-- The cookie has a classic folded crescent shape
-- Its surface is lightly toasted with golden and brown tones
+Photo: A golden retriever sits attentively on green grass in a sunny park.
+- The dog has long, light-golden fluffy fur
+- Wearing a brown leather collar with a round gold tag
+- Background shows blurred trees and a park path
 
-          ########
-           #########
-  ##       ##########
- #######   ###########
- ########## ###########
- ######################
+            #########
+           ###########
+            #########
+           ############
+          ###########
+         ############
+        ############
+      ######### ####
+  ############  # #
+     ##     ###   #
+             ##   ##
+(outline of dog, found by SAM 3.1)
+```
+
+```
+                                ╭────────────────╮
+                               ╭╯                ╰╮
+                             ╭─╯                  ╰╮
+                           ╭─╯                     ╰╮
+                           │                        │
+                           ╰─╮                    ╭─╯
+                             ╰╮                   │
+                            ╭─╯                   │ ╭─╮
+                           ╭╯                     │ │╭╯
+                          ╭╯                      ╰─╯╰────
+                        ╭─╯                       ╭───────
+                        ╰╮                        │
+                       ╭─╯                        ╰╮
+                      ╭╯                          ╭╯
+                     ╭╯                          ╭╯
+                   ╭─╯                           │
+                  ╭╯                             │
+                ╭─╯                              │
+              ╭─╯                   ╭───╮       ╭╯
+             ╭╯                  ╭──╯   │ ╭╮   ╭╯
+     ╭────╮  │                   ╰╮   ╭─╯╭╯╰╮  │
+   ╭─╯    ╰──╯                    │   ╰╮ │  │  │
+   ╰─╮          ╭───╮╭─────╮      │    ╰─╯ ╭╯  │
+     ╰─────╮    │   ╰╯     ╰─╮    ╰╮       │   │
+           ╰────╯            ╰╮    │       │   │
+                              ╰╮   ╰─╮     ╰╮  ╰╮
+                               │    ╭╯      ╰╮  ╰─╮
+                               │    │        ╰────╯
+                               ╰────╯
+(outline of dog, found by SAM 3.1)
+```
+
+**A black 8-ball on black:** (WhatsApp text 1708 bytes (224 compressed), photo 36278 bytes). The colour method found nothing; SAM found the ball (as "ball", after "eight ball" found nothing), and inside its box the colour method could see it.
+
+```
+Photo: A close-up of a glossy black 8-ball pool ball against a black background.
+- The ball is shiny black with a light reflection on top
+- White circular spot with readable black text "8"
+- The ball fills almost the entire frame
+
+           #####
+      ##############
+    ##################
+   ####################
   #####################
-   ###################
-    #################
-      #############
-(outline of fortune cookie, cropped to it)
-```
-
-```
-                         ╭───────────╮
-                         │           ╰───╮
-                         │               ╰──╮
-                         │                  ╰─╮
-                         │                    ╰─╮
-                         ╰╮                     ╰─╮
-   ╭──╮                   │                       │
-  ╭╯  ╰─────╮             │                       ╰─╮
-  │         ╰────╮        ╰╮                        ╰╮
-  │              ╰───╮     ╰╮                        │
-  │                  ╰─╮    │                        ╰╮
-  │                    ╰─╮  │                         │
-  │                      ╰──╯                         ╰╮
-  ╰╮                                                   │
-   │                                                   │
-   ╰╮                                                  │
-    ╰╮                                                 │
-     ╰╮                                               ╭╯
-      ╰╮                                             ╭╯
-       ╰╮                                           ╭╯
-        ╰╮                                         ╭╯
-         ╰─╮                                     ╭─╯
-           ╰─╮                                 ╭─╯
-             ╰──╮                           ╭──╯
-                ╰───╮                   ╭───╯
-                    ╰────────╮ ╭────────╯
-                             ╰─╯
-(outline of fortune cookie, cropped to it)
-```
-
-**A gingerbread man on white.** (WhatsApp text 1808 bytes (271 compressed), photo 87141 bytes). Its white icing border matches the background; closing gaps of a few pixels keeps the arms and legs attached:
-
-```
-Photo: A gingerbread man cookie decorated with white icing on a white background.
-- Golden-brown cookie shaped like a smiling person
-- White icing outline, eyes, smile, and three buttons
-- No readable text in the image
-
-     #########
-     #########
-     #############
-    #################
+ ######################
+ ######################
+ #####################
   ##################
- ##################
-  ##################
-     ################
-      #################
-      #######  #######
+    ##############
+         ####
+(outline of eight ball, found by SAM 3.1)
+```
+
+```
+                         ╭─────────────╮
+                    ╭────╯             ╰────╮
+                ╭───╯                       ╰──╮
+            ╭───╯                              ╰──╮
+          ╭─╯                                     ╰╮
+         ╭╯                                        ╰╮
+       ╭─╯                                          ╰─╮
+      ╭╯                                              ╰╮
+     ╭╯                                                │
+    ╭╯                                                 ╰╮
+   ╭╯                                                   │
+  ╭╯                                                    │
+  │                                                     │
+  │                                                    ╭╯
+  │                                                    │
+  │                                                   ╭╯
+  │                                                  ╭╯
+  ╰╮                                                ╭╯
+   ╰╮                                             ╭─╯
+    ╰╮                                           ╭╯
+     ╰─╮                                       ╭─╯
+       ╰╮                                    ╭─╯
+        ╰─╮                               ╭──╯
+          ╰───╮                       ╭───╯
+              ╰────╮            ╭─────╯
+                   ╰────────────╯
+(outline of eight ball, found by SAM 3.1)
+```
+
+**A mug on white:** (WhatsApp text 1451 bytes (189 compressed), photo 18261 bytes). Clean, but the hole through the handle is filled in: the colour method fills holes, SAM's own mask would keep it.
+
+```
+Photo: A matte dark blue ceramic mug sits centered on a plain white background.
+- Solid blue color with a matte finish
+- Simple rounded shape with a handle on the right side
+- No text, patterns, or other objects visible
+
+       ######
+  ###############
+  ####################
+  #####################
+  #####################
+  ####################
+  ###################
+  ###############
+ ###############
       ######
-(outline of gingerbread cookie, cropped to it)
+(outline of mug, found by SAM 3.1)
 ```
 
 ```
-                    ╭──╮
-               ╭────╯  ╰─────╮
-             ╭─╯             ╰──╮
-            ╭╯                  ╰╮
-           ╭╯                    ╰╮
-          ╭╯                      │
-          ╰─╮                     │
-            │                     ╰───────╮
-            ╰╮                            ╰───╮
-             │                                ╰───╮
-        ╭────╯                                    ╰╮
-      ╭─╯                                         ╭╯
-     ╭╯                                          ╭╯
-    ╭╯                                       ╭───╯
-   ╭╯                                        │
-  ╭╯                                         ╰╮
-  ╰╮                                          │
-   ╰───╮╭──╮                                  ╰╮
-       ╰╯  ╰╮                                  ╰╮
-            │                                   ╰╮
-            ╰╮                                   ╰╮
-             │                                    ╰────╮
-             │                                         │
-             ╰╮                                       ╭╯
-              ╰╮               ╭────╮                ╭╯
-             ╭─╯              ╭╯    ╰─╮            ╭─╯
-             │               ╭╯       ╰───╮      ╭─╯
-             │             ╭─╯            ╰──────╯
-             ╰─╮          ╭╯
-               ╰──────────╯
-(outline of gingerbread cookie, cropped to it)
+              ╭──────────────────╮
+     ╭────────╯                  ╰──────╮
+    ╭╯                                  ╰╮
+    │                                    │
+    │                                    ╰─────────╮
+    │                                              ╰─╮
+    │                                                ╰╮
+    │                                                 ╰╮
+    │                                                  │
+    │                                                  │
+    │                                                  │
+    │                                                 ╭╯
+    │                                                ╭╯
+    ╰╮                                              ╭╯
+     │                                           ╭──╯
+     │                                        ╭──╯
+     │                                     ╭──╯
+     ╰╮                                ╭───╯
+    ╭─╯                               ╭╯
+  ╭─╯                                ╭╯
+  ╰──╮                             ╭─╯
+     ╰──────╮                ╭─────╯
+            ╰────────────────╯
+(outline of mug, found by SAM 3.1)
 ```
 
 ## Weather radar
@@ -1154,7 +1162,8 @@ python3 main.py --walk "Castelo de São Jorge, Lisbon" --at 38.7139,-9.1406 -v  
 | `evac/pipeline.py` | The fixed emergency reply: parse, locate, route, word, build the Scene |
 | `evac/directions.py` | A walk as a `Trip`: streets and landmarks downloaded once, re-routed at every GPS fix (`move`); one step at a time, to the next intersection, with its turn, a landmark and a map of just that stretch; optional named start |
 | `evac/radar.py` | RainViewer tiles → rain levels, motion, Open-Meteo forecast, its four versions |
-| `evac/photo.py` | Muse description; the one object's outline (colour mask, cropped, marching squares) or the borders of the main regions |
+| `evac/photo.py` | Muse description; the one object's outline (found by SAM 3.1, shaped by its mask or by colour inside its box; cropped; marching squares) or the borders of the main regions |
+| `evac/sam.py` | SAM 3.1 client on `/v1/responses`: boxes, confidence and (with Meta's `meta-sam-parser`) masks; cached in `cache/sam/` |
 | `evac/notice.py` | Alert text → fields (Muse, regex fallback); unit conversion in code |
 | `evac/grid.py` | Grid: terrain, roads, closures, hazard, Dijkstra, turn-by-turn directions (`legs` also gives where each step starts) |
 | `evac/osm.py` | Overpass queries (roads, walkable paths, towns, landmarks) cached in `cache/`; street-name matching ("5 Av" = "Fifth Avenue"); intersections |
@@ -1178,7 +1187,7 @@ Roads, paths and towns © OpenStreetMap contributors (via Overpass); geocoding b
 - Radar town names often time out and are then skipped. "Find heavy rain" works on a coarse world view, so the spot it picks can sit in a gap between storms.
 - Radar and photos still produce their own versions; the next step makes them Scenes (a grid of values) so the router can, for example, draw the rain on the walking-route map.
 - Muse's wording isn't checked against the tool results; the prompt asks it to keep every number and name. It sometimes adds an estimate (the Trevi Fountain reply guessed a 20-minute walk).
-- Photo outlines come from a colour guess (whatever differs from the main colours along the photo's border), not a segmentation model. They work for one object on a plain background (a fortune cookie, a penguin against the sky, a gingerbread man). They fail when the object matches its background (a black 8-ball on black), and on busy photos (a guitar filling the frame) the outline wanders. A scene with no single object falls back to the borders of its main regions. SAM 3.1 on the Meta Model API is the real fix and is not wired in yet. Muse's subject boxes were too loose to use: none for the flamingos, and the whole frame for "waterfall".
+- SAM 3.1 finds the object, but its masks aren't decoded yet: that needs Meta's `meta-sam-parser`, which requires Python 3.10+ (this project runs on 3.9) and isn't installed. Until then the shape inside SAM's box comes from colour, so thin parts (a bicycle's frame), holes (a mug's handle) and busy surroundings (a teapot on a cluttered counter) come out wrong. The aerial terrain for the maps still uses the colour heuristic for the same reason.
 - Steps run to the next intersection where the street *name* changes, so in an old town some are only 20 m long, and a square counts as a street. Landmarks come from OpenStreetMap names: sometimes the square you're already in, or a local name a visitor won't know (the place type is added, e.g. "(subway entrance)"). The first landmark download for an area takes about 30 s, so that first reply goes without landmarks.
 - Walking updates need the phone to send its position. The simulator moves "you" along the route or onto a nearby street off it; a real deployment needs the person to share their location, or reply with it. The wrong-turn button sometimes picks a street behind you.
 - Terrain comes from a colour heuristic. On street-scale focused maps the water layer is skipped, because blue rooftops came out as specks of lake.
