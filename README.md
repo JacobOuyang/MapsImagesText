@@ -156,6 +156,49 @@ A teapot on a cluttered counter: the lid knob, the spout and the handle with its
 (outline of teapot, found by SAM 3.1)
 ```
 
+## How picture compression works
+
+A photo has to reach a phone that can't download it. We tried three ways of carrying it, in this order.
+
+**1. Draw it in characters.** The server draws the photo as text that any messaging app can carry:
+- **Low detail:** the main object's outline (above).
+- **High detail:** every part, from SAM masks, shaded by tone (`evac/tonal.py`). The subject stays dark and the background light.
+- **Zooms:** a part redrawn from its own crop of the full-size photo.
+
+The high-detail drawing of the dog, before and after making the subject stand out (over 36 photos the subject is now darker than its background in 34, up from 16):
+
+![The dog drawn in text, before and after emphasis](docs/eval_emphasis_dog.jpg)
+
+The drawing carries *where things are and how light or dark they are*; the words carry *what it is and its colours*. Each drawing ships its own tone legend, so the receiver can rebuild the photo in two ways (`evals/photo_eval.py`, `evals/RESULTS.md`):
+- **Decoding the text to grey, with no model.** One drawing gets 19% of the way from flat grey to the photo; with every zoom, 54%.
+- **Asking Muse Image to recreate it.** Given the raw characters, it copies the glyph texture, so it is given the decoded grey instead. With the caption, its recreation matches the photo's layout at r 0.52; with every zoom, r 0.75 (the caption alone: 0.37).
+
+Below, each row shows: the photo; every zoom decoded; Muse Image from the caption only, the drawing only, the drawing with its key, and the zooms' rebuild with the key. The dog, the eagle and Mt Fuji land in the right place; the teapot's clutter doesn't:
+
+![Photos rebuilt from text: dog, eagle, Mt Fuji, teapot](docs/eval_recompose_examples.jpg)
+
+**2. Measure it as a codec.** `evals/compress_compare.py` sends the whole text payload for each of 36 photos (base drawing, every zoom in greedy order, the key) and scores the rebuilt picture against the greyscale photo with pixel measures only (SSIM, PSNR). Medians:
+
+| What is sent | Size | SSIM (256 px) |
+| --- | --- | --- |
+| All zooms + key, decoded back to grey | 48 KB of text, 2.9 KB gzipped | 0.76 |
+| The same text, recreated by Muse Image | same | 0.45 |
+| A greyscale picture of about 300 bytes | 286 B | 0.72 |
+| A greyscale picture the size of the gzipped text | 2.3 KB | 0.94 |
+
+![Text drawing vs a tiny picture](docs/eval_compress_examples.jpg)
+
+**As compression, text loses to a picture by one to three orders of magnitude.** A picture of about 300 bytes matches everything the text carries. The image model makes things worse, not better: it invents texture that isn't in the photo. So the text drawings are worth it only for the channel (they need no app and no decoder). Wherever a few hundred bytes of picture can get through, the picture wins.
+
+**3. Send the picture itself, as text.** That is what the [offline kit](#the-offline-kit) does. The picture is 128 px, base64 inside an ordinary SMS, decoded by the browser:
+- **Photos:** greyscale WebP at quality 5, contrast stretched: 284 to 1,400 bytes (3 to 14 SMS) for the six samples.
+- **Line drawings:** 1-bit PNG (the step pictures), which the kit can compare pixel by pixel.
+- **Zooms:** cropped from the full-size original the server keeps. A zoom shows detail the 128 px picture never had, at the cost of one more picture.
+
+Why greyscale WebP and not black and white, on the six samples at 128 px: 1-bit PNG at a fixed threshold, 1-bit at Otsu's threshold, then WebP at quality 20, 10 and 5. They cost about the same, but in black and white the bicycle turns to noise against the brick wall and the white sneaker disappears:
+
+![1-bit PNG vs greyscale WebP at 128 px](docs/kit_picture_formats.png)
+
 ## How-to answers and pictures (experimental)
 
 "How do I shut off the gas at my meter?" gets numbered steps at once, written by Muse Spark from the Meta Model API's built-in web search. A step is marked confirmed when a cited source covers it, the sites are named, and the local emergency number is filled in. Pictures follow later, and only where they help:
@@ -179,11 +222,46 @@ A text map is limited to what characters can show. The **kit** is a single web p
 
 - **Maps** that the kit draws properly: streets, the zone, closures, the route.
 - **Signed alerts:** the kit says *Genuine* or *NOT genuine*, so a changed word is caught.
-- **Photos you can zoom into.** A photo arrives as a 128 px greyscale WebP. Drag a box or tap a numbered part (SAM names them), and the kit writes a one-SMS reply such as `ZOOM 7k 2`. The server crops its full-size original, and the kit pastes the close-up over the picture.
+- **Photos you can zoom into.** A photo arrives as a 128 px greyscale WebP (see [how picture compression works](#how-picture-compression-works)). Drag a box or tap a numbered part (SAM names them), and the kit writes a one-SMS reply such as `ZOOM 7k 2`. The server crops its full-size original, and the kit pastes the close-up over the picture.
 - **Routes that open in a map app:** the whole walk as an encoded polyline, which the kit turns into a GPX file for Organic Maps or OsmAnd to navigate offline.
 - **Words with accents.** One character outside the basic SMS alphabet (ã, ç, ê) cuts every SMS from 153 to 67 characters; packing the words keeps them at 153.
 - **A phrasebook** of checked how-to pictures already inside the kit, so only an id travels.
 - **From the phone:** photo codes, check-ins with GPS, `RESEND` for lost parts, and a QR code to pass a message to a phone with no signal.
+
+### Examples
+
+**A photo, then a closer look.** The Photo tab's bicycle, as the kit message (Muse described it; SAM 3.1 boxed and named its parts):
+
+```
+Photo: A black bicycle with a front basket is parked on a sidewalk leaning against a red brick wall.
+- The bicycle has a wire front basket holding a dark blue bag and a tan cloth
+- It is parked on a concrete sidewalk next to a curb on a street
+- The wall is made of weathered red bricks
+#Pna.1/14:UklGRmYFAABXRUJQVlA4…AoN0:ca7e#     ← "UklGR…" is "RIFF": a WebP
+   … 12 more parts …
+#Pna.14/14:grGXKoDEyW5yeDCeCll…AA==:10c0#
+#K0n.1/2:eyJpIjoibmEiLCJrIjpbW…YW4i:3280#      ← the named parts
+#K0n.2/2:LDE2LDQxLDksMThdXX0=:4585#
+                                                 17 SMS
+```
+
+The person taps part 2 in the kit, which writes the one-SMS reply `ZOOM na 2`. The answer is `Closer look at bicycle basket (part 2) in picture na:` and 14 parts of `#Z2z…`, a 1,368-byte WebP cropped from the original. The kit draws the picture with its numbered parts (left) and the close-up (right), and pastes the close-up over the picture:
+
+![The kit: a photo with numbered parts, and a zoom on the basket](docs/kit_zoom.jpg)
+
+**A walking route.** Rossio to Castelo de São Jorge. The words travel as a `T` code (the "ã" would make the plain SMS UCS-2), then the step's map and the whole route:
+
+```
+#Tue.1/2:LY4xCsJAEEX7nOKXCrJEG…uGoS:8ea1#    ← "Castelo de São Jorge: 0.7 km, about 9 min. Head E on Calçada do Carmo…"
+#Tue.2/2:Tq665CQYuLMi//cnWQCF3…Cw==:7c1b#
+#Mac.1/3:VZG/TsMwEIdfxbr5ItlOm…MXNm:b1ba#    ← the step's map
+#Mac.2/3:yawiNc9rduiMlDuELrSAt…600o:3ca6#
+#Mac.3/3:JTZuEFvbeiduHuk5nSHlc…P34B:79de#
+#G7c.1/1:c04sLknNyVdISVUIPrw4X…AA==:2888#    ← the route: walk-to-Castelo-de-Sao-Jorge.gpx, 28 points
+                                               6 SMS (the plain reply with its text map: 6)
+```
+
+**Words with accents.** "Comment couper l'eau en cas de fuite ?" from Paris: Muse's French answer is 5 SMS as plain text (UCS-2) and 2 SMS as a `T` code.
 
 **Measured** (`evals/kit/measure.py`, full table in [`evals/kit/RESULTS.md`](evals/kit/RESULTS.md)):
 - **Overall:** alerts, a walk and three answers take 44 SMS plain and 33 with the kit.
