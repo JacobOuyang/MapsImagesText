@@ -27,14 +27,14 @@ from .photo import MONO_CELL, _components, _kmeans, contour
 
 W = 240             # working grid width (square pixels)
 SHADES = " ·░▒▓"    # lightest to darkest; all one cell wide in Menlo
-MAX_PARTS = 8
 SPLIT_STD = 24      # a region whose grey values vary more than this (std) is split in two
 SPLIT_DEPTH = 2
+DUPLICATE = 0.8    # a part overlapping one already kept by this IoU is the same thing under another name
 STANDS_OUT = 55     # a small region this much darker or lighter than its neighbour is kept, and marked in its cell
 LIST = ("List every distinct part of this photo, so that together they cover the whole picture: the main subjects and "
         "the backgrounds (sky, water, mist, ground, walls...). Each a short noun phrase an image segmentation model could "
-        "find. The most important subject first, then the rest from largest to smallest. Reply as JSON: "
-        '{"parts": [...]} (at most %d).' % MAX_PARTS)
+        "find. The most important subject first, then the rest from largest to smallest. As many as the photo has, and no "
+        'more: one plain scene may have three, a busy one twenty. Reply as JSON: {"parts": [...]}')
 
 
 def parts(img):
@@ -49,7 +49,8 @@ def parts(img):
             d = llm.chat_json([{"role": "user", "content": [{"type": "text", "text": LIST},
                                                            {"type": "image_url", "image_url": {"url": url}}]}])
             got = d.get("parts") or []
-            return [str(p).strip() for p in (got if isinstance(got, list) else [got]) if str(p).strip()][:MAX_PARTS]
+            names = [str(p).strip() for p in (got if isinstance(got, list) else [got]) if str(p).strip()]
+            return list(dict.fromkeys(names))
         except Exception:
             if attempt:
                 return []
@@ -109,8 +110,12 @@ def regions(img, names):
     L = np.zeros((H, W), int)
     named, root, lab = {}, {}, 1
     small = [(n, np.asarray(Image.fromarray(m.astype(np.uint8) * 255).resize((W, H), Image.BOX)) > 100) for n, m in found]
+    min_px = max(8, W * H // 300)
+    placed = []
     for n, m in sorted(small, key=lambda nm: -nm[1].sum()):  # larger first, so smaller things lie on top
-        if m.any():
+        # No fixed number of parts: a part is kept if it's more than a speck and not another name for one already kept.
+        if m.sum() >= min_px and all((m & p).sum() < DUPLICATE * (m | p).sum() for p in placed):
+            placed.append(m)
             L[m] = lab
             named[lab], root[lab] = n, lab
             lab += 1
@@ -125,7 +130,6 @@ def regions(img, names):
                 L[list(ys), list(xs)] = lab
                 root[lab] = lab
                 lab += 1
-    min_px = max(8, W * H // 300)
     for l in list(np.unique(L)):
         lab = _split(L, gray, l, lab, SPLIT_DEPTH, min_px, root)
     return _merge_small(L, gray, min_px, root), gray, named, root

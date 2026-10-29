@@ -21,6 +21,7 @@ from . import imagemap, llm, sam
 BLANK = "\u2007"  # figure space: a blank SMS row that keeps its height
 SMS_TONES = BLANK + "+#"  # three flat tones for a photo drawn as its main regions
 SMS_CELL = 22 / 10.28   # iMessage line height / digit width
+BOXY = 0.85             # a silhouette filling this much of its own box is just a box (a sign, a pill): it shows nothing
 MONO_CELL = 16.9 / 7.53  # WhatsApp monospace line height / Menlo cell width at 12.5 px
 PROMPT = ("Describe this photo for someone whose phone could not load it. Reply as JSON: "
           '{"caption": one sentence, "details": [up to 3 short facts a person would want to know, including any '
@@ -188,6 +189,24 @@ def edges(L, cell_aspect):
     return out
 
 
+def sms_shape_useful(rows, mask, name):
+    """Is the SMS silhouette worth its SMS? -> (bool, why). Not when it is just a filled box (a sign, a pill, a pen:
+    the shape inside is what matters and a silhouette loses it), and not when Muse, shown only the silhouette, can't
+    tell what it is: then it costs 3-6 SMS and can mislead (a CPR scene drew as one blob). The words go either way."""
+    if mask is not None and mask.any():
+        ys, xs = np.nonzero(mask)
+        extent = mask.sum() / ((ys.max() - ys.min() + 1) * (xs.max() - xs.min() + 1))
+        if extent >= BOXY:
+            return False, "fills %.0f%% of its box: a plain shape" % (100 * extent)
+    if not name or not llm._key():
+        return True, "not checked"
+    from . import sketch
+    seen, recognised = sketch.check([r.replace(BLANK, " ") for r in rows], [name])
+    if not recognised:
+        return False, "Muse, shown only the silhouette, saw: %s" % (", ".join(seen) or "nothing")
+    return True, "Muse recognised it as: %s" % ", ".join(seen)
+
+
 def _trim(rows):
     """Rows as strings, without the empty ones above and below the drawing."""
     out = ["".join(r) for r in rows]
@@ -251,7 +270,7 @@ def sam_object(img, name, category=""):
     return crop, len(found), how
 
 
-def run(data, sms_cols=24, mono_cols=58, description=None):  # the widths the maps use
+def run(data, sms_cols=24, mono_cols=58, description=None, whatsapp=True):  # the widths the maps use
     img = ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB")
     small = img.copy()
     small.thumbnail((1024, 1024))
@@ -279,13 +298,15 @@ def run(data, sms_cols=24, mono_cols=58, description=None):  # the widths the ma
         L, light = layout_regions(img, sms_cols, max(3, round(sms_cols * img.height / img.width / SMS_CELL)))
         tone = {j: SMS_TONES[i] for i, j in enumerate(np.argsort(-light))}  # lightest region blank, darkest #
         sms_rows = [[tone[v] for v in row] for row in L]
-    what = (name or "the main object") if total == 1 else "1 of %d %ss" % (total, name)
+    what = (name or "the main object") if total == 1 else "one of the %d in the photo" % total
     key = ("(outline of %s, found by %s)" % (what, "SAM 3.1" if how != "colour" else "colour")
            if kind == "object" else "(outlines of the main shapes)")
-    sms = "\n".join(lines + [""] + [r.rstrip(BLANK) or BLANK for r in _trim(sms_rows)] + [key])
+    sms_lines = [r.rstrip(BLANK) or BLANK for r in _trim(sms_rows)]
+    shape_ok, shape_why = sms_shape_useful(sms_lines, obj if kind == "object" else None, name or d.get("category", ""))
+    sms = "\n".join(lines + ([""] + sms_lines + [key] if shape_ok else []))
     mono = "\n".join([r.rstrip() for r in _trim(mono_rows)] + [key])
     checked = None
-    if d.get("things") and sam.available() and sam.masks_available():
+    if whatsapp and d.get("things") and sam.available() and sam.masks_available():
         from . import sketch  # WhatsApp: the several things, drawn together and checked by Muse
         try:
             checked = sketch.draw(img, d["things"], mono_cols, fallback=d.get("category", ""))
@@ -296,6 +317,7 @@ def run(data, sms_cols=24, mono_cols=58, description=None):  # the widths the ma
         mono = "\n".join(checked["rows"] + ["", " · ".join("%d %s" % (i + 1, n) for i, n in enumerate(names)),
                                              "(Muse, shown only this drawing, recognised: %s)" % (", ".join(checked["recognised"]) or "nothing")])
     return {"caption": d["caption"], "details": d["details"], "object": name, "outline": kind, "shape_from": how,
+            "sms_shape": shape_ok, "sms_shape_why": shape_why, "sms_shape_rows": sms_lines,
             "things": d.get("things", []), "check": checked and {k: checked[k] for k in ("items", "recognised", "seen")},
             "attempts": checked and [{k: a[k] for k in ("items", "seen", "recognised")} for a in checked["attempts"]],
             "sms": sms, "text": "\n".join(lines), "mono": mono,

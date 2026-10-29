@@ -68,6 +68,11 @@ def sample_objects():
     return out
 
 
+def sample_emergency():
+    d = os.path.join(GENERATED, "emergency")  # one clear subject each: actions to do, things to identify (Muse Image)
+    return {f[:-4]: os.path.join(d, f) for f in sorted(os.listdir(d)) if f.endswith(".jpg")} if os.path.isdir(d) else {}
+
+
 def sample_photos():
     try:
         return {f[:-4]: os.path.join(SAMPLE_DIR, f) for f in sorted(os.listdir(SAMPLE_DIR))
@@ -77,7 +82,7 @@ def sample_photos():
 
 
 def sample_path(name):
-    path = sample_objects().get(name) or sample_photos().get(name)
+    path = sample_objects().get(name) or sample_emergency().get(name) or sample_photos().get(name)
     if path and path.endswith(".heic"):  # Pillow can't read HEIC; macOS's sips can
         os.makedirs(CONVERTED, exist_ok=True)
         jpg = os.path.join(CONVERTED, name + ".jpg")
@@ -103,7 +108,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/api/samples":
-            return self.send_json({"objects": list(sample_objects()), "photos": list(sample_photos())})
+            return self.send_json({"objects": list(sample_objects()), "emergency": list(sample_emergency()),
+                                   "photos": list(sample_photos())})
         if self.path.startswith("/api/sample?name="):
             path = sample_path(unquote(self.path.split("=", 1)[1]))
             if not path:
@@ -136,6 +142,10 @@ class Handler(SimpleHTTPRequestHandler):
                 out["parts"] = sms_parts(out["message"]) if out.get("message") else 0
             elif self.path == "/api/message":
                 img = base64.b64decode(body["image"].split(",", 1)[-1]) if body.get("image") else None
+                if body.get("photo_id") in PHOTOS:  # a question about a photo sent earlier in the Photo tab
+                    buf = io.BytesIO()
+                    PHOTOS[body["photo_id"]]["image"].save(buf, "JPEG", quality=90)
+                    img = buf.getvalue()
                 out = router.handle(body["text"], (float(body["lat"]), float(body["lon"])), image=img)
                 out["parts"] = sms_parts(out["sms"]) if out.get("sms") else 0
             elif self.path == "/api/photo":  # the quick version (SMS + low-detail WhatsApp outline)

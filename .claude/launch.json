@@ -9,6 +9,21 @@
       ],
       "port": 8765,
       "url": "http://127.0.0.1:8765"
+    },
+    {
+      "name": "eval-pages",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8766",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "out/eval"
+      ],
+      "port": 8766,
+      "url": "http://127.0.0.1:8766"
     }
   ]
 }

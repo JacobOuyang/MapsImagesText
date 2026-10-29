@@ -39,50 +39,20 @@ import traceback
 from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
-import requests
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, ROOT)
 sys.path.insert(0, os.path.join(ROOT, "sim"))
-from evac import llm, photo, sam, tonal  # noqa: E402
+from evac import llm, museimage, photo, sam, tonal  # noqa: E402
 from evac.photo import MONO_CELL  # noqa: E402
+from evac.zooms import (FONT_PATH, SHADE_CHARS, decode, ink, ink_map, legend, legend_bytes,  # noqa: E402,F401
+                        lightness, paste, ssim)
 
 OUT = os.path.join(ROOT, "out", "eval")
-FONT_PATH = "/System/Library/Fonts/Menlo.ttc"
 LINES = set("─│╭╮╯╰╳━┃┏┓┗┛╋")
 ANALYSIS_W = 232  # recomposition is scored at this width: 4 x 58, the detail a 4x4 tiling of zooms can reach
 COLS = 58
-
-
-# ---------- glyphs -> grey ----------
-
-_INK = {}
-
-
-def ink(ch):
-    """Share of a Menlo cell (WhatsApp's cell shape) that the glyph covers in ink."""
-    if ch not in _INK:
-        font = ImageFont.truetype(FONT_PATH, 40)
-        w = font.getlength("M")
-        h = w * MONO_CELL
-        im = Image.new("L", (int(round(w)), int(round(h))), 255)
-        ImageDraw.Draw(im).text((0, h / 2), ch, font=font, fill=0, anchor="lm")
-        _INK[ch] = 1 - np.asarray(im, float).mean() / 255
-    return _INK[ch]
-
-
-def ink_map(rows, cols=COLS):
-    out = np.zeros((len(rows), cols))
-    for r, line in enumerate(rows):
-        for c, ch in enumerate(line[:cols]):
-            out[r, c] = ink(ch) if ch != " " else 0.0
-    return out
-
-
-def lightness(img, cols, rows):
-    """The photo's lightness (0 black .. 1 white) averaged into a cols x rows grid."""
-    return np.asarray(img.convert("L").resize((cols, rows), Image.BOX), float) / 255
 
 
 # ---------- image metrics ----------
@@ -91,23 +61,6 @@ def pearson(a, b):
     a, b = a.ravel() - a.mean(), b.ravel() - b.mean()
     d = math.sqrt((a * a).sum() * (b * b).sum())
     return float((a * b).sum() / d) if d else 0.0
-
-
-def _blur(x, sigma=1.5, size=7):
-    k = np.exp(-((np.arange(size) - size // 2) ** 2) / (2 * sigma ** 2))
-    k /= k.sum()
-    p = size // 2
-    x = np.pad(x, p, mode="reflect")
-    x = np.apply_along_axis(lambda v: np.convolve(v, k, "valid"), 1, x)
-    return np.apply_along_axis(lambda v: np.convolve(v, k, "valid"), 0, x)
-
-
-def ssim(a, b):
-    """Mean SSIM of two lightness images in [0, 1] (Gaussian window 7, sigma 1.5)."""
-    c1, c2 = 0.01 ** 2, 0.03 ** 2
-    ma, mb = _blur(a), _blur(b)
-    va, vb, cov = _blur(a * a) - ma * ma, _blur(b * b) - mb * mb, _blur(a * b) - ma * mb
-    return float((((2 * ma * mb + c1) * (2 * cov + c2)) / ((ma * ma + mb * mb + c1) * (va + vb + c2))).mean())
 
 
 def dilate(m):
@@ -201,59 +154,8 @@ def blind_read(rows, caption, main):
 # Every drawing sets its own tone scale (its lightest half is blank), so the same ░ is a different grey in different
 # zooms. A receiver can only rebuild consistent greys if each drawing says what its glyphs stand for: a one-line legend
 # such as "tones ·82 ░64 ▒41 ▓20" (percent lightness), ~40 bytes, counted in the bytes sent. Outline glyphs carry no
-# tone: those cells are filled from their neighbours.
-
-SHADE_CHARS = " ·░▒▓█"
-
-
-def legend(rows, light):
-    """The mean lightness of the photo's cells drawn with each shading glyph (what the server would send)."""
-    out = {}
-    for ch in SHADE_CHARS:
-        vals = [light[r, c] for r, line in enumerate(rows) for c, x in enumerate(line.ljust(light.shape[1])[:light.shape[1]])
-                if r < light.shape[0] and x == ch]
-        if vals:
-            out[ch] = round(float(np.mean(vals)), 2)
-    return out
-
-
-def legend_bytes(leg):
-    return len(("tones " + " ".join("%s%d" % (ch, round(100 * v)) for ch, v in leg.items())).encode())
-
-
-def decode(rows, leg, cols=COLS):
-    """A drawing + its legend -> lightness per cell; outline cells filled from their neighbours."""
-    g = np.full((len(rows), cols), np.nan)
-    for r, line in enumerate(rows):
-        for c, ch in enumerate(line.ljust(cols)[:cols]):
-            if ch in leg:
-                g[r, c] = leg[ch]
-            elif ch == " ":
-                g[r, c] = leg.get(" ", 1.0)
-    for _ in range(60):
-        holes = np.isnan(g)
-        if not holes.any():
-            break
-        p = np.pad(g, 1, constant_values=np.nan)
-        nb = np.stack([p[:-2, 1:-1], p[2:, 1:-1], p[1:-1, :-2], p[1:-1, 2:]])
-        known = (~np.isnan(nb)).sum(0)
-        if not known.any():
-            break
-        fill = np.where(known > 0, np.nansum(nb, axis=0) / np.maximum(known, 1), np.nan)
-        g = np.where(holes & (known > 0), fill, g)
-    return np.where(np.isnan(g), np.nanmean(g) if (~np.isnan(g)).any() else 0.5, g)
-
-
-def paste(canvas, grey, box, img_size):
-    """Paste a decoded drawing (lightness per cell) into `canvas` (ANALYSIS_W wide) over `box` (in photo pixels)."""
-    H, W = canvas.shape
-    kx, ky = W / img_size[0], H / img_size[1]
-    x0, y0, x1, y1 = int(round(box[0] * kx)), int(round(box[1] * ky)), int(round(box[2] * kx)), int(round(box[3] * ky))
-    if x1 - x0 < 1 or y1 - y0 < 1:
-        return
-    part = np.asarray(Image.fromarray((np.clip(grey, 0, 1) * 255).astype(np.uint8)).resize((x1 - x0, y1 - y0), Image.BILINEAR), float) / 255
-    canvas[y0:y1, x0:x1] = part
-
+# tone: those cells are filled from their neighbours. legend, decode and paste live in evac/zooms.py (the server uses
+# them to choose zooms).
 
 def base_canvas(grey, img_size):
     H = round(ANALYSIS_W * img_size[1] / img_size[0])
@@ -314,18 +216,7 @@ def greedy(base, candidates, ref, img_size):
 
 def generate(prompt, image=None):
     """Muse Image: text-to-image, or image-conditioned (edits) when `image` is given. -> PIL image."""
-    h = {"Authorization": "Bearer " + llm._key()}
-    base = llm.BASE_URL.rstrip("/")
-    if image is None:
-        r = requests.post(base + "/images/generations", headers=dict(h, **{"Content-Type": "application/json"}), timeout=300,
-                          data=json.dumps({"model": "muse-image-1.0", "prompt": prompt, "n": 1, "size": "1024x1024"}))
-    else:
-        buf = io.BytesIO()
-        image.convert("RGB").save(buf, "PNG")
-        r = requests.post(base + "/images/edits", headers=h, timeout=300, files={"image": ("in.png", buf.getvalue(), "image/png")},
-                          data={"model": "muse-image-1.0", "prompt": prompt, "size": "1024x1024"})
-    r.raise_for_status()
-    return Image.open(io.BytesIO(base64.b64decode(r.json()["data"][0]["b64_json"]))).convert("RGB")
+    return museimage.generate(prompt, image)
 
 
 def layout_corr(a, b):

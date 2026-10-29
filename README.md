@@ -14,12 +14,13 @@ Ask it anything in one message; **Muse Spark** decides which tools to call:
 - "Is it going to rain on my walk to the Colosseum?" → radar + walking route → one reply with the first step and its map
 - "How do I walk from the Pantheon to the Colosseum?" → a walking route from the Pantheon, not from where you are
 - an emergency alert (fire, gas leak, wildfire, flood) → the fixed, tested emergency reply: are you affected, what to avoid, which way out
-- "my friend sent me this, what is it?" + a photo that won't download → a description + the photo drawn in text
+- "my friend sent me this, what is it?" + a photo that won't download → a description + the photo drawn in text, with close-ups of the details that decide what it is (experimental)
+- "How do I do CPR?" → the steps in words, and a flip-book of text frames drawn from real instructional pictures (experimental)
 - "How far is the Trevi Fountain?" → a one-line answer
 
 Every map and drawing shows **only what the reply is about**: the route, the streets it uses, the closures and the zone's edge. Everything else is left blank, so the way to go is the first thing you see. Walking directions go one step at a time: only the current step, as far as the next intersection, which way to turn there and a landmark to look for, with a map zoomed to just that stretch. The next step comes as you move. A photo of one object becomes that object's outline, drawn as wide as the maps.
 
-Built on the Meta Model API: Muse Spark plans and words, SAM 3.1 finds objects in photos, Muse Image made the test pictures.
+Built on the Meta Model API: Muse Spark plans and words, SAM 3.1 finds objects in photos, Muse Image made the test pictures (and fills in step pictures when no real one fits).
 
 Contents: [Architecture](#architecture) · [The router](#the-router-one-message-in-muse-picks-the-tools) · [Tools](#tools) · [Scene and renderers](#scene-one-description-four-drawings) · [Only what matters](#showing-only-what-matters) · [Emergency](#emergency-alerts) · [Photo](#photos-that-wont-load) · [Radar](#weather-radar) · [Directions](#walking-directions-abroad) · [Text-map rules](#why-the-text-maps-line-up) · [Simulator](#try-it-the-simulator) · [Command line](#run-it-from-the-command-line) · [Code](#code) · [Limits](#known-limits)
 
@@ -895,6 +896,162 @@ flowchart TD
 
 ![Recomposition examples](docs/eval_recompose_examples.jpg)
 
+### Emergency pictures: what to look at, and how to do it (experimental)
+
+A test set of 20 pictures, each one clear subject on a plain background, made with Muse Image (`sim/samples/emergency/`, prompts and one question each in `evals/emergency/dataset.json`). They fall into five groups:
+
+| Group | Pictures |
+| --- | --- |
+| Do this now | CPR, recovery position, gas shut-off, tourniquet |
+| Is this dangerous? | rattlesnake, black widow, poison ivy, death cap |
+| Have you seen this? | a missing child, an elderly man, a dachshund, a pickup |
+| Which one? | EpiPen, inhaler, pill, fire extinguisher |
+| Signs | evacuation route, tsunami, hazmat, exit |
+
+**The SMS silhouette is sent only when it says something** (`photo.sms_shape_useful`). It is dropped when it's just a filled box (it fills ≥ 85% of its own box: a sign, a pen), or when Muse, shown only the silhouette, can't tell what it is. The words always go. In the latest run it was kept for 4 of 20 pictures: the mushroom, the dachshund, the child and the pill. Some of the reasons it was dropped:
+
+```
+gas_shutoff       Muse, shown only the silhouette, saw: umbrella
+rattlesnake       Muse, shown only the silhouette, saw: UFO, flying saucer
+evacuation_route  fills 99% of its box: a plain shape
+```
+
+**The words carry the answers; the drawings, rebuilt, carry them too.** Muse answered each picture's multiple-choice question from one input at a time, marked right or wrong (`evals/emergency/score.py`). 12 of the 20 questions can be answered without seeing anything, so the 8 that can't are the real test:
+
+| Input | All 20 | The 8 that can't be guessed |
+| --- | --- | --- |
+| Nothing (question only) | 12 | 0 |
+| The picture | 20 | 8 |
+| The SMS words | 19 | 7 |
+| The WhatsApp drawings, as seen | 14 | 5 |
+| Base drawing decoded to grey | 17 | 6 |
+| Base + zooms decoded to grey | 19 | 8 |
+
+On the gas valve, Muse's caption said the handle was "in the vertical open position", and from the words alone Muse answered "along the pipe" (wrong). From the rebuilt drawing it answered "across the pipe" (right). The drawing caught a confident, dangerous mistake in the words.
+
+**Zooms go to what matters** (`evac/zooms.py`).
+- **Choosing a zoom:** Muse names the 1–3 details that decide a photo (`details`), SAM finds them, and only their error counts when choosing zooms.
+- **What a close-up carries:** each close-up (`close_up`) is drawn with that part as the subject, and says what to look for: "Glossy jet-black round belly with no dorsal mark means widow spider: do not touch."
+- **The base drawing:** the details are carried into it (`carry`), in light outlines or `█`, so they can't vanish into a flat region.
+
+**WhatsApp waits until the whole set is checked** (`zooms.complete`). The SMS words go at once. The WhatsApp drawing and its close-ups go together, once:
+- **Measured:** each close-up must make the rebuild over its part at least 10% less wrong, or be readable on its own.
+- **Understood:** Muse, shown only the drawings, must name the subject.
+
+If it can't, the whole drawing is withheld and only close-ups that were read go. That check is the weak part: it passed for 9 of 20 pictures and isn't consistent between runs. A real reply for the black widow, where it was withheld (Muse saw "a fly"):
+
+```
+Friend sent a black spider.
+It has a shiny, bulbous abdomen.
+Eight long legs spread outward.
+Close-up: glossy jet-black round belly.
+No dorsal mark means widow spider.
+Do not touch it.
+Do not handle with hands.
+Keep distance and get help if indoors.
+```
+
+```
+(No drawing of the whole photo: shown only the drawing, Muse couldn't tell what it was.)
+
+ZOOM: round abdomen
+Glossy jet-black round belly with no dorsal mark means widow spider: do not touch.
+···················┏━┛▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒┗━━┓░░░░░░░░░░░░░░░░░
+···············┏━━━┛▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▓▓▓┗━━┓░░░░░░░░░░░░░░
+··············┏┛▒▒▒░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░▓▓▓┗┓░░░░░░░░░░░░░
+···········░░┏┛▒▒▒░▒▒▒▒░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░┏━┛░░░░░░░░░░░░░
+·········░░░░┗━┓▒▒▒▒▒░░░░▒▒▒▒▒▒▒▒▒▒░░▒▒▒▒▒┃··░░░░░░░░░░░░░
+·······░░░░░░··┃▒▒▒▒▒░░░▒▒▒▒▒▒▒▒▒▒▒░░░▒▒▒▒┗┓···░░░░░░░░░░░
+·····░░░░░░···┏┛▒▒▒▒▒░▒▒▒▒▒▒▒▒▒▒▒▒▒▒░░▒▒▒▒░┃·····░░░░░░░░░
+···░░░░░······┗┓░▒▒▒▒▒▒▒▒░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░┃········░░░░░░
+·░░░░··········┗┓░░▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒░┏┛············░░░
+░░░···············┗━┓░░▒▒▒▒▒▒▒▒▒▒▒▒▒░░┏━┛·················
+░······················┗━━━━━━━━━━┛·······················
+```
+
+**How to do something with your hands** (`evac/steps.py`, the `show_steps` tool).
+1. **Steps:** Muse writes 3–6 steps, each with the numbers that matter, a part to mark and a web search.
+2. **No photo:** each step starts from a real picture.
+   - **Where pictures come from** (`evac/imagesearch.py`): Wikimedia Commons and Openverse (openly licensed). When those give fewer than 6 pictures, Brave Search fills in (`BRAVE_API_KEY` in `.env`; rights unknown, watermarked stock sites skipped).
+   - **Choosing:** Muse picks the best picture for each step and names the area that matters. The frame is cropped to it and credited.
+3. **With a photo:** the frames are Muse Image edits of the photo.
+4. **Fallback:** Muse Image when nothing fits.
+
+A real reply to "How do I do CPR?" (82 s); all four frames came from BruceBlaus's CPR illustrations on Commons. Step 2 on WhatsApp:
+
+```
+Adult hands-only CPR.
+Kneel beside chest, stack hands center chest.
+Push straight down 2 inches, 5 cm hard.
+Lift up fully, let chest rise 1 second.
+Push 100-120 times per minute, no stop.
+Keep going until help arrives.
+```
+
+```
+2/4 Push straight down 2 inches, 5 cm hard
+         ╭───╮   ╭───╮
+         ╰╮  ╰╮  │   │
+          ╰╮  ╰╮ │   │
+           ╰╮  ▓▓▓▓▓ │
+    ╭───────╯ ▓▓▓▓▓▓▓▓╮     ╭─────────╮
+ ╭──╯                 ╰─╮  ╭╯         │
+ │                      ╰──╯          ╰╮
+ │                                    ╭╯
+ │                         ╭───╮     ╭╯
+ │                      ╭──╯   ╰─────╯
+ ╰──────────╮ ╭─────────╯
+(look at: hands · picture: BruceBlaus, CC BY-SA 4.0, Wikimedia Commons)
+```
+
+**Most flip-books aren't usable yet.** For other actions, consecutive steps often come from unrelated sources (a generated picture, then wikiHow, then Commons), so the sequence isn't coherent. What's next:
+- words first;
+- one picture source per answer;
+- a checked set of pictures for the common emergencies;
+- the next frames made by moving the part that moves in one key frame.
+
+**Animating a key frame** (`evals/emergency/animate_test.py`, a test). Muse names only the part that moves and what it acts on, and how it moves in numbers. SAM finds them, and the frames are the same masks rotated or moved: nothing is generated, so nothing drifts. The gas valve, from on to off (the first and last of three frames; the pipe and valve filled, the handle outlined on top):
+
+```
+                    ╭────────────────╮
+  ╭─────────────────╯ ▓              ╰←
+  ╰╮           ╭▓▓│╭──────────────────╯
+   ╰───────────────╯  ▓▓╮ ╭──╮
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓   ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+──────────▓▓▓─────╯   ╰────▓▓▓──────────
+```
+
+```
+                  ╭──╮
+                 ╭╯  ╰╮
+                 │    │
+                 ╰╮   │
+                  │   │
+               ╭▓▓│   │▓
+         ╭─▓─╮ │▓▓│   │▓╮ ╭──╮
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│   │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓│   │▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓
+──────────▓▓▓─────│   │────▓▓▓──────────
+                  ╰───╯
+```
+
+The same CPR step made instead by a Muse Image edit of the key frame changed the rest of the picture too: outside the arms, it matched the original at only SSIM 0.78.
+
+**Agentic.** The router has two new tools, `photo_details` and `show_steps`. For a photo, Muse calls `describe_photo` and then decides:
+- **Something to do with your hands** (the tourniquet, the EpiPen): steps.
+- **A detail that decides what it is** (the spider, the pill): close-ups.
+
+A question with no photo ("How do I do CPR?") gets the steps alone. An alert that tells people to do something physical can add steps after the fixed emergency reply. Steps and close-ups arrive as separate messages after the reply.
+
+Pages to look at (built from cached runs, under `out/eval/`):
+- `emergency.html`: every picture through the pipeline, with every SMS and the scores.
+- `agent.html`: what the agent sends for each picture and for 7 questions with no photo.
+- `zooms_tree.html`: how zooms are chosen, round by round.
+- `animate.html`: the key-frame test.
+
+`.claude/launch.json` has an `eval-pages` server for them on port 8766.
+
 ## Weather radar
 
 ```mermaid
@@ -1234,8 +1391,11 @@ Open http://127.0.0.1:8765. In the Claude desktop app, `.claude/launch.json` sta
 - **Emergency:** the left phone is **Emergency Response (555) 010-0911**. Type an alert or pick a sample (NYC fire, NYC gas leak, LA wildfire, Pasadena flood) and choose who gets it: **Bob the Builder**, **Wendy** or **Farmer Pickles**, each with their own GPS. Move someone and press **Text MAP** for a fresh reply. The pipeline log shows what Muse parsed and the alignment check.
 - **Weather radar:** pick a city, type coordinates, or press **Find heavy rain right now**.
 - **Directions abroad:** pick a starting station (Lisbon, Paris, Rome, Tokyo) and a destination; type a place in **From** to start somewhere other than your GPS. Then simulate the phone's GPS: **Walk 60 m along the route** or **Take a wrong turn**. Each update joins the thread, and the status line says whether the next step (with its map) was sent or just a line of text.
-- **Photo:** the **One object** samples (a penguin, a fortune cookie, a gingerbread man... macOS's account pictures, converted with `sips`) are the case the outline is built for; the **Scenes** are macOS desktop pictures.
-- **Ask anything:** the router. Pick where you are (Rome, Lisbon, NYC), type anything or pick an example, optionally attach a photo; the tools Muse called are listed under the box.
+- **Photo:** the **One object** samples (a penguin, a fortune cookie, a gingerbread man... macOS's account pictures, converted with `sips`) are the case the outline is built for. The **Emergency** samples are the 20 test pictures, and the **Scenes** are macOS desktop pictures.
+  - **SMS goes first, in words.** Then Muse looks again with tools: steps for an action, close-ups for a deciding detail.
+  - **WhatsApp waits** until the whole drawing set is built and checked.
+  - **Reply box:** ask about the photo in text ("is this a black widow?").
+- **Ask anything:** the router. Pick where you are (Rome, Lisbon, NYC), type anything or pick an example (including "How do I do CPR?"), optionally attach one of the emergency pictures; the tools Muse called are listed under the box. Step flip-books play in place in the WhatsApp pane.
 - **Clear** empties every thread, result and the log.
 
 ## Run it from the command line
@@ -1262,7 +1422,7 @@ Put your Meta Model API key in `.env` (git-ignored):
 LLAMA_API_KEY=...
 ```
 
-Optional settings in `.env`: `LLM_BASE_URL` (default `https://api.meta.ai/v1`), `LLM_MODEL` (default `muse-spark-1.3`), `SAM_MODEL` (default `sam-3.1`), `LLM_REASONING_EFFORT` (default `minimal`). Without a key: keyword routing, regex alert parsing, no photo descriptions, template text.
+Optional settings in `.env`: `BRAVE_API_KEY` (whole-web image search for step pictures, used only when the openly licensed sources find too little), `LLM_BASE_URL` (default `https://api.meta.ai/v1`), `LLM_MODEL` (default `muse-spark-1.3`), `SAM_MODEL` (default `sam-3.1`), `LLM_REASONING_EFFORT` (default `minimal`). Without a key: keyword routing, regex alert parsing, no photo descriptions, template text.
 
 ```bash
 python3 main.py --ask "Is it going to rain on my walk to the Colosseum?" --at 41.9010,12.5016   # the router
@@ -1281,7 +1441,7 @@ python3 main.py --walk "Castelo de São Jorge, Lisbon" --at 38.7139,-9.1406 -v  
 | File | Role |
 | --- | --- |
 | `evac/router.py` | One entry point: Muse picks tools (parallel, up to 3 rounds), writes the reply; the kept results become the versions |
-| `evac/tools.py` | The 10 tools, their JSON descriptions, the per-request `Context`, `call()` that never raises |
+| `evac/tools.py` | The 12 tools, their JSON descriptions, the per-request `Context`, `call()` that never raises |
 | `evac/scene.py` | The `Scene`: what to draw, shared by every renderer |
 | `evac/focus.py` | Which roads a map draws (walked, turn landmarks, main roads, closures, anchors) and the view fitted to them |
 | `evac/render.py` | Scene → `sms`, `mono`, `small`, `picture` |
@@ -1291,7 +1451,11 @@ python3 main.py --walk "Castelo de São Jorge, Lisbon" --at 38.7139,-9.1406 -v  
 | `evac/pipeline.py` | The fixed emergency reply: parse, locate, route, word, build the Scene |
 | `evac/directions.py` | A walk as a `Trip`: streets and landmarks downloaded once, re-routed at every GPS fix (`move`); one step at a time, to the next intersection, with its turn, a landmark and a map of just that stretch; optional named start |
 | `evac/radar.py` | RainViewer tiles → rain levels, motion, Open-Meteo forecast, its four versions |
-| `evals/` | Photo drawing evals: metrics against the photo, recomposition from text (D0 decode, Muse Image), report |
+| `evals/` | Photo drawing evals: metrics against the photo, recomposition from text (D0 decode, Muse Image), report; `focus_zooms.py` and `visualize_zooms.py` (zooms the server chooses vs tiles vs pictures); `emergency/` (the 20-picture dataset, `make_images.py`, `run.py`, `score.py`, `agent_page.py`, `animate_test.py`) |
+| `evac/zooms.py` | The receiver's decode (glyph ink, tone legend, paste, SSIM); zooms chosen by what the receiver still gets wrong; details that matter, close-ups with what to look for, carried into the base; `complete()`: the WhatsApp set built, measured and checked before sending |
+| `evac/steps.py` | How to do something with your hands: Muse's steps, a picture per step (web pictures cropped to what matters, edits of a sent photo, or Muse Image), frames for WhatsApp and SMS |
+| `evac/imagesearch.py` | Image search: Wikimedia Commons, Openverse, Brave Search (with `BRAVE_API_KEY`); no "no derivatives" licences, no stock sites; cached in `cache/web/` |
+| `evac/museimage.py` | Muse Image client (`/images/generations`, `/images/edits`), cached in `cache/image/` |
 | `evac/tonal.py` | The high-detail WhatsApp photo drawing: every part segmented, split recursively by brightness, shaded by grey value; zoom into a part |
 | `evac/sketch.py` | The WhatsApp photo drawing: everything Muse lists, outlined by SAM, drawn together, checked by Muse from a rendered image, repaired up to 3 times |
 | `evac/photo.py` | Muse description; the one object's outline (found by SAM 3.1, shaped by its mask or by colour inside its box; cropped; marching squares) or the borders of the main regions |
@@ -1310,7 +1474,7 @@ python3 main.py --walk "Castelo de São Jorge, Lisbon" --at 38.7139,-9.1406 -v  
 
 ## Data sources
 
-Roads, paths and towns © OpenStreetMap contributors (via Overpass); geocoding by Nominatim; aerial imagery and grey basemap © Esri; radar © RainViewer; forecast by Open-Meteo. Picture maps carry these credits.
+Roads, paths and towns © OpenStreetMap contributors (via Overpass); geocoding by Nominatim; aerial imagery and grey basemap © Esri; radar © RainViewer; forecast by Open-Meteo. Picture maps carry these credits. Step pictures come from Wikimedia Commons and Openverse (openly licensed) and, when those find too little, Brave Search (rights unknown); every frame names its source.
 
 ## Known limits
 
@@ -1325,3 +1489,8 @@ Roads, paths and towns © OpenStreetMap contributors (via Overpass); geocoding b
 - Walking updates need the phone to send its position. The simulator moves "you" along the route or onto a nearby street off it; a real deployment needs the person to share their location, or reply with it. The wrong-turn button sometimes picks a street behind you.
 - Trees and buildings in the aerial terrain come from a colour heuristic (only water comes from SAM). Walking maps don't use terrain at all, so they make no SAM call per step.
 - SMS replies are long: 6 to 12 parts.
+- The emergency picture features are experimental:
+  - **Incoherent flip-books:** most step flip-books mix unrelated picture sources between steps.
+  - **Noisy check:** the "understood" check withholds about half the WhatsApp drawings and isn't consistent between runs.
+  - **Slow:** a photo with its follow-ups takes 45–130 s.
+  - **Clean test set:** the 20 test pictures are Muse Image renders, not real photos, and the questions were written for this test.

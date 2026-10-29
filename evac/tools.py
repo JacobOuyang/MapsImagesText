@@ -182,3 +182,43 @@ def describe_photo(ctx):
     d = photo.describe(buf.getvalue())
     ctx.store["describe_photo"] = d
     return d
+
+
+def _image(ctx):
+    img = Image.open(io.BytesIO(ctx.image)).convert("RGB")
+    img.thumbnail((1600, 1600))
+    return img
+
+
+@tool("The WhatsApp drawing of the attached photo, complete and checked: the details that tell what it is or what to "
+      "do are carried into the drawing and get close-ups, each with one sentence on what to look for (a marking or "
+      "pattern, the shape of a part, a symbol, which way a handle or arrow points). Nothing goes to WhatsApp until it "
+      "is understood. Use when identifying the thing or checking a detail matters. Pass the person's question if they "
+      "asked about something specific.",
+      question=("string", "What the person asked about the photo, if anything, e.g. 'is this a black widow?'", False))
+def photo_details(ctx, question=None):
+    from . import zooms
+    if not ctx.image:
+        return {"error": "no photo attached"}
+    subject = (ctx.store.get("describe_photo") or {}).get("object", "")
+    res = zooms.complete(_image(ctx), question, subject=subject)
+    ctx.store["photo_details"] = res
+    return {"close_ups": [{"part": z["name"], "look_for": z["look"]} for z in res["close_ups"]],
+            "drawing_understood": res["understood"], "seen_in_drawing": res["seen"]}
+
+
+@tool("Show how to do something with your hands, step by step, as a short flip-book of text drawings (a video is "
+      "far too big for a text connection): CPR, a tourniquet, the recovery position, shutting off gas or water, using "
+      "a fire extinguisher or an EpiPen. Use whenever the person has to perform a physical action, with or without a "
+      "photo, including when an emergency alert tells them to do one.",
+      task=("string", "The action, e.g. 'CPR on an adult' or 'shut off the gas at the meter'", True),
+      from_photo=("boolean", "True if the attached photo shows this action or the object it is done to", False))
+def show_steps(ctx, task, from_photo=False):
+    from . import steps
+    photo_img = _image(ctx) if (from_photo and ctx.image) else None
+    caption = (ctx.store.get("describe_photo") or {}).get("caption", "")
+    res = steps.run(task, photo=photo_img, caption=caption if photo_img is not None else "")
+    if "error" in res:
+        return {"error": res["error"]}
+    ctx.store["show_steps"] = res
+    return {"title": res["title"], "steps": [s["say"] for s in res["steps"]], "repeat": res["repeat"]}

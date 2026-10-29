@@ -94,6 +94,7 @@
   .wa-msg.out { align-self: flex-end; background: #d9fdd3; border-top-right-radius: 0; }
   .wa-msg .time { position: absolute; right: 8px; bottom: 3px; font-size: 11px; color: #667781; }
   /* WhatsApp shows ```text``` in monospace but can't colour it; wraps like WhatsApp would if too wide */
+  .wa-msg .play { font-size: 11px; color: #00a884; margin-top: 4px; }
   .wa-msg pre.map { margin: 6px 0 0; font: 12.5px/1.35 Menlo, Monaco, "Courier New", monospace; white-space: pre-wrap; color: #111b21; }
   .lmeta { align-self: center; font-size: 12px; color: #54656f; background: #fff; border-radius: 7px; padding: 4px 10px; margin: 6px 0; box-shadow: 0 1px .5px rgba(11,20,26,.13); }
   .hi { width: 500px; height: 760px; overflow-y: auto; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
@@ -188,6 +189,12 @@
       <span class="status-line" id="highStatus"></span>
     </div>
     <div class="row2" id="photoZoom" hidden><span class="status-line">Zoom in (reply ZOOM n):</span><span class="chips" id="zoomChips"></span></div>
+    <div class="row2" id="photoAsk" hidden>
+      <input type="text" id="photoAskText" aria-label="Ask about the photo" placeholder="Reply with a question, e.g. is this a black widow? / how do I use it?" style="width:440px">
+      <button class="go" id="photoAskGo">Send</button>
+      <span class="status-line" id="photoAskStatus"></span>
+    </div>
+    <p class="hint">After the first reply, Muse looks again with tools: if the photo shows something to do with your hands it sends the steps as a flip-book of text drawings (played in place in WhatsApp); if a detail decides what it is, it sends close-ups, each saying what to look for. You can only reply with text.</p>
   </div>
   <div class="triple" id="photoOut"></div>
 </section>
@@ -238,7 +245,7 @@
     <div class="row2">
       <input type="text" id="askText" aria-label="Message" placeholder="Type a message…" style="width:520px">
       <button class="go" id="askGo">Send</button>
-      <label class="inline"><input type="checkbox" id="askPhoto"> attach the Flamingos photo</label>
+      <label class="inline">attach a photo: <select id="askPhoto"><option value="">none</option></select></label>
       <span class="status-line" id="askStatus"></span>
     </div>
     <div class="status-line" id="askTools" style="margin-top:6px"></div>
@@ -299,13 +306,22 @@ function render(box, items) {
   box.scrollTop = box.scrollHeight;
 }
 function renderWa(box, items) {
+  for (const t of box._timers || []) clearInterval(t);
+  box._timers = [];
   box.innerHTML = '';
   for (const it of items) {
+    if (it.smsOnly) continue;  // sent by SMS only (WhatsApp waits for the complete, checked picture)
     if (it.kind === 'meta') { box.appendChild(el('div', 'lmeta', it.text)); continue; }
     const b = el('div', 'wa-msg ' + (it.dir || 'in'));
     if (it.kind === 'typing') { b.textContent = 'typing…'; b.style.color = '#00a884'; box.appendChild(b); continue; }
     b.textContent = it.mono !== undefined ? it.plain : it.text;
-    if (it.mono) b.appendChild(el('pre', 'map', it.mono));
+    if (it.frames && it.frames.length > 1) {  // one message edited in place, frame by frame: a flip-book
+      const pre = el('pre', 'map', it.frames[0]), tag = el('div', 'play', `▶ step 1 of ${it.frames.length} · the message is edited in place`);
+      let i = 0;
+      box._timers.push(setInterval(() => { i = (i + 1) % it.frames.length; pre.textContent = it.frames[i];
+        tag.textContent = `▶ step ${i + 1} of ${it.frames.length} · the message is edited in place`; }, 1600));
+      b.append(pre, tag);
+    } else if (it.mono) b.appendChild(el('pre', 'map', it.mono));
     b.appendChild(el('span', 'time', now()));
     box.appendChild(b);
   }
@@ -324,7 +340,7 @@ function triple(box, items, r, labels) {
   const mid = card(box, 'Medium data', 'WhatsApp text', r && r.monoBytes ? `${labels.what} is ${kb(r.monoBytes)} of text (${kb(r.monoGzip)} compressed). Needs only a trickle of data, like free in-flight messaging.` : 'Needs only a trickle of data, like free in-flight messaging.');
   const pane = el('div', 'wa-pane'); pane.innerHTML = `<div class="wa-head"><div class="avatar alert">${labels.initials}</div><div><b>${labels.from}</b><small>${labels.sub}</small></div></div>`;
   const wt = el('div', 'lthread'); pane.appendChild(wt); mid.appendChild(pane);
-  render(th, items.map(it => it.mono !== undefined ? {dir: 'in', text: it.sms} : it));
+  render(th, items.filter(it => !it.waOnly).map(it => it.dir === 'in' && it.sms !== undefined ? {dir: 'in', text: it.sms} : it));
   renderWa(wt, items);
 
   const stack = el('div', 'stack'); box.appendChild(stack);
@@ -422,16 +438,19 @@ function showResult(kind) {
   if (x.pending) items.push({kind: 'typing'});
   else if (x.res.error) items.push({kind: 'meta', text: 'Failed: ' + x.res.error});
   else {
-    const mono = kind === 'photo' && x.view === 'high' && x.high ? x.high.mono : x.res.mono;
-    items.push({dir: 'in', sms: x.res.sms, plain: x.res.text, mono});
+    const mono = kind === 'photo' ? undefined : x.res.mono;
+    items.push({dir: 'in', sms: x.res.sms, plain: x.res.text, mono, smsOnly: kind === 'photo'});
+    if (kind === 'photo' && !(x.more || []).some(u => u.res && u.res.complete)) items.push({kind: 'meta', waOnly: true,
+      text: 'WhatsApp: nothing sent yet. The drawing, its details and close-ups are made and checked first, then sent together.'});
   }
   // Later updates (a walk as the person moves): a text-only update has no map in the SMS or WhatsApp version.
   let last = x.res;
   for (const u of x.more || []) {
-    items.push({kind: 'meta', text: u.meta});
+    items.push({kind: 'meta', text: u.meta, smsOnly: u.smsOnly});
     if (u.pending) { items.push({kind: 'typing'}); continue; }
     if (u.res.error) { items.push({kind: 'meta', text: 'Failed: ' + u.res.error}); continue; }
-    items.push(u.res.map ? {dir: 'in', sms: u.res.sms, plain: u.res.text, mono: u.res.mono} : {dir: 'in', text: u.res.text, sms: u.res.text});
+    items.push(u.res.map ? {dir: 'in', sms: u.res.sms, plain: u.res.text, mono: u.res.mono, frames: u.res.frames, smsOnly: u.smsOnly}
+                         : {dir: 'in', text: u.res.text, sms: u.res.text, smsOnly: u.smsOnly});
     last = Object.assign({}, u.res, u.res.image ? {} : {image: last && last.image, small: last && last.small});
   }
   const sized = kind === 'photo' && x.view === 'high' && x.high && !(x.more || []).length ? x.high : last;
@@ -443,13 +462,38 @@ async function sendPhoto(dataUrl, name, bytes, w, h) {
   results.photo = {request: `Friend sent a photo (${name}, ${kb(bytes)}). It didn't download.`, pending: true,
     img: {data_url: dataUrl, bytes, width: w, height: h}, imgLabel: 'The photo'};
   showResult('photo'); $('photoStatus').textContent = 'Working…';
-  $('photoDetail').hidden = true; $('photoZoom').hidden = true;
+  $('photoDetail').hidden = true; $('photoZoom').hidden = true; $('photoAsk').hidden = true;
   const res = await post('/api/photo', {image: dataUrl});
   Object.assign(results.photo, {pending: false, res, view: 'low', high: null, more: []});
-  if (res.photo_id) loadHigh(results.photo);
+  if (res.photo_id) {
+    $('photoAsk').hidden = false;
+    askPhoto(results.photo, 'A friend sent me this photo but it will not load. What is it, and is there anything I should look at closely or do?', 'Muse looked again');
+  }
   $('photoStatus').textContent = res.error ? '' : `Done in ${res.seconds} s` + (res.attempts && res.attempts.length
     ? ' · Muse checked the drawing: ' + res.attempts.map((x, i) => `try ${i + 1} drew ${x.items.join(', ')}, saw ${x.seen.join(', ') || 'nothing'}`).join('; ')
     : res.shape_from ? ` · outline from: ${res.shape_from}` + (res.object ? ` ("${res.object}")` : '') : '');
+  showResult('photo');
+}
+// Follow-up messages from the agent (step flip-books, close-ups), added to a result's thread.
+function addFollowups(x, res, who) {
+  if (res.error) { x.more.push({meta: who + ' failed: ' + res.error, res: {error: res.error}}); return; }
+  const tools = res.tools && res.tools.length ? ' · tools: ' + res.tools.map(c => c.tool).join(', ') : '';
+  if (res.mono)  // the complete WhatsApp picture, sent once it was checked
+    x.more.push({meta: who + tools + (res.understood === false ? ' · whole drawing not understood, so not sent' : ' · understood: ' + (res.seen || []).join(', ')),
+                 res: {map: true, complete: true, text: res.text, sms: res.text, mono: res.mono, mono_bytes: res.mono_bytes}});
+  else if (res.text) x.more.push({meta: who + tools, res: {text: res.text, sms: res.text}});
+  for (const f of res.followups || [])
+    x.more.push({meta: f.kind === 'steps' ? `Steps: ${f.title} (${f.frames.length} frames, ${kb(f.mono_bytes)})` : `Close-up by SMS: ${f.title}`,
+                 smsOnly: !!f.sms_only, res: {map: true, text: f.text, sms: f.sms, mono: f.mono || undefined, frames: f.frames, mono_bytes: f.mono_bytes}});
+}
+async function askPhoto(x, text, who) {
+  const u = {meta: who, pending: true}; x.more.push(u); showResult('photo');
+  $('photoAskStatus').textContent = 'Muse is choosing tools…';
+  const res = await post('/api/message', {text, lat: 41.9010, lon: 12.5016, photo_id: x.res.photo_id});
+  if (results.photo !== x) return;
+  x.more.splice(x.more.indexOf(u), 1);
+  addFollowups(x, res, who);
+  $('photoAskStatus').textContent = res.error ? '' : `Done in ${res.seconds} s`;
   showResult('photo');
 }
 function setView(v) {
@@ -530,12 +574,15 @@ async function sendAsk() {
   const text = $('askText').value.trim();
   if (!text) { $('askStatus').textContent = 'Type a message first.'; return; }
   let image = null;
-  if ($('askPhoto').checked) image = await fetch('/api/sample?name=Flamingos').then(r => r.blob())
+  if ($('askPhoto').value) image = await fetch('/api/sample?name=' + encodeURIComponent($('askPhoto').value)).then(r => r.blob())
     .then(b => new Promise(ok => { const fr = new FileReader(); fr.onload = () => ok(fr.result); fr.readAsDataURL(b); })).catch(() => null);
   results.ask = {request: `You are at ${askAt[0].toFixed(4)}, ${askAt[1].toFixed(4)}` + (image ? ' · photo attached' : ''), out: text, pending: true};
   showResult('ask'); $('askStatus').textContent = 'Muse is choosing tools…'; $('askTools').textContent = '';
   const res = await post('/api/message', {text, lat: askAt[0], lon: askAt[1], image});
-  Object.assign(results.ask, {pending: false, res});
+  Object.assign(results.ask, {pending: false, res, more: []});
+  for (const f of res.followups || [])
+    results.ask.more.push({meta: f.kind === 'steps' ? `Steps: ${f.title} (${f.frames.length} frames, ${kb(f.mono_bytes)})` : `Close-up: ${f.title}`,
+                           res: {map: true, text: f.text, sms: f.sms, mono: f.mono, frames: f.frames, mono_bytes: f.mono_bytes}});
   $('askStatus').textContent = res.error ? '' : `Done in ${res.seconds} s`;
   $('askTools').textContent = res.tools ? 'Tools called: ' + (res.tools.map(c => c.tool + '(' + Object.values(c.args).join(', ') + ')').join(', ') || 'none') : '';
   showResult('ask');
@@ -565,6 +612,9 @@ fetch('/api/samples').then(r => r.json()).then(d => {
   const send = name => () => fetch('/api/sample?name=' + encodeURIComponent(name)).then(r => r.blob()).then(b => loadPhoto(b, name));
   if (d.objects.length) $('photoSamples').appendChild(el('span', 'status-line', 'One object:'));
   for (const name of d.objects) chip('photoSamples', name, send(name));
+  if ((d.emergency || []).length) $('photoSamples').appendChild(el('span', 'status-line', 'Emergency:'));
+  for (const name of d.emergency || []) chip('photoSamples', name, send(name));
+  for (const name of d.emergency || []) { const o = el('option', '', name); o.value = name; $('askPhoto').appendChild(o); }
   if (d.photos.length) $('photoSamples').appendChild(el('span', 'status-line', 'Scenes:'));
   for (const name of d.photos) chip('photoSamples', name, send(name));
 });
@@ -593,9 +643,11 @@ for (const [name, ll] of Object.entries(ASK_FROM)) chip('askFrom', name, c => {
   askAt = ll; document.querySelectorAll('#askFrom .chip').forEach(x => x.classList.toggle('on', x === c)); });
 document.querySelector('#askFrom .chip').classList.add('on');
 for (const q of ['Will it rain on me in the next hour?', 'How do I walk to the Colosseum?', 'Is it going to rain on my walk to the Colosseum?',
-                 'How far is the Trevi Fountain?', TEMPLATES['NYC fire']])
+                 'How far is the Trevi Fountain?', 'How do I do CPR?', 'How do I shut off the gas at my meter?', TEMPLATES['NYC fire']])
   chip('askExamples', q.length > 50 ? 'NYC fire alert (pick NYC first)' : q, () => { $('askText').value = q; });
 $('askGo').onclick = sendAsk;
+$('photoAskGo').onclick = () => { const t = $('photoAskText').value.trim(); if (t && results.photo && results.photo.res) { $('photoAskText').value = ''; askPhoto(results.photo, t, 'You: ' + t); } };
+$('photoAskText').onkeydown = e => { if (e.key === 'Enter') $('photoAskGo').click(); };
 $('askText').onkeydown = e => { if (e.key === 'Enter') sendAsk(); };
 $('walkTo').onkeydown = e => { if (e.key === 'Enter') sendWalk(); };
 
@@ -610,7 +662,7 @@ $('clear').onclick = () => {
   $('log').textContent = 'Nothing sent yet.';
   for (const k of Object.keys(results)) { results[k] = null; showResult(k); }
   for (const id of ['photoStatus', 'radarStatus', 'walkStatus', 'askStatus', 'askTools']) $(id).textContent = '';
-  $('walkMove').hidden = true; $('photoDetail').hidden = true; $('photoZoom').hidden = true;
+  $('walkMove').hidden = true; $('photoDetail').hidden = true; $('photoZoom').hidden = true; $('photoAsk').hidden = true;
   refresh();
 };
 refresh();

@@ -75,7 +75,7 @@ def find(img, things, fallback=""):
             return None
         return refine(img, m)
 
-    with ThreadPoolExecutor(len(things)) as pool:
+    with ThreadPoolExecutor(min(8, len(things))) as pool:
         masks = list(pool.map(one, things))
     return [(n, m) for i, (n, m) in enumerate(zip(things, masks))
             if m is not None and m.any() and (i == 0 or m.mean() <= BACKGROUND)]
@@ -215,14 +215,20 @@ def compose(items, cols):
     return ["".join(r).rstrip() for r in grid], ["".join(r).rstrip() for r in numbered]
 
 
-def picture(rows):
-    """The drawing as a PNG in Menlo, the way a person would see it."""
+def picture_image(rows):
+    """The drawing as a PIL image in Menlo, the way a person would see it."""
     font = ImageFont.truetype(FONT, 14)
-    w = max(len(r) for r in rows) * 9 + 20
+    w = max([len(r) for r in rows] + [1]) * 9 + 20
     im = Image.new("RGB", (w, len(rows) * 17 + 20), "white")
     d = ImageDraw.Draw(im)
     for i, r in enumerate(rows):
         d.text((10, 10 + i * 17), r, font=font, fill="black")
+    return im
+
+
+def picture(rows):
+    """The drawing as a PNG data URL."""
+    im = picture_image(rows)
     buf = io.BytesIO()
     im.save(buf, "PNG")
     return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()

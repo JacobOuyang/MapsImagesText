@@ -76,8 +76,8 @@ def chat_tools(messages, tools, max_tokens=DEFAULT_MAX_TOKENS):
     return r.json()["choices"][0]["message"]
 
 
-def chat_json(messages):
-    text = chat(messages, json_mode=True)
+def chat_json(messages, max_tokens=DEFAULT_MAX_TOKENS):
+    text = chat(messages, json_mode=True, max_tokens=max_tokens)
     # Some models wrap JSON in fences even in json mode; take the outermost object.
     out = json.loads(text[text.find("{"): text.rfind("}") + 1])
     if not isinstance(out, dict):
