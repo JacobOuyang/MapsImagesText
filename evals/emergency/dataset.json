@@ -1,0 +1,262 @@
+[
+ {
+  "name": "cpr_hands",
+  "category": "do this now",
+  "prompt": "Instructional photo, side view: a person kneeling beside a CPR training mannequin lying on its back, performing chest compressions with both hands stacked in the centre of the chest and arms straight. Plain light grey studio background, nothing else in the picture.",
+  "question": "Where are the hands placed?",
+  "choices": [
+   "centre of the chest",
+   "on the stomach",
+   "on the neck",
+   "on the left shoulder"
+  ],
+  "answer": 0
+ },
+ {
+  "name": "recovery_position",
+  "category": "do this now",
+  "prompt": "Instructional first-aid photo, seen from the side at floor level: a person lying on their LEFT SIDE in the recovery position, facing the camera, chest turned toward the floor, the top leg bent at the knee and resting on the floor in front, the top hand under the cheek. Plain white studio floor and background, nothing else in the picture.",
+  "question": "How is the person lying?",
+  "choices": [
+   "on their back",
+   "on their side",
+   "on their front",
+   "sitting up"
+  ],
+  "answer": 1
+ },
+ {
+  "name": "gas_shutoff",
+  "category": "do this now",
+  "prompt": "Close-up instructional photo of a residential gas pipe shut-off valve with a flat yellow handle turned crosswise, perpendicular to the pipe (closed position). The pipe runs left to right. Plain white wall background, nothing else in the picture.",
+  "question": "Which way does the valve handle point relative to the pipe?",
+  "choices": [
+   "along the pipe",
+   "across the pipe",
+   "there is no handle",
+   "it points at the camera"
+  ],
+  "answer": 1
+ },
+ {
+  "name": "tourniquet",
+  "category": "do this now",
+  "prompt": "Instructional photo: a first-aid tourniquet strap with a windlass rod tightened high on the upper arm of a training mannequin's arm, above the elbow. The whole arm is shown. Plain white studio background, nothing else in the picture.",
+  "question": "Where on the arm is the tourniquet?",
+  "choices": [
+   "on the wrist",
+   "on the forearm",
+   "on the upper arm above the elbow",
+   "on the hand"
+  ],
+  "answer": 2
+ },
+ {
+  "name": "rattlesnake",
+  "category": "is this dangerous",
+  "prompt": "Photo of a rattlesnake coiled in a defensive posture with its head raised and its rattle up, on plain pale sand, nothing else in the picture.",
+  "question": "What is the snake doing?",
+  "choices": [
+   "stretched out straight",
+   "coiled with its head raised",
+   "climbing a tree",
+   "swimming"
+  ],
+  "answer": 1
+ },
+ {
+  "name": "black_widow",
+  "category": "is this dangerous",
+  "prompt": "Macro photo of a black widow spider seen from above, round shiny black abdomen, eight thin legs spread out, on a plain white background, nothing else in the picture.",
+  "question": "What shape is the spider's body?",
+  "choices": [
+   "long and thin",
+   "a large round abdomen with thin legs",
+   "flat and wide like a crab",
+   "it has wings"
+  ],
+  "answer": 1
+ },
+ {
+  "name": "poison_ivy",
+  "category": "is this dangerous",
+  "prompt": "Botanical photo of a single poison ivy leaf: exactly three glossy pointed leaflets on one short stem, one leaflet at the top and one on each side. Plain white background, nothing else in the picture.",
+  "question": "How many leaflets does the leaf have?",
+  "choices": [
+   "one",
+   "three",
+   "five",
+   "seven"
+  ],
+  "answer": 1
+ },
+ {
+  "name": "death_cap",
+  "category": "is this dangerous",
+  "prompt": "Photo of a single death cap mushroom standing upright: a smooth cap, a ring on the stem and a cup-shaped sac at the base. Plain white background, nothing else in the picture.",
+  "question": "What is at the base of the stem?",
+  "choices": [
+   "a cup-shaped sac",
+   "roots",
+   "nothing, the stem is plain",
+   "a second mushroom"
+  ],
+  "answer": 0
+ },
+ {
+  "name": "missing_child",
+  "category": "have you seen this",
+  "prompt": "Full-body photo of a fictional boy about eight years old standing facing the camera, wearing a striped shirt, shorts and a large backpack, holding a soccer ball under one arm. Plain white studio background, nothing else in the picture.",
+  "question": "What is the child holding under one arm?",
+  "choices": [
+   "nothing",
+   "a ball",
+   "a dog",
+   "an umbrella"
+  ],
+  "answer": 1
+ },
+ {
+  "name": "missing_elderly",
+  "category": "have you seen this",
+  "prompt": "Full-body photo of a fictional elderly man standing in profile, wearing a flat cap and a long coat, leaning on a walking cane. Plain white studio background, nothing else in the picture.",
+  "question": "What is the man leaning on?",
+  "choices": [
+   "a walking cane",
+   "a bicycle",
+   "a shopping cart",
+   "nothing"
+  ],
+  "answer": 0
+ },
+ {
+  "name": "lost_dachshund",
+  "category": "have you seen this",
+  "prompt": "Side view photo of a dachshund dog standing, long low body and short legs, wearing a collar. Plain white studio background, nothing else in the picture.",
+  "question": "What is the dog's body shape?",
+  "choices": [
+   "tall with long legs",
+   "long and low with short legs",
+   "round and fluffy",
+   "very large and muscular"
+  ],
+  "answer": 1
+ },
+ {
+  "name": "pickup_truck",
+  "category": "have you seen this",
+  "prompt": "Side view photo of a pickup truck with a ladder rack over its open cargo bed, facing left. Plain white studio background, nothing else in the picture.",
+  "question": "What kind of vehicle is it?",
+  "choices": [
+   "a sedan",
+   "a pickup truck with a rack",
+   "a motorcycle",
+   "a bus"
+  ],
+  "answer": 1
+ },
+ {
+  "name": "epipen",
+  "category": "which one",
+  "prompt": "Product photo of a single epinephrine auto-injector pen lying horizontally, a blue safety cap at the left end and an orange tip at the right end. Plain white background, nothing else in the picture.",
+  "question": "What does the object look like?",
+  "choices": [
+   "a round bottle",
+   "a long pen-shaped tube",
+   "a flat card",
+   "a syringe with a long needle"
+  ],
+  "answer": 1
+ },
+ {
+  "name": "inhaler",
+  "category": "which one",
+  "prompt": "Product photo of a single L-shaped asthma inhaler with its mouthpiece facing right, standing upright. Plain white background, nothing else in the picture.",
+  "question": "What shape is it?",
+  "choices": [
+   "a straight tube",
+   "an L shape",
+   "a sphere",
+   "a flat square"
+  ],
+  "answer": 1
+ },
+ {
+  "name": "pill",
+  "category": "which one",
+  "prompt": "Macro photo of a single white oval tablet with a score line across its middle, lying on a plain dark blue background, nothing else in the picture.",
+  "question": "What shape is the tablet?",
+  "choices": [
+   "round",
+   "oval with a line across the middle",
+   "a capsule in two halves",
+   "triangular"
+  ],
+  "answer": 1
+ },
+ {
+  "name": "fire_extinguisher",
+  "category": "which one",
+  "prompt": "Product photo of a single red fire extinguisher standing upright, a black hose on the side and a pull pin in the handle at the top. Plain white background, nothing else in the picture.",
+  "question": "Where is the handle with the pull pin?",
+  "choices": [
+   "at the bottom",
+   "at the top",
+   "on the hose",
+   "there is none"
+  ],
+  "answer": 1
+ },
+ {
+  "name": "evacuation_route",
+  "category": "signs",
+  "prompt": "Flat front view photo of a blue and white evacuation route road sign: a white arrow pointing right. Plain white background, nothing else in the picture.",
+  "question": "Which way does the arrow point?",
+  "choices": [
+   "left",
+   "right",
+   "up",
+   "down"
+  ],
+  "answer": 1
+ },
+ {
+  "name": "tsunami_sign",
+  "category": "signs",
+  "prompt": "Flat front view photo of a tsunami hazard zone sign: a white sign showing a large breaking wave over a running person. Plain white background, nothing else in the picture.",
+  "question": "What does the sign show?",
+  "choices": [
+   "a fire",
+   "a wave over a person",
+   "a car",
+   "a falling rock"
+  ],
+  "answer": 1
+ },
+ {
+  "name": "hazmat_flammable",
+  "category": "signs",
+  "prompt": "Flat front view photo of a hazardous materials placard: a red diamond-shaped sign with a black flame symbol at the top. Plain white background, nothing else in the picture.",
+  "question": "What shape is the sign?",
+  "choices": [
+   "circle",
+   "diamond",
+   "triangle",
+   "octagon"
+  ],
+  "answer": 1
+ },
+ {
+  "name": "exit_sign",
+  "category": "signs",
+  "prompt": "Flat front view photo of a green emergency exit sign showing a running person going through a door, with an arrow pointing left. Plain white background, nothing else in the picture.",
+  "question": "Which way does the arrow point?",
+  "choices": [
+   "left",
+   "right",
+   "up",
+   "down"
+  ],
+  "answer": 0
+ }
+]

@@ -15,7 +15,7 @@ import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from . import llm, photo, render, tools
+from . import llm, photo, render, tools, zooms
 
 MAX_ROUNDS = 3
 SYSTEM = ("You help someone on a very slow or text-only connection; replies go out as short text messages. Their GPS "
@@ -23,8 +23,13 @@ SYSTEM = ("You help someone on a very slow or text-only connection; replies go o
           "short sentence per line. Summarise: never list every forecast value, give when rain starts and stops (or that "
           "none is expected). Keep the numbers, times, distances, directions and names you use exactly as the tools "
           "gave them. Don't invent places or facts, and don't mention maps or pictures (the app adds them when it "
-          "can). For walking directions give only the current step and the turn after it, as the tool gave them; the "
-          "app sends the next step by itself when their position changes, so don't ask them to reply or send anything. For any emergency alert, call emergency_reply with the alert text and nothing else.")
+          "can). If they were sent a photo, call describe_photo; then, if it shows something they must do with their hands, "
+          "show_steps (from_photo true); if knowing what it is or checking a detail matters (an animal, plant, pill, "
+          "sign, a part's position), photo_details. When they ask how to do a physical action, or an alert tells them "
+          "to do one, call show_steps; the app sends the drawings as separate messages, so your reply only needs the "
+          "words. For walking directions give only the current step and the turn after it, as the tool gave them; the "
+          "app sends the next step by itself when their position changes, so don't ask them to reply or send anything. For any emergency alert, call emergency_reply with the alert text, plus show_steps only if the alert "
+          "tells them to do something with their hands (shut off gas, first aid).")
 
 
 def handle(message, you, image=None):
@@ -63,6 +68,8 @@ def _run_rules(ctx, message):
     m = message.lower()
     if ctx.image:
         name, args = "describe_photo", {}
+    elif re.search(r"\bhow (do|to|can) (i|you|we)\b", m) and re.search(r"\b(cpr|tourniquet|recovery position|shut off|extinguisher|epipen|bleeding)\b", m):
+        name, args = "show_steps", {"task": message}
     elif re.search(r"\b(alert|evacuat|warning|avoid|fire|flood|leak)\b", m) and len(message) > 80:
         name, args = "emergency_reply", {"text": message}
     elif "rain" in m or "radar" in m or "weather" in m:
@@ -102,9 +109,31 @@ def _versions(ctx, text):
         out.update(text=body, sms=body + r["sms"][len(r["text"]):], map="radar", mono=r["mono"], small=r["small"],
                    image=r["image"])
     elif "describe_photo" in s and ctx.image:
-        r = photo.run(ctx.image, description=s["describe_photo"])
+        # SMS: the words (and the silhouette only if it passed its check). WhatsApp: only the complete, checked
+        # picture (base drawing with the details carried in, close-ups that were measured or read), never pieces.
+        r = photo.run(ctx.image, description=s["describe_photo"], whatsapp=False)
+        if "photo_details" not in s:
+            s["photo_details"] = zooms.complete(tools._image(ctx), subject=s["describe_photo"].get("object", ""))
+        c = s["photo_details"]
         body = text or r["text"]
-        out.update(text=body, sms=body + r["sms"][len(r["text"]):], map="photo", mono=r["mono"], small=r["small"])
+        out.update(text=body, sms=body + r["sms"][len(r["text"]):], map="photo", mono=c["mono"],
+                   small=r["small"], understood=c["understood"], seen=c["seen"])
     if out["mono"]:
         out["mono_bytes"], out["mono_gzip"] = len(out["mono"].encode()), len(gzip.compress(out["mono"].encode()))
+    out["followups"] = _followups(ctx)
+    return out
+
+
+def _followups(ctx):
+    """Messages sent after the reply: a step-by-step flip-book and close-ups of details, each in every version.
+    {"kind", "title", "text" (SMS words), "sms", "mono", "frames" (WhatsApp frames, played in place)}."""
+    s, out = ctx.store, []
+    if "show_steps" in s:
+        r = s["show_steps"]
+        out.append({"kind": "steps", "title": r["title"], "text": r["text"], "sms": r["sms"], "mono": r["mono"],
+                    "frames": r["frames_mono"], "mono_bytes": r["mono_bytes"], "pictures": [x["small"] for x in r["steps"]],
+                    "sources": [x.get("source") for x in r["steps"]]})
+    for z in (s.get("photo_details") or {}).get("close_ups", []):  # on WhatsApp they are part of the complete picture
+        out.append({"kind": "close_up", "title": z["name"], "text": "ZOOM: %s\n%s" % (z["name"], z["look"]), "sms": z["sms"],
+                    "mono": None, "sms_only": True})
     return out

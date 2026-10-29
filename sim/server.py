@@ -12,6 +12,7 @@ POST /api/message {"text", "lat", "lon", "image"?} -> router: Muse picks tools; 
 GET /api/find_rain, /api/samples, /api/sample?name=
 """
 import base64
+import gzip
 import io
 import json
 import os
@@ -22,12 +23,12 @@ import traceback
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(ROOT))
 
-from evac import directions, photo, pipeline, radar, router  # noqa: E402
+from evac import directions, photo, pipeline, radar, router, tonal  # noqa: E402
 
 PORT = int(os.environ.get("PORT", 8765))
 WHATSAPP_COLS = 58  # widest monospace map that fits the simulated WhatsApp Desktop bubble (65% of the chat pane) unwrapped
@@ -43,6 +44,13 @@ def sms_parts(text):
 
 
 TRIPS = {}  # trip id -> directions.Trip, for the simulated walk
+PHOTOS = {}  # photo id -> {"image": full-size photo or zoomed crop, "boxes": {key number: box in its pixels}}
+
+
+def remember_photo(img):
+    pid = "%x" % id(img)
+    PHOTOS[pid] = {"image": img, "boxes": {}}
+    return pid
 SAMPLE_DIR = "/Library/Desktop Pictures"  # macOS ships photos here; used as sample "photos a friend sent"
 # One object each, the simplest case for an outline: macOS's account pictures (HEIC, converted with sips).
 OBJECT_DIR = "/Library/User Pictures"
@@ -60,6 +68,11 @@ def sample_objects():
     return out
 
 
+def sample_emergency():
+    d = os.path.join(GENERATED, "emergency")  # one clear subject each: actions to do, things to identify (Muse Image)
+    return {f[:-4]: os.path.join(d, f) for f in sorted(os.listdir(d)) if f.endswith(".jpg")} if os.path.isdir(d) else {}
+
+
 def sample_photos():
     try:
         return {f[:-4]: os.path.join(SAMPLE_DIR, f) for f in sorted(os.listdir(SAMPLE_DIR))
@@ -69,7 +82,7 @@ def sample_photos():
 
 
 def sample_path(name):
-    path = sample_objects().get(name) or sample_photos().get(name)
+    path = sample_objects().get(name) or sample_emergency().get(name) or sample_photos().get(name)
     if path and path.endswith(".heic"):  # Pillow can't read HEIC; macOS's sips can
         os.makedirs(CONVERTED, exist_ok=True)
         jpg = os.path.join(CONVERTED, name + ".jpg")
@@ -95,7 +108,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/api/samples":
-            return self.send_json({"objects": list(sample_objects()), "photos": list(sample_photos())})
+            return self.send_json({"objects": list(sample_objects()), "emergency": list(sample_emergency()),
+                                   "photos": list(sample_photos())})
         if self.path.startswith("/api/sample?name="):
             path = sample_path(unquote(self.path.split("=", 1)[1]))
             if not path:
@@ -128,11 +142,36 @@ class Handler(SimpleHTTPRequestHandler):
                 out["parts"] = sms_parts(out["message"]) if out.get("message") else 0
             elif self.path == "/api/message":
                 img = base64.b64decode(body["image"].split(",", 1)[-1]) if body.get("image") else None
+                if body.get("photo_id") in PHOTOS:  # a question about a photo sent earlier in the Photo tab
+                    buf = io.BytesIO()
+                    PHOTOS[body["photo_id"]]["image"].save(buf, "JPEG", quality=90)
+                    img = buf.getvalue()
                 out = router.handle(body["text"], (float(body["lat"]), float(body["lon"])), image=img)
                 out["parts"] = sms_parts(out["sms"]) if out.get("sms") else 0
-            elif self.path == "/api/photo":
-                out = photo.run(base64.b64decode(body["image"].split(",", 1)[-1]))
+            elif self.path == "/api/photo":  # the quick version (SMS + low-detail WhatsApp outline)
+                data = base64.b64decode(body["image"].split(",", 1)[-1])
+                out = photo.run(data)
                 out["parts"] = sms_parts(out["sms"])
+                out["photo_id"] = remember_photo(ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB"))
+            elif self.path in ("/api/photo/high", "/api/photo/zoom"):
+                # High detail: the whole scene in tones. Zoom: the same for one numbered part, on its own crop of the
+                # full-size photo; every result is kept, so a zoom can be zoomed again.
+                entry = PHOTOS[body["photo_id"]]
+                if self.path == "/api/photo/zoom":
+                    box = entry["boxes"][str(body["n"])]
+                    img = entry["image"].crop(box)
+                else:
+                    img = entry["image"]
+                work = img.copy()
+                work.thumbnail((1600, 1600))
+                r = tonal.draw(work)
+                k = img.width / work.width
+                pid = remember_photo(img)
+                PHOTOS[pid]["boxes"] = {str(n): tuple(int(v * k) for v in b) for n, b in r["boxes"].items()}
+                mono = tonal.text(r)
+                out = {"mono": mono, "mono_bytes": len(mono.encode()), "mono_gzip": len(gzip.compress(mono.encode())),
+                       "key": r["key"], "seen": r["seen"], "recognised": r["recognised"], "regions": r["regions"],
+                       "photo_id": pid}
             elif self.path == "/api/radar":
                 out = radar.run((float(body["lat"]), float(body["lon"])))
                 out["parts"] = sms_parts(out["sms"])
