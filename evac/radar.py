@@ -159,8 +159,9 @@ def run(user, w_km=160, h_km=110, sms_cols=18, mono_cols=58):
     text = "\n".join(facts)
     if llm.available():
         try:
-            text = llm.chat([{"role": "system", "content": "Rewrite this weather update as a short, friendly text message. "
-                              "Keep every time, distance, direction and number exactly. Plain text, under 300 characters."},
+            text = llm.chat([{"role": "system", "content": "Rewrite this weather update as a short, plain text message: no greeting, no "
+                              "sign-off, no encouragement (every character costs SMS). Keep every time, distance, direction "
+                              "and number exactly. Plain text, under 300 characters."},
                              {"role": "user", "content": text}]).strip()
         except Exception:
             pass
@@ -212,8 +213,11 @@ def run(user, w_km=160, h_km=110, sms_cols=18, mono_cols=58):
     srows = [[SMS_SHADE[v] for v in row] for row in gs]
     r0, c0 = len(srows) // 2, sms_cols // 2 - 1
     srows[r0][c0], srows[r0][c0 + 1] = SMS_YOU, ""
-    sms = "\n".join([text, "", "RADAR (north is up, %d km across):" % w_km] + ["".join(r) for r in srows] +
-                    ["", "+ light  × moderate", "0 heavy  # storm", "\U0001F534 you"])
+    if any(v for row in gs for v in row):
+        sms = "\n".join([text, "", "RADAR (north is up, %d km across):" % w_km] + ["".join(r) for r in srows] +
+                        ["", "+ light  × moderate", "0 heavy  # storm", "\U0001F534 you"])
+    else:  # no rain anywhere on the SMS grid: an empty grid says nothing and costs SMS parts
+        sms = text
 
     image = _picture(user, (s, w, n, e), rgba, clock, w_km)
     small = imagemap.shrink(image.pop("pil"))  # radar is a picture to begin with, so shrinking is fine

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-Built on the Meta Model API (Muse Spark, SAM 3.1, Muse Image). A server with a good connection does the work and sends the result to someone who can only receive text. A router (`evac/router.py`) lets Muse pick tools for any message; underneath are four modes: **emergency** (alert + GPS → instructions and a text map), **photo** (a photo that won't load → description + the outline of its main subject), **weather radar** (latest radar + 2-hour forecast as text) and **directions abroad** (walking route on street data, re-sent as the person moves). Every map draws only what the reply is about (`evac/focus.py`). Each reply exists in four versions: SMS aligned for **iPhone Messages** (iPhone only, multi-part SMS is fine), a 58-column monospace map for WhatsApp, a small picture (400 px WebP) and a full JPEG.
+Built on the Meta Model API (Muse Spark, SAM 3.1, Muse Image). A server with a good connection does the work and sends the result to someone who can only receive text. A router (`evac/router.py`) lets Muse pick tools for any message; underneath are four modes: **emergency** (alert + GPS → instructions and a text map), **photo** (a photo that won't load → description + the outline of its main subject), **weather radar** (latest radar + 2-hour forecast as text) and **directions abroad** (walking route on street data, re-sent as the person moves). Every map draws only what the reply is about (`evac/focus.py`). Each reply exists in four versions: SMS aligned for **iPhone Messages** (iPhone only, multi-part SMS is fine), a 58-column monospace map for WhatsApp, a small picture (400 px WebP) and a full JPEG; plus a kit version (plain SMS with codes for the offline kit page).
 
 ## Commands
 
@@ -25,7 +25,7 @@ python3 sim/server.py                                                     # simu
 
 `-v` prints the parsed alert (`notice (llm)` vs `notice (regex)` shows whether Muse ran), the distance check, closures found, and `text map: ... worst row drift X cells`. Drift must stay at or below ~0.07 cells (the 🔴 marker costs 0.04, one `Λ` 0.063; two `Λ` in a row are never allowed); that line is the regression check for the map.
 
-`.env` (git-ignored, loaded by `evac/llm.py`) holds `LLAMA_API_KEY` (a Meta Model API key; `MODEL_API_KEY` also works). `BRAVE_API_KEY` (optional) turns on whole-web image search for step pictures. Optional: `LLM_BASE_URL` (default `https://api.meta.ai/v1`), `LLM_MODEL` (default `muse-spark-1.3`), `LLM_REASONING_EFFORT` (default `minimal`). With no key, everything falls back to regex parsing and a message template.
+`.env` (git-ignored, loaded by `evac/llm.py`) holds `LLAMA_API_KEY` (a Meta Model API key; `MODEL_API_KEY` also works). `VERIFY_MODEL` (optional, default `muse-wonder-1.0`) is the checker for pictures. Optional: `LLM_BASE_URL` (default `https://api.meta.ai/v1`), `LLM_MODEL` (default `muse-spark-1.3`), `LLM_REASONING_EFFORT` (default `minimal`). With no key, everything falls back to regex parsing and a message template.
 
 ## Architecture
 
@@ -47,31 +47,35 @@ Request flow: `router.handle(message, you, image)` → Muse (`llm.chat_tools`) p
 
 **Evals (`evals/`):** `.venv/bin/python evals/photo_eval.py` runs every simulator sample through low and high drawing, scores them (glyph ink measured in Menlo → tone r/SSIM, edge F1, subject IoU/contrast, Muse blind read + judge, bytes) and recomposes the photo: D0 decodes each drawing with a per-drawing tone legend (needed: each drawing has its own tone scale) and pastes part zooms and 2×2/4×4 tilings, plus a greedy error-per-byte order; D1 asks Muse Image (`/images/edits` multipart takes an input image; `/images/generations` text only) to recreate it. `recompose_more.py` adds decoded-input recreations and ceiling/JPEG analyses. ~2.5 min per photo, 3 in parallel; results cached in `out/eval/<photo>/`; report `out/eval/report.html`; summary in `evals/RESULTS.md`. Feed image models decoded grey, never the raw text drawing (they copy the glyph texture).
 
-**Emergency pictures (experimental; `evac/zooms.py`, `evac/steps.py`, `evac/imagesearch.py`, `evac/museimage.py`):**
-- **SMS silhouette gate:** `photo.sms_shape_useful` drops it when it fills ≥ `BOXY` of its box or Muse can't name it. It was kept for 4 of the 20 test pictures.
-- **Close-ups:** `zooms.details` has Muse name 1–3 deciding details with a "look" sentence; `close_up` draws each as the subject of its own crop.
-- **The WhatsApp set:**
-  - `zooms.complete` builds the base with the details carried in (`carry`), measures each close-up on the receiver's rebuild (`_measure`, `HELPS`), and checks the set blind (`understood`).
-  - The router uses it for every photo, and `/api/photo` (low) is now SMS-only in the simulator.
-  - The blind check is noisy: 9 of 20 passed.
-- **Step flip-books:** `steps.run` has three paths.
-  - **No photo:** web pictures. `web_pool` searches Commons and Openverse, and Brave when they find fewer than `MIN_OPEN`. Muse picks per step (`web_pick`), the crop is the marked part plus what it touches (`focus`), and `draw_frame` draws it.
-  - **A photo:** Muse Image edits of it, tracked by `track`.
-  - **Fallback:** Muse Image.
-- **The direction agreed next (not built):**
-  - words first;
-  - one picture source per answer (mixed-source flip-books were judged unusable);
-  - a hand-checked picture set for the common emergencies;
-  - next frames made by moving SAM's mask of the moving part in one key frame (`evals/emergency/animate_test.py`), drawing only the moving part and what it acts on.
-- **Router tools:** `photo_details` and `show_steps`. Their results go out as `followups` in `router._versions`; close-ups are SMS-only follow-ups, because on WhatsApp they're inside the complete set.
-- **Model rule:** every model call must go to the Meta Model API (Muse Spark, Muse Image, SAM 3.1). Web search is a data source, like OpenStreetMap.
-- **Evals:** `evals/emergency/` holds the dataset (`dataset.json`, 20 pictures in `sim/samples/emergency/`) and these scripts:
-  - `run.py`: the pipeline per picture, then `emergency.html`;
-  - `score.py`: multiple-choice answers per input;
-  - `agent_page.py`: the router per picture plus 7 text-only questions, then `agent.html`;
-  - `animate_test.py`: the key-frame animation test.
+**Emergency pictures and how-to (experimental; `evac/zooms.py`, `evac/howto.py`, `evac/illustrate.py`, `evac/verify.py`, `evac/museimage.py`):**
+- **Photos:**
+  - **SMS silhouette gate:** `photo.sms_shape_useful` drops it when it fills ≥ `BOXY` of its box or Muse can't name it.
+  - **Close-ups:** `zooms.details` names the deciding details with a "look" sentence; `close_up` draws each one.
+  - **The WhatsApp set:** `zooms.complete` builds the base with details carried in and checks it blind. That check is noisy: 9 of 20 passed.
+- **How-to** (`show_steps` → `howto.answer`):
+  - **Steps:** `llm.search` runs Muse Spark with the Meta Model API's built-in web search (`/responses` + `tools: [{"type": "web_search"}]`; chat completions refuses it) and returns the text, `url_citation` spans and the searches.
+  - **Confirmation:** a step is confirmed when a citation span overlaps its line.
+  - **Phone numbers:** stripped. The emergency number comes from `geo.emergency_number` (Nominatim reverse lookup, then a small table, default 112).
+  - **Errors:** never shown raw. They become "Checked steps can't be looked up right now…".
+- **Pictures** (`illustrate.sequence`):
+  - **Which steps:** at most 3 that change an object, chosen by `choose`. Never people or bodies, never calls or checks; picking none is fine.
+  - **Frames:** before and after per step, all one chain of `museimage.generate` edits; black and white, no arrows.
+  - **Checks:** `verify.could_be` (Muse Wonder, `VERIFY_MODEL`) runs on the pair and on the text frames.
+  - **Text frames:** `to_text` fills enclosed shapes into silhouettes before turning them into characters.
+  - **Sent:** tiny 2-colour PNGs from `tiny`.
+- **What failed and was removed:** web picture search (incoherent mixed sources), traced keyframes and moved masks ("a maze"), pictograms ("a needle sewing"), drawn hands and bodies (ribcages; Muse Image refused some), arrows (noise), red highlights (the output is black and white).
+- **Model rule:** every model call goes to the Meta Model API: Muse Spark writes and searches, Muse Image draws, Muse Wonder checks, SAM 3.1 segments. `museimage.generate` retries rate-limit errors with backoff.
+- **Router:**
+  - **Tools:** `photo_details` and `show_steps`; results go out as `followups` (steps carry `images` and text `frames`).
+  - **`ONCE`:** each slow tool runs once per request.
+  - **`handle` checks input first:** it answers an empty message or impossible GPS at once.
+- **Evals:** `evals/emergency/` holds `dataset.json` (20 pictures in `sim/samples/emergency/`) and these scripts:
+  - `run.py` → `emergency.html`
+  - `score.py`
+  - `agent_page.py` → `agent.html`
+  - `illustrate_pilot.py` → `illustrate.html`: how-to end to end, cached in `out/eval/illustrate/`.
 
-  Results are cached as pickles under `out/eval/`, so the pages rebuild without new model calls.
+**The offline kit (`evac/codes.py`, `sim/kit.js`, `sim/kit.html`):** a page saved on the phone once (`/kit.html`, one self-contained file with the phrasebook `sim/pack.json` and the issuer's public key injected) that turns codes inside a plain SMS into a map, zoomable photo, GPX route, text or signature check. A code is `#<type><2-char id>.<i>/<n>:<base64>:<crc16>#`, each part ≤ 153 characters (basic alphabet). Types: `P` picture (greyscale WebP q5 for photos, 1-bit PNG for line drawings; `smsimage`), `Z` zoom (parent id + box as 4 × uint16 /64 + WebP), `K` named parts (SAM boxes via `photo.part_boxes`), `M` map (deflated JSON from `map_scene`), `G` route (deflated name + Google polyline after 4 m Douglas-Peucker), `T` deflated UTF-8 words (`codes.words`: used whenever text isn't GSM-7, because one UCS-2 character makes every code in the SMS cost double), `S` phrasebook id, `A` Ed25519 over `signed_text` (plain words + T texts; pure-Python signer, key in `cache/keys/`), `L` check-in. `router.handle` answers `RESEND id n…` and `ZOOM id n` / `ZOOM id x y w h` before anything else; `codes.picture` keeps every original in `cache/kit/kept.json` so a zoom crops the full-size photo (at least 128 source px). `router.kit_message(text, parts, signed)` builds a kit reply; `_kit` picks one per tool (alert, walk + route, phrasebook, or T-packed words). The kit remembers pictures in localStorage so a later `Z` is pasted over its picture; requests it writes go through `KIT.onRequest` in the simulator. Sizes: `evals/kit/measure.py` → `evals/kit/RESULTS.md` (`--report` rewrites it from the last run).
 
 **SAM 3.1 (`evac/sam.py`):** model `sam-3.1` is served on `/v1/responses` (chat completions refuses it). Send one user message with `input_text` (a noun phrase) and `input_image`, `metadata` `mask_encoding: one_bit`, `include_confidence: "true"` (strings). Output text: `<0f>` then records `id<|box;x1;y1;x2;y2;w;h;c|><|mask;x=0;y=0;c;data=H,W,<enc><payload>|>`; boxes are in the sent image's pixels, corners inclusive; the mask is box-sized. The payload is compressed and the SAM License forbids reverse-engineering it: parse and decode only with Meta's `meta-sam-parser` (`image_segmentation_format().create_parser()`, `push(text)`, `finish(CompletedOutcome()).result.records`: box and mask records by `object_id`; `decode_mask_to_raster(record.mask)` gives row-major 0/1 bytes for the record's half-open `bounds`). Responses are cached in `cache/sam/` by image and prompt.
 

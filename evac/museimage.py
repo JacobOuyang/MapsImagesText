@@ -11,6 +11,7 @@ import hashlib
 import io
 import json
 import os
+import time
 
 import requests
 from PIL import Image
@@ -34,12 +35,16 @@ def generate(prompt, image=None):
         return Image.open(path).convert("RGB")
     h = {"Authorization": "Bearer " + llm._key()}
     base = llm.BASE_URL.rstrip("/")
-    if image is None:
-        r = requests.post(base + "/images/generations", headers=dict(h, **{"Content-Type": "application/json"}), timeout=300,
-                          data=json.dumps({"model": MODEL, "prompt": prompt, "n": 1, "size": "1024x1024"}))
-    else:
-        r = requests.post(base + "/images/edits", headers=h, timeout=300, files={"image": ("in.png", src, "image/png")},
-                          data={"model": MODEL, "prompt": prompt, "size": "1024x1024"})
+    for wait in (4, 12, 30, None):  # several pictures at once get refused (rate limits): back off and retry
+        if image is None:
+            r = requests.post(base + "/images/generations", headers=dict(h, **{"Content-Type": "application/json"}), timeout=300,
+                              data=json.dumps({"model": MODEL, "prompt": prompt, "n": 1, "size": "1024x1024"}))
+        else:
+            r = requests.post(base + "/images/edits", headers=h, timeout=300, files={"image": ("in.png", src, "image/png")},
+                              data={"model": MODEL, "prompt": prompt, "size": "1024x1024"})
+        if r.status_code not in (429, 500, 502, 503, 504) or wait is None:
+            break
+        time.sleep(wait)
     r.raise_for_status()
     im = Image.open(io.BytesIO(base64.b64decode(r.json()["data"][0]["b64_json"]))).convert("RGB")
     os.makedirs(CACHE_DIR, exist_ok=True)

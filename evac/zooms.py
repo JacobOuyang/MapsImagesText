@@ -29,7 +29,7 @@ import math
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from . import llm, sketch, tonal
+from . import llm, sketch, tonal, verify
 from .photo import MONO_CELL, _components, _kmeans, contour
 
 FONT_PATH = "/System/Library/Fonts/Menlo.ttc"
@@ -483,11 +483,11 @@ def close_ups(img, question=None):
 #      are marked █. A detail can't vanish into a flat region any more.
 #   3. Each detail gets a close-up. It is measured: the receiver's rebuild (base decoded, close-up pasted over its box)
 #      must get at least HELPS less wrong over that detail, else it isn't sent.
-#   4. Muse is shown only the drawings (base + close-ups, no words) and says what the photo is and what it can make
-#      out; a text-only match against the caption's subject and the detail names says what was understood. A
-#      close-up is sent if it helps the rebuild or is read (the valve handle barely changed the pixels but is the
-#      point). If the subject wasn't understood, the base is redrawn on one tone scale (no emphasis) and checked
-#      again; if it still isn't, no drawing of the whole photo is sent, only close-ups that were read.
+#   4. The lenient check (verify.could_be, Muse Wonder): could this deliberately rough drawing be a photo of the
+#      subject, and could each close-up be its part? A close-up is sent if it helps the rebuild or passes (the valve
+#      handle barely changed the pixels but is the point). If the whole drawing fails, it is redrawn on one tone
+#      scale and checked again; if it still fails, only close-ups that passed are sent. The earlier blind check (name
+#      what you see, then match names) passed 9 of 20 and flipped between runs (a spider passed, then didn't).
 
 CARRY_CELLS = 6
 DETAIL_MARK = "█"
@@ -594,22 +594,25 @@ def complete(img, question=None, subject=""):
     for emphasis in (True, False):
         rows = carry(tonal.render(L, gray, named, main, COLS, root, emphasis=emphasis)[0], masks)
         made = [dict(z, gain=_measure(work, rows, z, m)) for z, (_, m) in zip(ups, masks) if z is not None]
-        seen, rec = understood([rows] + [z["rows"] for z in made], subject, [z["name"] for z in made])
-        kept = [z for z in made if z["gain"] >= HELPS or z["name"] in rec]  # it helps the rebuild, or it is read
+        # The lenient check (as for how-to pictures): could this deliberately rough drawing be a photo of the subject?
+        ok, why = verify.could_be("a photo of %s" % subject, frames=[rows])
+        for z in made:
+            z["read"], z["why"] = verify.could_be("a close-up of the %s of %s" % (z["name"], subject), frames=[z["rows"]])
+        kept = [z for z in made if z["gain"] >= HELPS or z["read"]]  # it helps the rebuild, or it could be that part
         attempts.append({"emphasis": emphasis, "rows": rows, "kept": kept, "dropped": [z for z in made if z not in kept],
-                         "seen": seen, "recognised": rec})
-        if subject in rec:
+                         "ok": ok, "seen": [why], "recognised": ([subject] if ok else []) + [z["name"] for z in kept if z["read"]]})
+        if ok:
             break
-    best = max(attempts, key=lambda a: (subject in a["recognised"], len(a["recognised"]), a["emphasis"]))
-    ok = subject in best["recognised"]
+    best = next((a for a in attempts if a["ok"]), attempts[-1])
+    ok = best["ok"]
     marks = [d["name"] for d in ds]
     if ok:
         base_text = "\n".join(best["rows"] + ([("Marked in the drawing (╭╮ outline, █ small): " + ", ".join(marks))] if marks else []))
         msgs = [base_text] + [z["mono"] for z in best["kept"]]
-    else:  # the whole drawing wasn't understood: don't send it; only close-ups that were read on their own
-        best["kept"] = [z for z in best["kept"] if z["name"] in best["recognised"]]
-        msgs = ["(No drawing of the whole photo: shown only the drawing, Muse couldn't tell what it was.)"] + [z["mono"] for z in best["kept"]]
-    check = "(Muse, shown only these drawings, made out: %s)" % (", ".join(s for s in best["seen"] if s) or "nothing")
+    else:  # the whole drawing couldn't be the photo: don't send it; only close-ups that could be their part
+        best["kept"] = [z for z in best["kept"] if z["read"]]
+        msgs = ["(No drawing of the whole photo: it didn't pass its check.)"] + [z["mono"] for z in best["kept"]]
+    check = "(Checked by Muse Wonder: %s)" % (best["seen"][0] or "no reason given")
     mono = "\n\n".join(msgs + [check])
     return {"base": best["rows"], "close_ups": best["kept"], "dropped": [(z["name"], round(z["gain"], 2)) for z in best["dropped"]],
             "details": ds, "understood": ok, "subject": subject, "seen": best["seen"],

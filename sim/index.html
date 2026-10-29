@@ -115,7 +115,7 @@
 </head>
 <body data-tab="emergency">
 <header class="top">
-  <h1>Low-Data Simulator</h1>
+  <h1>Low-Data Simulator <a href="/kit.html" target="_blank" style="font-size:14px;font-weight:400">open the offline kit</a></h1>
   <p>A server with a good connection does the work; the person gets the result three ways: SMS (no data at all), WhatsApp text (a trickle of data) or a picture (a working connection).</p>
   <div class="bar">
     <button class="tab on" data-tab="emergency">Emergency</button>
@@ -253,6 +253,7 @@
   <div class="triple" id="askOut"></div>
 </section>
 
+<script src="/kit.js"></script>
 <script>
 const TEMPLATES = {
   'NYC fire': 'NotifyNYC (DRILL - fictional sample): FDNY is on scene of a 5-alarm fire at 5 Av and W 47 St, Manhattan. Expect road closures and smoke in the area. Avoid 5 Av between W 42 St and W 50 St.',
@@ -289,8 +290,32 @@ const kb = b => (b / 1000).toFixed(1) + ' KB';
 const now = () => new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
 
+const KIT_CODE = /#[PZKMGTLSA][0-9a-z]{2}\.\d+\/\d+:[A-Za-z0-9+/=]*:[0-9a-f]{4}#/g;
+// SMS a kit message takes (basic alphabet: codes are base64 and the words are packed if they'd need UCS-2).
+const smsCount = t => { const gsm = /^[@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,\-./0-9:;<=>?¡A-ZÄÖÑÜ§¿a-zäöñüà]*$/.test(t);
+  return gsm ? (t.length <= 160 ? 1 : Math.ceil(t.length / 153)) : (t.length <= 70 ? 1 : Math.ceil(t.length / 67)); };
+// A request the kit makes ("ZOOM 3f 2"), sent from the phone as a plain SMS; the answer joins the thread it came from.
+KIT.onRequest = async text => {
+  const tab = document.body.dataset.tab, x = results[tab];
+  if (tab === 'emergency' || !x) return;
+  const u = {meta: `You sent "${text}" (1 SMS)`, out: text, smsOnly: true, pending: true};
+  x.more = x.more || []; x.more.push(u); showResult(tab);
+  const res = await post('/api/message', {text, lat: 0, lon: 0});
+  Object.assign(u, {pending: false, res: {text: res.text, sms: res.text}, meta: u.meta + ` · reply: ${smsCount(res.text || '')} SMS`});
+  showResult(tab);
+};
 function bubble(dir, text) {
-  const row = el('div', 'row ' + dir); row.appendChild(el('div', 'bubble', text)); return row;
+  const row = el('div', 'row ' + dir), b = el('div', 'bubble', text);
+  const codes = (text || '').match(KIT_CODE) || [];
+  if (codes.length && window.KIT) {  // what the offline kit page shows when this message is pasted into it
+    b.textContent = text.replace(KIT_CODE, c => c.length <= 40 ? c : c.slice(0, 22) + `…(${c.length} chars)#`);
+    const dec = el('div'); dec.style.cssText = 'margin-top:6px;padding-top:6px;border-top:1px dashed #bbb;font-size:12px;color:#555';
+    const head = el('div', '', `In the kit (${codes.length} code part${codes.length > 1 ? 's' : ''}): `), open = el('a', '', 'open in the kit');
+    open.href = '/kit.html#m=' + encodeURIComponent(text); open.target = '_blank'; head.appendChild(open);
+    const body = el('div'); dec.append(head, body); b.appendChild(dec);
+    KIT.show(text, body);
+  }
+  row.appendChild(b); return row;
 }
 function render(box, items) {
   box.innerHTML = '';
@@ -310,7 +335,7 @@ function renderWa(box, items) {
   box._timers = [];
   box.innerHTML = '';
   for (const it of items) {
-    if (it.smsOnly) continue;  // sent by SMS only (WhatsApp waits for the complete, checked picture)
+    if (it.smsOnly || it.kitOnly) continue;  // sent by SMS only (WhatsApp waits for the complete, checked picture)
     if (it.kind === 'meta') { box.appendChild(el('div', 'lmeta', it.text)); continue; }
     const b = el('div', 'wa-msg ' + (it.dir || 'in'));
     if (it.kind === 'typing') { b.textContent = 'typing…'; b.style.color = '#00a884'; box.appendChild(b); continue; }
@@ -322,6 +347,14 @@ function renderWa(box, items) {
         tag.textContent = `▶ step ${i + 1} of ${it.frames.length} · the message is edited in place`; }, 1600));
       b.append(pre, tag);
     } else if (it.mono) b.appendChild(el('pre', 'map', it.mono));
+    if (it.images && it.images.length) {  // tiny checked pictures, one per step: only over data (WhatsApp), never by SMS
+      const strip = el('div'); strip.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-top:6px';
+      for (const p of it.images) {
+        const fig = el('div'), im = el('img'); im.src = p.data_url; im.style.cssText = 'width:120px;border-radius:6px;background:#fff;display:block';
+        fig.append(im, el('div', 'play', `${p.caption} · ${kb(p.bytes)}`)); strip.appendChild(fig);
+      }
+      b.appendChild(strip);
+    }
     b.appendChild(el('span', 'time', now()));
     box.appendChild(b);
   }
@@ -337,7 +370,7 @@ function triple(box, items, r, labels) {
   const low = card(box, 'Low data', 'SMS on an iPhone', r && r.parts ? `${r.parts} SMS part${r.parts === 1 ? '' : 's'} (about ${kb(r.parts * 140)}). Works with no mobile data at all; the iPhone joins the parts into one bubble.` : 'Works with no mobile data at all.');
   const phone = el('div', 'phone'); phone.innerHTML = `<div class="status"><span>9:41</span><span>●●● ▮</span></div><div class="contact"><div class="avatar alert">${labels.initials}</div><div class="name">${labels.from}</div></div>`;
   const th = el('div', 'thread'); phone.appendChild(th); low.appendChild(phone);
-  const mid = card(box, 'Medium data', 'WhatsApp text', r && r.monoBytes ? `${labels.what} is ${kb(r.monoBytes)} of text (${kb(r.monoGzip)} compressed). Needs only a trickle of data, like free in-flight messaging.` : 'Needs only a trickle of data, like free in-flight messaging.');
+  const mid = card(box, 'Medium data', 'WhatsApp text', r && r.monoBytes ? `${labels.what} is ${kb(r.monoBytes)} of text${r.monoGzip ? ` (${kb(r.monoGzip)} compressed)` : ''}. Needs only a trickle of data, like free in-flight messaging.` : 'Needs only a trickle of data, like free in-flight messaging.');
   const pane = el('div', 'wa-pane'); pane.innerHTML = `<div class="wa-head"><div class="avatar alert">${labels.initials}</div><div><b>${labels.from}</b><small>${labels.sub}</small></div></div>`;
   const wt = el('div', 'lthread'); pane.appendChild(wt); mid.appendChild(pane);
   render(th, items.filter(it => !it.waOnly).map(it => it.dir === 'in' && it.sms !== undefined ? {dir: 'in', text: it.sms} : it));
@@ -389,6 +422,8 @@ async function deliver(key, alertText) {
   const i = p.thread.indexOf(typing); if (i >= 0) p.thread.splice(i, 1);
   if (res.message) {
     p.thread.push({dir: 'in', text: res.message, plain: res.text || res.message, laptop: res.laptop, image: res.image, small: res.small, parts: res.parts});
+    if (res.kit) p.thread.push({kind: 'meta', text: `For a phone with the kit: words, map and signature in ${res.kit_parts} SMS (vs ${res.parts})`},
+                              {dir: 'in', text: res.kit, kitOnly: true});
     erThread.push({kind: 'meta', text: `Reply to ${p.name}: ${res.parts} SMS part${res.parts === 1 ? '' : 's'}, ${res.seconds} s`});
   } else {
     p.thread.push({kind: 'meta', text: 'Reply failed: ' + res.error});
@@ -440,6 +475,8 @@ function showResult(kind) {
   else {
     const mono = kind === 'photo' ? undefined : x.res.mono;
     items.push({dir: 'in', sms: x.res.sms, plain: x.res.text, mono, smsOnly: kind === 'photo'});
+    if (x.res.kit) items.push({kind: 'meta', smsOnly: true, text: `For a phone with the kit: the same as ${smsCount(x.res.kit)} SMS the kit draws`},
+                              {dir: 'in', text: x.res.kit, sms: x.res.kit, smsOnly: true});
     if (kind === 'photo' && !(x.more || []).some(u => u.res && u.res.complete)) items.push({kind: 'meta', waOnly: true,
       text: 'WhatsApp: nothing sent yet. The drawing, its details and close-ups are made and checked first, then sent together.'});
   }
@@ -447,9 +484,12 @@ function showResult(kind) {
   let last = x.res;
   for (const u of x.more || []) {
     items.push({kind: 'meta', text: u.meta, smsOnly: u.smsOnly});
+    if (u.out) items.push({dir: 'out', text: u.out, smsOnly: u.smsOnly});
+    if (u.metaOnly) continue;
     if (u.pending) { items.push({kind: 'typing'}); continue; }
     if (u.res.error) { items.push({kind: 'meta', text: 'Failed: ' + u.res.error}); continue; }
-    items.push(u.res.map ? {dir: 'in', sms: u.res.sms, plain: u.res.text, mono: u.res.mono, frames: u.res.frames, smsOnly: u.smsOnly}
+    items.push(u.res.map ? {dir: 'in', sms: u.res.sms, plain: u.res.text, mono: u.res.mono, frames: u.res.frames, smsOnly: u.smsOnly,
+                            images: u.res.images}
                          : {dir: 'in', text: u.res.text, sms: u.res.text, smsOnly: u.smsOnly});
     last = Object.assign({}, u.res, u.res.image ? {} : {image: last && last.image, small: last && last.small});
   }
@@ -482,9 +522,30 @@ function addFollowups(x, res, who) {
     x.more.push({meta: who + tools + (res.understood === false ? ' · whole drawing not understood, so not sent' : ' · understood: ' + (res.seen || []).join(', ')),
                  res: {map: true, complete: true, text: res.text, sms: res.text, mono: res.mono, mono_bytes: res.mono_bytes}});
   else if (res.text) x.more.push({meta: who + tools, res: {text: res.text, sms: res.text}});
-  for (const f of res.followups || [])
-    x.more.push({meta: f.kind === 'steps' ? `Steps: ${f.title} (${f.frames.length} frames, ${kb(f.mono_bytes)})` : `Close-up by SMS: ${f.title}`,
-                 smsOnly: !!f.sms_only, res: {map: true, text: f.text, sms: f.sms, mono: f.mono || undefined, frames: f.frames, mono_bytes: f.mono_bytes}});
+  for (const f of res.followups || []) pushFollowup(x, f, 'photo');
+}
+// A follow-up message; a steps answer whose pictures are still being made gets them as a later message.
+function pushFollowup(x, f, kind) {
+  const meta = f.kind === 'steps' ? `Steps: ${f.title}` + (f.job ? ' (pictures on their way)' : (f.images || []).length ? ` + ${f.images.length} checked pictures` : '')
+                                  : (kind === 'photo' ? 'Close-up by SMS: ' : 'Close-up: ') + f.title;
+  x.more.push({meta, smsOnly: !!f.sms_only, res: {map: true, text: f.text, sms: f.sms, mono: f.mono || undefined, frames: f.frames,
+                                                   mono_bytes: f.mono_bytes, images: f.images}});
+  if (f.job) pollPictures(x, f.job, kind, Date.now());
+}
+async function pollPictures(x, job, kind, started) {
+  const p = await post('/api/pictures', {job});
+  if (results[kind] !== x) return;  // a newer request replaced this one
+  if (!p.done && !p.error) { setTimeout(() => pollPictures(x, job, kind, started), 4000); return; }
+  const secs = Math.round((Date.now() - started) / 1000);
+  if ((p.images || []).length) {
+    x.more.push({meta: `Pictures for the steps, ${secs} s after the words (tiny images over data; text versions where they passed)`,
+                 res: {map: true, text: '', sms: p.sms || '(see the next message)', mono: p.mono || undefined, frames: p.frames, images: p.images},
+                 smsOnly: false});
+    if (p.sms_pictures) x.more.push({meta: `The same pictures by plain SMS: ${p.sms_pictures_parts} SMS of picture code, for the offline decoder page`,
+                                     smsOnly: true, res: {text: p.sms_pictures, sms: p.sms_pictures}});
+  }
+  else x.more.push({meta: `No picture passed its checks (${secs} s): the words stand alone`, metaOnly: true});
+  showResult(kind);
 }
 async function askPhoto(x, text, who) {
   const u = {meta: who, pending: true}; x.more.push(u); showResult('photo');
@@ -580,9 +641,7 @@ async function sendAsk() {
   showResult('ask'); $('askStatus').textContent = 'Muse is choosing tools…'; $('askTools').textContent = '';
   const res = await post('/api/message', {text, lat: askAt[0], lon: askAt[1], image});
   Object.assign(results.ask, {pending: false, res, more: []});
-  for (const f of res.followups || [])
-    results.ask.more.push({meta: f.kind === 'steps' ? `Steps: ${f.title} (${f.frames.length} frames, ${kb(f.mono_bytes)})` : `Close-up: ${f.title}`,
-                           res: {map: true, text: f.text, sms: f.sms, mono: f.mono, frames: f.frames, mono_bytes: f.mono_bytes}});
+  for (const f of res.followups || []) pushFollowup(results.ask, f, 'ask');
   $('askStatus').textContent = res.error ? '' : `Done in ${res.seconds} s`;
   $('askTools').textContent = res.tools ? 'Tools called: ' + (res.tools.map(c => c.tool + '(' + Object.values(c.args).join(', ') + ')').join(', ') || 'none') : '';
   showResult('ask');

@@ -25,6 +25,17 @@ def compass(a, b):
 
 def geocode(query, near=None):
     """Place name -> (lat, lon) via OSM Nominatim. `near` biases results to a ~50km box."""
+    p = place(query, near)
+    return p[:2] if p else None
+
+
+BUSINESS = {"tourism", "amenity", "shop", "office", "craft", "leisure"}
+
+
+def place(query, near=None):
+    """Place name -> (lat, lon, what was matched) via OSM Nominatim. The label says what the name matched when it
+    isn't the same name ("Atlantis" matched "Atlantis Inn Roma (hotel, Via Muzio Clementi)"), so a reply never
+    passes off a different or fictional place as the one asked for; None when it is."""
     params = {"q": query, "format": "json", "limit": 1}
     if near:
         d = 0.5
@@ -34,7 +45,42 @@ def geocode(query, near=None):
     hits = r.json()
     if not hits:
         return None
-    return float(hits[0]["lat"]), float(hits[0]["lon"])
+    h = hits[0]
+    parts = [x.strip() for x in (h.get("display_name") or "").split(",")]
+    name, asked = (parts[0] if parts else ""), query.split(",")[0].strip()
+    label = None
+    if name and name.lower() != asked.lower():
+        label = name  # a landmark's local name helps with signs ("Colosseo")
+        if h.get("class") in BUSINESS:  # a business may not be what was meant: say what and where
+            kind = (h.get("type") or "").replace("_", " ")
+            street = next((x for x in parts[1:4] if not x[:1].isdigit()), "")
+            label = "%s (%s)" % (name, ", ".join(x for x in (kind, street) if x))
+    return float(h["lat"]), float(h["lon"]), label
+
+
+# The emergency number by country (ISO code); 112 works across the EU and on most GSM phones elsewhere.
+EMERGENCY = {"us": "911", "ca": "911", "mx": "911", "gb": "999", "au": "000", "nz": "111", "jp": "119", "kr": "119",
+             "cn": "120", "in": "112", "br": "192", "za": "10111"}
+_COUNTRY = {}
+
+
+def country(latlon):
+    """ISO country code for a point (Nominatim reverse lookup), or None."""
+    key = (round(latlon[0], 1), round(latlon[1], 1))
+    if key not in _COUNTRY:
+        try:
+            r = requests.get("https://nominatim.openstreetmap.org/reverse", headers=UA, timeout=10,
+                             params={"lat": latlon[0], "lon": latlon[1], "format": "json", "zoom": 3})
+            r.raise_for_status()
+            _COUNTRY[key] = ((r.json().get("address") or {}).get("country_code") or "").lower() or None
+        except Exception:
+            return None
+    return _COUNTRY[key]
+
+
+def emergency_number(latlon):
+    """The local emergency number for a point ('112' if the country is unknown or not listed)."""
+    return EMERGENCY.get(country(latlon) or "", "112") if latlon else "112"
 
 
 def current_location(override=None):
