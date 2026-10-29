@@ -18,7 +18,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from PIL import Image
 
-from . import codes, llm, photo, render, tools, zooms
+from . import codes, llm, photo, render, store, tools, zooms
 
 MAX_ROUNDS = 3
 ONCE = {"show_steps", "photo_details", "describe_photo", "emergency_reply", "rain_radar"}  # slow: never twice per request
@@ -41,7 +41,8 @@ def _quick(text):
             "tools": [], "log": [], "seconds": 0.0}
 
 
-def handle(message, you, image=None):
+def handle(message, you, image=None, who=None):
+    """One message from a person (`who`: their number, when known) at `you` (lat, lon), maybe with a photo."""
     t = time.time()
     message = (message or "").strip()
     if not message and not image:  # an empty text once made Muse call three tools for 45 s
@@ -61,7 +62,7 @@ def handle(message, you, image=None):
         out = _quick(closer[0] + ("\n" + codes.text(closer[1]) if closer[1] else ""))
         out["kit"] = out["text"]
         return out
-    found, log = codes.decode(message), []
+    found, log, report = codes.decode(message), [], None
     for c in found["complete"]:  # codes the kit made on the phone: a photo, or a check-in with GPS
         if c["kind"] == "P" and image is None:  # a PNG or WebP; the model calls send JPEG
             buf = io.BytesIO()
@@ -73,11 +74,16 @@ def handle(message, you, image=None):
             if loc:
                 lat, lon = loc["lat"], loc["lon"]
                 log.append("check-in: %(status)s, %(people)s people at %(lat).5f, %(lon).5f (±%(accuracy_m)s m)" % loc)
-                if not codes.plain(message):  # a check-in alone: acknowledge it (a real service would alert responders)
+                # Every check-in is kept as a report (with its photo, if one came with it) for the responders' view.
+                photo_code = next((p["data"] for p in found["complete"] if p["kind"] == "P"), None)
+                report = store.new("report", meta=dict(loc, text=codes.plain(message)), where=(lat, lon), who=who,
+                                   image=Image.open(io.BytesIO(photo_code)) if photo_code else None)
+                log.append("kept as report %s" % report)
+                if not codes.plain(message):  # a check-in alone: acknowledge it
                     out = _quick("Check-in received: %s, %s %s at %.5f, %.5f. Keep your phone on; reply with any change."
                                  % ({"ok": "safe", "help": "needs help", "hurt": "someone hurt"}.get(loc["status"], loc["status"]),
                                     loc["people"] or 1, "person" if (loc["people"] or 1) == 1 else "people", lat, lon))
-                    out.update(log=log, checkin=loc)
+                    out.update(log=log, checkin=loc, report=report)
                     return out
     if found["missing"]:
         log.append("incomplete codes: %s" % found["missing"])
@@ -87,7 +93,7 @@ def handle(message, you, image=None):
     calls, text = _run_model(ctx, message) if llm.available() else _run_rules(ctx, message)
     out = _versions(ctx, text)
     out["kit"] = _kit(ctx, out)
-    out.update({"tools": calls, "log": ctx.log, "seconds": round(time.time() - t, 1)})
+    out.update({"tools": calls, "log": ctx.log, "seconds": round(time.time() - t, 1), "report": report})
     return out
 
 

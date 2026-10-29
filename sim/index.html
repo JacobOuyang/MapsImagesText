@@ -290,7 +290,7 @@ const kb = b => (b / 1000).toFixed(1) + ' KB';
 const now = () => new Date().toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; };
 
-const KIT_CODE = /#[PZKMGTLSA][0-9a-z]{2}\.\d+\/\d+:[A-Za-z0-9+/=]*:[0-9a-f]{4}#/g;
+const KIT_CODE = /#[PZKMGTLSA][0-9a-z]{2,4}\.\d+\/\d+:[A-Za-z0-9+/=]*:[0-9a-f]{4}#/g;
 // SMS a kit message takes (basic alphabet: codes are base64 and the words are packed if they'd need UCS-2).
 const smsCount = t => { const gsm = /^[@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !"#¤%&'()*+,\-./0-9:;<=>?¡A-ZÄÖÑÜ§¿a-zäöñüà]*$/.test(t);
   return gsm ? (t.length <= 160 ? 1 : Math.ceil(t.length / 153)) : (t.length <= 70 ? 1 : Math.ceil(t.length / 67)); };
