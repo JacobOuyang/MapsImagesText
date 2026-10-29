@@ -227,6 +227,7 @@ A text map is limited to what characters can show. The **kit** is a single web p
 - **Words with accents.** One character outside the basic SMS alphabet (ã, ç, ê) cuts every SMS from 153 to 67 characters; packing the words keeps them at 153.
 - **A phrasebook** of checked how-to pictures already inside the kit, so only an id travels.
 - **From the phone:** photo codes, check-ins with GPS, `RESEND` for lost parts, and a QR code to pass a message to a phone with no signal.
+- **Everything is kept** (`evac/store.py`): each photo, zoom, trip, message and check-in is a record with a short id in a SQLite file, so `ZOOM 10d 1` or `RESEND 108 2` still works after the server restarts, a zoom remembers which picture it came from, and every check-in is kept as a report for responders.
 
 ### Examples
 
@@ -312,6 +313,12 @@ From the command line:
 
 `--photo some.jpg` and `--radar LAT,LON` run the other modes.
 
+Offline tests (no model key or network needed):
+
+```bash
+.venv/bin/python -m unittest discover tests
+```
+
 ## Code
 
 | Area | Files |
@@ -324,7 +331,9 @@ From the command line:
 | How-to | `evac/howto.py`, `evac/illustrate.py`, `evac/verify.py`, `evac/museimage.py` |
 | Radar | `evac/radar.py` |
 | Kit | `evac/codes.py`, `evac/smsimage.py`, `sim/kit.js`, `sim/kit.html`, `sim/pack.json` |
+| Store | `evac/store.py` (every photo, zoom, trip, message and report, in SQLite) |
 | Simulator | `sim/server.py`, `sim/index.html` |
+| Tests | `tests/` (codes, signatures, the store, RESEND/ZOOM/check-ins; offline) |
 | Evals | `evals/` (photo drawings, emergency pictures, kit sizes) |
 
 `CLAUDE.md` has the details of how the pieces connect.

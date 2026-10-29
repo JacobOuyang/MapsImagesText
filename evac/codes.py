@@ -4,7 +4,8 @@ pictures, maps and forms, and back.
 Every code looks like  #P3f.1/2:iVBORw0KGgo...:9c1e#  : a type letter, an id, part i of n, a chunk of base64, and a
 CRC-16 of the chunk. Only characters of the basic SMS alphabet are used (base64, # . / :), so an SMS carries 160 of
 them, and a part never exceeds one SMS (PART_CHARS). Parts can arrive out of order or not at all: the kit reassembles
-them, says which are missing and writes the "RESEND <id> <part>" reply; the server keeps what it sent in OUTBOX.
+them, says which are missing and writes the "RESEND <id> <part>" reply; the server keeps what it sent in its store
+(evac/store.py). Ids the server gives are 3+ characters (store records); a phone's own codes use 2.
 
 Types (payloads before base64):
   P picture       a 128 px picture: a greyscale WebP for photos, a 1-bit PNG for line drawings (picture(); every
@@ -12,8 +13,8 @@ Types (payloads before base64):
                   server keeps the full-size original, so the person can ask for a closer look (Z). Sending an
                   "after" as only its difference from "before" was tried and was no smaller (the two redrawn
                   pictures differ in scattered pixels); the kit flips between the two and zooms on what changed
-  Z zoom          a closer look at part of an earlier picture, cropped from the kept original: the parent's id, the
-                  box in the parent's pixels (4 x uint16, 1/64 px), then a greyscale WebP. The kit pastes it over the
+  Z zoom          a closer look at part of an earlier picture, cropped from the kept original: the parent's id (one
+                  length byte, then the id), the box in the parent's pixels (4 x uint16, 1/64 px), then a greyscale WebP. The kit pastes it over the
                   parent, so the picture gets sharper where the person looked. Asked for with "ZOOM <id> x y w h"
                   (a box in that picture's pixels) or "ZOOM <id> <n>" (a numbered part from its key)
   K picture key   JSON {"i": picture id, "k": [[name, x, y, w, h]]}: the named parts of a picture (SAM 3.1 boxes),
@@ -37,10 +38,8 @@ import re
 import zlib
 
 PART_CHARS = 153            # one SMS part in the basic alphabet
-CODE = re.compile(r"#([PZKMGTLSA])([0-9a-z]{2})\.(\d+)/(\d+):([A-Za-z0-9+/=]*):([0-9a-f]{4})#")
-OUTBOX = {}                 # id -> [parts]: what was sent, for RESEND
+CODE = re.compile(r"#([PZKMGTLSA])([0-9a-z]{2,4})\.(\d+)/(\d+):([A-Za-z0-9+/=]*):([0-9a-f]{4})#")
 KEY_PATH = os.path.join(os.path.dirname(__file__), "..", "cache", "keys", "ed25519.json")
-KEPT_DIR = os.path.join(os.path.dirname(__file__), "..", "cache", "kit")  # originals of the pictures sent, for ZOOM
 GSM7 = set("@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿"
            "abcdefghijklmnopqrstuvwxyzäöñüà")
 
@@ -64,19 +63,17 @@ def sms_parts(text):
     return 1 if units <= 70 else -(-units // 67)
 
 
-def _new_id(data):
-    return "".join("0123456789abcdefghijklmnopqrstuvwxyz"[b % 36] for b in hashlib.md5(data).digest()[:2])
-
-
-def encode(kind, data):
-    """bytes -> the code's parts (each fits one SMS). Remembered in OUTBOX for RESEND."""
+def encode(kind, data, ident=None):
+    """bytes -> the code's parts (each fits one SMS), kept with record `ident` (a new "code" record if None) so
+    RESEND can send them again."""
+    from . import store
     b64 = base64.b64encode(data).decode()
-    ident = _new_id(kind.encode() + data)
+    ident = ident or store.new("code", meta={"type": kind})
     head = len("#%s%s.%d/%d:" % (kind, ident, 9, 9)) + len(":xxxx#")
     size = PART_CHARS - head - 2  # room for two-digit part numbers
     chunks = [b64[i:i + size] for i in range(0, len(b64), size)] or [""]
     parts = ["#%s%s.%d/%d:%s:%s#" % (kind, ident, i, len(chunks), c, crc16(c)) for i, c in enumerate(chunks, 1)]
-    OUTBOX[ident] = parts
+    store.update(ident, sent=parts, bump=False)
     return parts
 
 
@@ -108,15 +105,17 @@ def decode(message):
     return {"complete": complete, "missing": missing, "bad": bad}
 
 
-RESEND = re.compile(r"\bRESEND\s+([0-9a-z]{2})((?:\s+\d+)+)", re.I)
+RESEND = re.compile(r"\bRESEND\s+([0-9a-z]{2,4})((?:\s+\d+)+)", re.I)
 
 
 def resend(message):
-    """"RESEND 7k 2 3" -> those parts again (from OUTBOX), or None."""
+    """"RESEND 7k3 2 3" -> those parts again (as the store kept them), or None."""
+    from . import store
     m = RESEND.search(message or "")
-    if not m or m.group(1).lower() not in OUTBOX:
+    rec = store.get(m.group(1)) if m else None
+    if not rec or not rec["sent"]:
         return None
-    parts = OUTBOX[m.group(1).lower()]
+    parts = rec["sent"]
     want = [int(x) for x in m.group(2).split()]
     return [parts[k - 1] for k in want if 1 <= k <= len(parts)]
 
@@ -128,58 +127,43 @@ def plain(message):
 
 # ---------- pictures and zooms ----------
 
-def _kept():
-    path = os.path.join(KEPT_DIR, "kept.json")
-    return json.load(open(path)) if os.path.exists(path) else {}
-
-
-def _keep(ident, file, region, size, parts=None):
-    """Remember what a picture code shows: the original (a file in KEPT_DIR), the region of it, the size sent."""
-    kept = _kept()
-    kept[ident] = {"file": file, "region": [round(v, 1) for v in region], "size": list(size), "parts": parts or []}
-    json.dump(kept, open(os.path.join(KEPT_DIR, "kept.json"), "w"))
-
-
-def picture(img, tones=True, parts=None):
-    """A picture -> code parts: a greyscale WebP for a photo (tones=True), a 1-bit PNG for a line drawing. The
-    original is kept so the person can zoom; `parts` [(name, (x0, y0, x1, y1) in img's pixels)] adds a K code naming
-    them, so a tap on one asks for it."""
-    from . import smsimage
+def picture(img, tones=True, parts=None, ident=None):
+    """A picture -> code parts: a greyscale WebP for a photo (tones=True), a 1-bit PNG for a line drawing. It is
+    kept in the store (a new "photo" record, or `ident`, one that already holds this image), so the person can zoom;
+    `parts` [(name, (x0, y0, x1, y1) in img's pixels)] adds a K code naming them, so a tap on one asks for it."""
+    from . import smsimage, store
     data = smsimage.webp(img) if tones else smsimage.png(img)
-    out = encode("P", data)
-    ident = CODE.match(out[0]).group(2)
-    os.makedirs(KEPT_DIR, exist_ok=True)
-    file = hashlib.md5(img.tobytes()).hexdigest()[:16] + ".jpg"
-    if not os.path.exists(os.path.join(KEPT_DIR, file)):
-        img.convert("RGB").save(os.path.join(KEPT_DIR, file), "JPEG", quality=92)
+    ident = ident or store.new("photo", image=img)
     size = smsimage.fit(img).size
     k = size[0] / img.width
     named = [[str(n)[:20]] + [round(b[0] * k), round(b[1] * k), max(1, round((b[2] - b[0]) * k)), max(1, round((b[3] - b[1]) * k))]
              for n, b in (parts or [])]
-    _keep(ident, file, (0, 0, img.width, img.height), size, named)
+    store.update(ident, meta={"region": [0, 0, img.width, img.height], "size": list(size), "parts": named}, bump=False)
+    out = encode("P", data, ident)
     if named:
         out += encode("K", json.dumps({"i": ident, "k": named}, separators=(",", ":"), ensure_ascii=False).encode())
     return out
 
 
-ZOOM = re.compile(r"\bZOOM\s+([0-9a-z]{2})((?:\s+\d+){1,4})\b", re.I)
+ZOOM = re.compile(r"\bZOOM\s+([0-9a-z]{2,4})((?:\s+\d+){1,4})\b", re.I)
 
 
 def zoom(message):
     """"ZOOM 3f 40 22 30 30" (a box in picture 3f's pixels) or "ZOOM 3f 2" (part 2 of its key) -> (words, code
     parts) for a closer look cropped from the kept original, or None if the message asks for no zoom."""
-    from . import smsimage
-    from PIL import Image
+    from . import smsimage, store
     m = ZOOM.search(message or "")
     if not m:
         return None
     ident, nums = m.group(1).lower(), [int(x) for x in m.group(2).split()]
-    src = _kept().get(ident)
-    if not src:
+    rec = store.get(ident)
+    img = store.image(ident) if rec and "size" in rec["meta"] else None
+    if img is None:
         return "Nothing to zoom: picture %s is no longer kept." % ident, []
+    src = rec["meta"]
     (x0, y0, x1, y1), (w, h) = src["region"], src["size"]
     if len(nums) == 1:
-        if not 1 <= nums[0] <= len(src["parts"]):
+        if not 1 <= nums[0] <= len(src.get("parts") or []):
             return "Picture %s has no part %d." % (ident, nums[0]), []
         name, bx, by, bw, bh = src["parts"][nums[0] - 1]
         what = "%s (part %d)" % (name, nums[0])
@@ -189,7 +173,6 @@ def zoom(message):
     else:
         return "Send ZOOM, the picture's id, then a part number or a box: x y width height.", []
     sx, sy = (x1 - x0) / w, (y1 - y0) / h
-    img = Image.open(os.path.join(KEPT_DIR, src["file"]))
     # The crop in the original's pixels: a little margin, square-ish, and never smaller than a picture's own 128 px
     # (past the original's resolution a zoom shows nothing new).
     cx, cy = x0 + (bx + bw / 2) * sx, y0 + (by + bh / 2) * sy
@@ -200,9 +183,10 @@ def zoom(message):
     crop = img.crop((round(rx0), round(ry0), round(rx1), round(ry1)))
     data = smsimage.webp(crop)
     box = [(rx0 - x0) / sx, (ry0 - y0) / sy, (rx1 - rx0) / sx, (ry1 - ry0) / sy]  # in the parent's pixels
-    head = ident.encode() + b"".join(int(max(0, min(65535, round(v * 64)))).to_bytes(2, "big") for v in box)
-    out = encode("Z", head + data)
-    _keep(CODE.match(out[0]).group(2), src["file"], (rx0, ry0, rx1, ry1), smsimage.fit(crop).size)
+    head = bytes([len(ident)]) + ident.encode() + b"".join(int(max(0, min(65535, round(v * 64)))).to_bytes(2, "big") for v in box)
+    child = store.new("zoom", file=rec["file"], parent=ident, box=box,
+                      meta={"region": [rx0, ry0, rx1, ry1], "size": list(smsimage.fit(crop).size), "parts": []})
+    out = encode("Z", head + data, child)
     return "Closer look at %s in picture %s:" % (what, ident), out
 
 
@@ -395,8 +379,10 @@ def _enc_point(p):
 def _key():
     if not os.path.exists(KEY_PATH):
         os.makedirs(os.path.dirname(KEY_PATH), exist_ok=True)
-        json.dump({"seed": os.urandom(32).hex()}, open(KEY_PATH, "w"))
-    seed = bytes.fromhex(json.load(open(KEY_PATH))["seed"])
+        with open(KEY_PATH, "w") as f:
+            json.dump({"seed": os.urandom(32).hex()}, f)
+    with open(KEY_PATH) as f:
+        seed = bytes.fromhex(json.load(f)["seed"])
     h = hashlib.sha512(seed).digest()
     a = int.from_bytes(h[:32], "little")
     a = (a & ((1 << 254) - 8)) | (1 << 254)

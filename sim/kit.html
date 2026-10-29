@@ -70,7 +70,7 @@ async function read() {
 $('msg').addEventListener('input', read);
 $('qrMsg').onclick = () => {  // pass what you received to a phone without signal: it scans this with its camera
   const out = $('qrOut'); out.innerHTML = '';
-  const codes = $('msg').value.match(/#[PZKMGTLSA][0-9a-z]{2}\.\d+\/\d+:[A-Za-z0-9+/=]*:[0-9a-f]{4}#/g) || [];
+  const codes = $('msg').value.match(/#[PZKMGTLSA][0-9a-z]{2,4}\.\d+\/\d+:[A-Za-z0-9+/=]*:[0-9a-f]{4}#/g) || [];
   const text = KIT.plain($('msg').value) + (codes.length ? '\n' + codes.join('\n') : '');
   const c = KIT.qrCanvas(text, 3);
   out.appendChild(c || Object.assign(document.createElement('p'), {textContent: 'Too long for one QR code: show the codes one at a time.'}));

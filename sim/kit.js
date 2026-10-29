@@ -5,7 +5,7 @@
 // K a picture's named parts, M map, G route (-> GPX), T compressed text, L location, S phrasebook entry, A signature.
 "use strict";
 var KIT = (function () {
-  const CODE = /#([PZKMGTLSA])([0-9a-z]{2})\.(\d+)\/(\d+):([A-Za-z0-9+/=]*):([0-9a-f]{4})#/g;
+  const CODE = /#([PZKMGTLSA])([0-9a-z]{2,4})\.(\d+)\/(\d+):([A-Za-z0-9+/=]*):([0-9a-f]{4})#/g;
   const PART_CHARS = 153;
 
   function crc16(s) {
@@ -321,8 +321,9 @@ var KIT = (function () {
     }
     for (const c of complete) {  // pictures first, so a key or a zoom in the same message finds them
       if (c.kind === "P") await remember(c.id, c.bytes);
-      else if (c.kind === "Z") { const d = new DataView(c.bytes.buffer, c.bytes.byteOffset), parent = String.fromCharCode(c.bytes[0], c.bytes[1]);
-        await remember(c.id, c.bytes.slice(10), parent, [0, 1, 2, 3].map(i => d.getUint16(2 + 2 * i) / 64)); }
+      else if (c.kind === "Z") {  // the parent's id (length byte + id), its box as 4 x uint16 in 1/64 px, then the picture
+        const n = c.bytes[0], d = new DataView(c.bytes.buffer, c.bytes.byteOffset + 1 + n), parent = String.fromCharCode(...c.bytes.slice(1, 1 + n));
+        await remember(c.id, c.bytes.slice(9 + n), parent, [0, 1, 2, 3].map(i => d.getUint16(2 * i) / 64)); }
     }
     for (const c of complete.filter(c => c.kind === "K")) { try { const k = JSON.parse(new TextDecoder().decode(c.bytes)); (SEEN[k.i] = SEEN[k.i] || {}).keys = k.k; } catch (e) {} }
     const pics = complete.filter(c => c.kind === "P");

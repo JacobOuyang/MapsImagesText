@@ -28,7 +28,7 @@ from PIL import Image, ImageOps
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(ROOT))
 
-from evac import codes, howto, directions, photo, pipeline, radar, router, tonal  # noqa: E402
+from evac import codes, howto, directions, photo, pipeline, radar, router, store, tonal  # noqa: E402
 
 PORT = int(os.environ.get("PORT", 8765))
 WHATSAPP_COLS = 58  # widest monospace map that fits the simulated WhatsApp Desktop bubble (65% of the chat pane) unwrapped
@@ -37,14 +37,9 @@ WHATSAPP_COLS = 58  # widest monospace map that fits the simulated WhatsApp Desk
 sms_parts = codes.sms_parts
 
 
-TRIPS = {}  # trip id -> directions.Trip, for the simulated walk
-PHOTOS = {}  # photo id -> {"image": full-size photo or zoomed crop, "boxes": {key number: box in its pixels}}
-
-
-def remember_photo(img):
-    pid = "%x" % id(img)
-    PHOTOS[pid] = {"image": img, "boxes": {}}
-    return pid
+def remember_photo(img, boxes=None, parent=None):
+    """A photo (or a crop of one) kept in the store; `boxes` {key number: box in its pixels} for the WhatsApp zooms."""
+    return store.new("photo", image=img, meta={"boxes": boxes or {}}, parent=parent)
 SAMPLE_DIR = "/Library/Desktop Pictures"  # macOS ships photos here; used as sample "photos a friend sent"
 # One object each, the simplest case for an outline: macOS's account pictures (HEIC, converted with sips).
 OBJECT_DIR = "/Library/User Pictures"
@@ -166,11 +161,12 @@ class Handler(SimpleHTTPRequestHandler):
                     out["kit_parts"] = sms_parts(out["kit"])
             elif self.path == "/api/message":
                 img = base64.b64decode(body["image"].split(",", 1)[-1]) if body.get("image") else None
-                if body.get("photo_id") in PHOTOS:  # a question about a photo sent earlier in the Photo tab
+                kept = store.image(body["photo_id"]) if body.get("photo_id") else None
+                if kept is not None:  # a question about a photo sent earlier in the Photo tab
                     buf = io.BytesIO()
-                    PHOTOS[body["photo_id"]]["image"].save(buf, "JPEG", quality=90)
+                    kept.save(buf, "JPEG", quality=90)
                     img = buf.getvalue()
-                out = router.handle(body["text"], (float(body["lat"]), float(body["lon"])), image=img)
+                out = router.handle(body["text"], (float(body["lat"]), float(body["lon"])), image=img, who=body.get("from"))
                 out["parts"] = sms_parts(out["sms"]) if out.get("sms") else 0
             elif self.path == "/api/photo":  # the quick version (SMS + low-detail WhatsApp outline)
                 data = base64.b64decode(body["image"].split(",", 1)[-1])
@@ -184,23 +180,20 @@ class Handler(SimpleHTTPRequestHandler):
                 out["photo_id"] = remember_photo(full)
                 # For a phone with the kit: the description and a 128 px picture with its named parts; a tap on a part
                 # (or a box drawn on the picture) asks the server for a closer look, cropped from this full-size photo.
-                out["kit"] = router.kit_message(out["text"], codes.picture(full, parts=photo.part_boxes(full, out.get("things") or [])))
+                out["kit"] = router.kit_message(out["text"], codes.picture(full, parts=photo.part_boxes(full, out.get("things") or []),
+                                                                           ident=out["photo_id"]))
                 out["kit_parts"] = sms_parts(out["kit"])
             elif self.path in ("/api/photo/high", "/api/photo/zoom"):
                 # High detail: the whole scene in tones. Zoom: the same for one numbered part, on its own crop of the
                 # full-size photo; every result is kept, so a zoom can be zoomed again.
-                entry = PHOTOS[body["photo_id"]]
+                entry, img = store.get(body["photo_id"]), store.image(body["photo_id"])
                 if self.path == "/api/photo/zoom":
-                    box = entry["boxes"][str(body["n"])]
-                    img = entry["image"].crop(box)
-                else:
-                    img = entry["image"]
+                    img = img.crop(tuple(entry["meta"]["boxes"][str(body["n"])]))
                 work = img.copy()
                 work.thumbnail((1600, 1600))
                 r = tonal.draw(work)
                 k = img.width / work.width
-                pid = remember_photo(img)
-                PHOTOS[pid]["boxes"] = {str(n): tuple(int(v * k) for v in b) for n, b in r["boxes"].items()}
+                pid = remember_photo(img, {str(n): [int(v * k) for v in b] for n, b in r["boxes"].items()}, parent=body["photo_id"])
                 mono = tonal.text(r)
                 out = {"mono": mono, "mono_bytes": len(mono.encode()), "mono_gzip": len(gzip.compress(mono.encode())),
                        "key": r["key"], "seen": r["seen"], "recognised": r["recognised"], "regions": r["regions"],
@@ -221,8 +214,7 @@ class Handler(SimpleHTTPRequestHandler):
                 scene = out.pop("scene", None)  # the page gets the rendered versions, not the Scene object
                 trip = out.pop("trip", None)
                 if trip:
-                    out["trip"] = "%x" % id(trip)
-                    TRIPS[out["trip"]] = trip
+                    out["trip"] = store.new("trip", obj=trip, where=trip.you, meta={"to": trip.name})
                     out["you"] = trip.you
                 if "sms" in out:
                     out["parts"] = sms_parts(out["sms"])
@@ -232,10 +224,11 @@ class Handler(SimpleHTTPRequestHandler):
                     out["kit_parts"] = sms_parts(out["kit"])
             elif self.path == "/api/directions/move":
                 # Simulated GPS: walk along the route, or take a wrong turn, then send the update.
-                trip = TRIPS[body["trip"]]
+                trip = store.obj(body["trip"])
                 you = (directions.astray(trip) if body.get("astray")
                        else directions.along(trip, float(body.get("metres", 150))))
                 out = directions.move(trip, you)
+                store.update(body["trip"], obj=trip, where=you)
                 out.pop("scene", None)
                 out.update(trip=body["trip"], you=you, parts=sms_parts(out["sms"]))
             else:
