@@ -62,16 +62,15 @@ def bubbles(text):
 def steps_node(f, idx):
     frames = f.get("frames") or []
     flip = ('<pre class="art flip" data-frames="%s">%s</pre><div class="play">▶ plays like one WhatsApp message edited in place</div>'
-            % (h(json.dumps(frames)), h(frames[0]))) if frames else "<p>(no frames: Muse Image failed, the steps went as words)</p>"
-    pics = "".join('<figure class="thumb"><img class="thumb" src="%s"><figcaption>%s</figcaption></figure>' % (p["data_url"], h(src or ""))
-                   for p, src in zip(f.get("pictures") or [], f.get("sources") or [None] * 99) if p)
+            % (h(json.dumps(frames)), h(frames[0]))) if frames else "<p>(no text frames: only pictures that passed as text are sent as text)</p>"
+    pics = "".join('<figure class="thumb"><img class="thumb" src="%s"><figcaption>%s · %s B</figcaption></figure>' % (
+        p["data_url"], h(p.get("caption", "")), format(p["bytes"], ",")) for p in f.get("images") or [])
     static = "".join('<pre class="art small">%s</pre>' % h(fr) for fr in frames)
     n, sms = bubbles(f["sms"])
     return "".join([
         V.node("Flip-book: %s" % h(f["title"]), flip, "%d frames · %s bytes for WhatsApp" % (len(frames), format(f.get("mono_bytes") or 0, ",")), "good"),
-        V.node("The pictures it was drawn from", '<div class="thumbs">%s</div>' % pics,
-               "web pictures (Wikimedia Commons, Openverse) chosen by Muse and cropped to what matters; Muse Image only "
-               "where nothing fit, or edits of the photo when the person sent one"),
+        V.node("Pictures sent (tiny images, data only)", '<div class="thumbs">%s</div>' % (pics or "<p>none: no step changes an object</p>"),
+               "the object before and after, made by Muse Image and checked by Muse Wonder"),
         V.node("Every frame", '<div class="frames">%s</div>' % static, "WhatsApp, one message per step"),
         V.node("SMS version", sms, "%d SMS · + = × the things, # the part to look at, figure spaces as blanks" % n, "pay"),
     ])

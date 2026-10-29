@@ -18,8 +18,9 @@ from concurrent.futures import ThreadPoolExecutor
 from . import llm, photo, render, tools, zooms
 
 MAX_ROUNDS = 3
+ONCE = {"show_steps", "photo_details", "describe_photo", "emergency_reply", "rain_radar"}  # slow: never twice per request
 SYSTEM = ("You help someone on a very slow or text-only connection; replies go out as short text messages. Their GPS "
-          "is {lat:.5f}, {lon:.5f}. {photo}Call the tools you need, then reply in plain text, under 500 characters, one "
+          "is {lat:.5f}, {lon:.5f}. {photo}Call the tools you need, then reply in plain text, under 500 characters, no greeting or sign-off, one "
           "short sentence per line. Summarise: never list every forecast value, give when rain starts and stops (or that "
           "none is expected). Keep the numbers, times, distances, directions and names you use exactly as the tools "
           "gave them. Don't invent places or facts, and don't mention maps or pictures (the app adds them when it "
@@ -32,9 +33,24 @@ SYSTEM = ("You help someone on a very slow or text-only connection; replies go o
           "tells them to do something with their hands (shut off gas, first aid).")
 
 
+def _quick(text):
+    return {"text": text, "sms": text, "mono": None, "small": None, "image": None, "map": None, "followups": [],
+            "tools": [], "log": [], "seconds": 0.0}
+
+
 def handle(message, you, image=None):
     t = time.time()
-    ctx = tools.Context(you=tuple(you), image=image)
+    message = (message or "").strip()
+    if not message and not image:  # an empty text once made Muse call three tools for 45 s
+        return _quick("Send a question, an alert, or a photo.")
+    try:
+        lat, lon = float(you[0]), float(you[1])
+        ok = -90 <= lat <= 90 and -180 <= lon <= 180
+    except (TypeError, ValueError, IndexError):
+        ok = False
+    if not ok:  # tools would geocode and route from an impossible point
+        return _quick("Your location looks wrong (%s). Check the phone's GPS, or name the place you are in." % (you,))
+    ctx = tools.Context(you=(lat, lon), image=image)
     calls, text = _run_model(ctx, message) if llm.available() else _run_rules(ctx, message)
     out = _versions(ctx, text)
     out.update({"tools": calls, "log": ctx.log, "seconds": round(time.time() - t, 1)})
@@ -45,7 +61,7 @@ def _run_model(ctx, message):
     msgs = [{"role": "system", "content": SYSTEM.format(lat=ctx.you[0], lon=ctx.you[1],
                                                         photo="They attached a photo. " if ctx.image else "")},
             {"role": "user", "content": message}]
-    calls = []
+    calls, done = [], {}
     for _ in range(MAX_ROUNDS):
         reply = llm.chat_tools(msgs, tools.schemas())
         todo = reply.get("tool_calls") or []
@@ -53,8 +69,13 @@ def _run_model(ctx, message):
             return calls, (reply.get("content") or "").strip()
         msgs.append({"role": "assistant", "content": reply.get("content") or "", "tool_calls": todo})
         parsed = [(c["id"], c["function"]["name"], json.loads(c["function"]["arguments"] or "{}")) for c in todo]
+        def once(p):  # a slow tool runs once per request: asked again (even after a failure), it gets the first result
+            key = p[1] if p[1] in ONCE else p[1] + json.dumps(p[2], sort_keys=True)
+            if key not in done:
+                done[key] = tools.call(ctx, p[1], p[2])
+            return done[key]
         with ThreadPoolExecutor(max_workers=len(parsed)) as pool:  # radar and routing each take seconds
-            results = list(pool.map(lambda p: tools.call(ctx, p[1], p[2]), parsed))
+            results = list(pool.map(once, parsed))
         for (cid, name, args), res in zip(parsed, results):
             calls.append({"tool": name, "args": args})
             msgs.append({"role": "tool", "tool_call_id": cid, "content": json.dumps(res, ensure_ascii=False)[:4000]})
@@ -128,11 +149,19 @@ def _followups(ctx):
     """Messages sent after the reply: a step-by-step flip-book and close-ups of details, each in every version.
     {"kind", "title", "text" (SMS words), "sms", "mono", "frames" (WhatsApp frames, played in place)}."""
     s, out = ctx.store, []
-    if "show_steps" in s:
+    if "show_steps" in s:  # the cited words always; checked before/after pictures as tiny images; text frames if they passed
         r = s["show_steps"]
-        out.append({"kind": "steps", "title": r["title"], "text": r["text"], "sms": r["sms"], "mono": r["mono"],
-                    "frames": r["frames_mono"], "mono_bytes": r["mono_bytes"], "pictures": [x["small"] for x in r["steps"]],
-                    "sources": [x.get("source") for x in r["steps"]]})
+        pics = r.get("frames") or []
+        frames, sms_art, images = [], "", []
+        for f in pics:
+            for label, fr in zip(("before", "after"), f["frames"]):
+                images.append(dict(fr["small"], caption="Step %d, %s" % (f["n"], label)))
+                if f.get("text_ok"):
+                    frames.append("Step %d (%s): %s\n%s" % (f["n"], label, f["step"], "\n".join(fr["mono"])))
+                    sms_art += "\n\nStep %d, %s:\n%s" % (f["n"], label, "\n".join(fr["sms"]))
+        out.append({"kind": "steps", "title": r["title"], "text": r["text"], "sms": r["text"] + sms_art,
+                    "mono": r["text"] + ("\n\n" + frames[0] if frames else ""), "frames": frames, "images": images,
+                    "mono_bytes": len(r["text"].encode())})
     for z in (s.get("photo_details") or {}).get("close_ups", []):  # on WhatsApp they are part of the complete picture
         out.append({"kind": "close_up", "title": z["name"], "text": "ZOOM: %s\n%s" % (z["name"], z["look"]), "sms": z["sms"],
                     "mono": None, "sms_only": True})

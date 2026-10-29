@@ -322,6 +322,14 @@ function renderWa(box, items) {
         tag.textContent = `▶ step ${i + 1} of ${it.frames.length} · the message is edited in place`; }, 1600));
       b.append(pre, tag);
     } else if (it.mono) b.appendChild(el('pre', 'map', it.mono));
+    if (it.images && it.images.length) {  // tiny checked pictures, one per step: only over data (WhatsApp), never by SMS
+      const strip = el('div'); strip.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px;margin-top:6px';
+      for (const p of it.images) {
+        const fig = el('div'), im = el('img'); im.src = p.data_url; im.style.cssText = 'width:120px;border-radius:6px;background:#fff;display:block';
+        fig.append(im, el('div', 'play', `${p.caption} · ${kb(p.bytes)}`)); strip.appendChild(fig);
+      }
+      b.appendChild(strip);
+    }
     b.appendChild(el('span', 'time', now()));
     box.appendChild(b);
   }
@@ -449,7 +457,8 @@ function showResult(kind) {
     items.push({kind: 'meta', text: u.meta, smsOnly: u.smsOnly});
     if (u.pending) { items.push({kind: 'typing'}); continue; }
     if (u.res.error) { items.push({kind: 'meta', text: 'Failed: ' + u.res.error}); continue; }
-    items.push(u.res.map ? {dir: 'in', sms: u.res.sms, plain: u.res.text, mono: u.res.mono, frames: u.res.frames, smsOnly: u.smsOnly}
+    items.push(u.res.map ? {dir: 'in', sms: u.res.sms, plain: u.res.text, mono: u.res.mono, frames: u.res.frames, smsOnly: u.smsOnly,
+                            images: u.res.images}
                          : {dir: 'in', text: u.res.text, sms: u.res.text, smsOnly: u.smsOnly});
     last = Object.assign({}, u.res, u.res.image ? {} : {image: last && last.image, small: last && last.small});
   }
@@ -483,8 +492,9 @@ function addFollowups(x, res, who) {
                  res: {map: true, complete: true, text: res.text, sms: res.text, mono: res.mono, mono_bytes: res.mono_bytes}});
   else if (res.text) x.more.push({meta: who + tools, res: {text: res.text, sms: res.text}});
   for (const f of res.followups || [])
-    x.more.push({meta: f.kind === 'steps' ? `Steps: ${f.title} (${f.frames.length} frames, ${kb(f.mono_bytes)})` : `Close-up by SMS: ${f.title}`,
-                 smsOnly: !!f.sms_only, res: {map: true, text: f.text, sms: f.sms, mono: f.mono || undefined, frames: f.frames, mono_bytes: f.mono_bytes}});
+    x.more.push({meta: f.kind === 'steps' ? `Steps: ${f.title}` + ((f.images || []).length ? ` + ${f.images.length} checked picture${f.images.length > 1 ? 's' : ''}` : ' (no picture passed its checks)') : `Close-up by SMS: ${f.title}`,
+                 smsOnly: !!f.sms_only, res: {map: true, text: f.text, sms: f.sms, mono: f.mono || undefined, frames: f.frames, mono_bytes: f.mono_bytes,
+                                              images: f.images}});
 }
 async function askPhoto(x, text, who) {
   const u = {meta: who, pending: true}; x.more.push(u); showResult('photo');
@@ -581,8 +591,9 @@ async function sendAsk() {
   const res = await post('/api/message', {text, lat: askAt[0], lon: askAt[1], image});
   Object.assign(results.ask, {pending: false, res, more: []});
   for (const f of res.followups || [])
-    results.ask.more.push({meta: f.kind === 'steps' ? `Steps: ${f.title} (${f.frames.length} frames, ${kb(f.mono_bytes)})` : `Close-up: ${f.title}`,
-                           res: {map: true, text: f.text, sms: f.sms, mono: f.mono, frames: f.frames, mono_bytes: f.mono_bytes}});
+    results.ask.more.push({meta: f.kind === 'steps' ? `Steps: ${f.title}` + ((f.images || []).length ? ` + ${f.images.length} checked picture${f.images.length > 1 ? 's' : ''}` : ' (no picture passed its checks)') : `Close-up: ${f.title}`,
+                           res: {map: true, text: f.text, sms: f.sms, mono: f.mono, frames: f.frames, mono_bytes: f.mono_bytes,
+                                 images: f.images}});
   $('askStatus').textContent = res.error ? '' : `Done in ${res.seconds} s`;
   $('askTools').textContent = res.tools ? 'Tools called: ' + (res.tools.map(c => c.tool + '(' + Object.values(c.args).join(', ') + ')').join(', ') || 'none') : '';
   showResult('ask');

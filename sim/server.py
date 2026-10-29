@@ -150,6 +150,10 @@ class Handler(SimpleHTTPRequestHandler):
                 out["parts"] = sms_parts(out["sms"]) if out.get("sms") else 0
             elif self.path == "/api/photo":  # the quick version (SMS + low-detail WhatsApp outline)
                 data = base64.b64decode(body["image"].split(",", 1)[-1])
+                try:
+                    Image.open(io.BytesIO(data)).verify()
+                except Exception:
+                    return self.send_json({"error": "That file isn't a picture that can be read.", "log": []}, t)
                 out = photo.run(data)
                 out["parts"] = sms_parts(out["sms"])
                 out["photo_id"] = remember_photo(ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB"))

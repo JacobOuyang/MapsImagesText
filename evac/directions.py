@@ -191,8 +191,8 @@ def run(user, destination, start=None, sms_cols=40, mono_cols=58):
     text = draft
     if llm.available():
         try:
-            text = llm.chat([{"role": "system", "content": "Reword this walking instruction as a short, friendly text "
-                              "message. Keep all three lines (the total, the current step, and the turn after it), one "
+            text = llm.chat([{"role": "system", "content": "Reword this walking instruction as a short, plain text "
+                              "message, with no greeting or encouragement (every character costs SMS). Keep all three lines (the total, the current step, and the turn after it), one "
                               "per line, with every street name, direction, distance and time exactly as given. Don't "
                               "add steps, streets, landmarks or advice. Plain text."},
                              {"role": "user", "content": draft}]).strip()

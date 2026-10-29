@@ -45,8 +45,8 @@ def available():
     return bool(_key())
 
 
-def chat(messages, json_mode=False, max_tokens=DEFAULT_MAX_TOKENS):
-    body = {"model": MODEL, "messages": messages, "max_completion_tokens": max_tokens,
+def chat(messages, json_mode=False, max_tokens=DEFAULT_MAX_TOKENS, model=None):
+    body = {"model": model or MODEL, "messages": messages, "max_completion_tokens": max_tokens,
             "temperature": 0, "reasoning_effort": REASONING_EFFORT}
     if json_mode:
         body["response_format"] = {"type": "json_object"}
@@ -76,13 +76,35 @@ def chat_tools(messages, tools, max_tokens=DEFAULT_MAX_TOKENS):
     return r.json()["choices"][0]["message"]
 
 
-def chat_json(messages, max_tokens=DEFAULT_MAX_TOKENS):
-    text = chat(messages, json_mode=True, max_tokens=max_tokens)
+def chat_json(messages, max_tokens=DEFAULT_MAX_TOKENS, model=None):
+    text = chat(messages, json_mode=True, max_tokens=max_tokens, model=model)
     # Some models wrap JSON in fences even in json mode; take the outermost object.
     out = json.loads(text[text.find("{"): text.rfind("}") + 1])
     if not isinstance(out, dict):
         raise ValueError("expected a JSON object, got %s" % type(out).__name__)
     return out
+
+
+def search(prompt, effort="low", timeout=180):
+    """Muse Spark with the API's built-in web search (/responses, tools [{"type": "web_search"}]): it searches, opens
+    pages itself and answers with citations. -> {"text", "citations": [{"url", "title", "start", "end"}], "searches"}.
+    Chat completions refuses this tool; only /responses has it."""
+    r = requests.post(BASE_URL.rstrip("/") + "/responses", headers={"Authorization": "Bearer " + _key()}, timeout=timeout,
+                      json={"model": MODEL, "input": prompt, "tools": [{"type": "web_search"}], "reasoning": {"effort": effort}})
+    r.raise_for_status()
+    text, cites, searches = "", [], []
+    for o in r.json().get("output", []):
+        if o.get("type") == "web_search_call":
+            searches.append(o.get("action") or {})
+        elif o.get("type") == "message" and o.get("phase") != "commentary":  # commentary = "I'll search..." notes
+            for c in o.get("content", []):
+                base = len(text)
+                text += c.get("text", "")
+                for a in c.get("annotations", []):
+                    if a.get("type") == "url_citation":
+                        cites.append({"url": a.get("url"), "title": a.get("title") or "",
+                                      "start": base + int(a.get("start_index") or 0), "end": base + int(a.get("end_index") or 0)})
+    return {"text": text, "citations": cites, "searches": searches}
 
 
 def image_part(png_bytes):

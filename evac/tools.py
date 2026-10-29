@@ -207,18 +207,16 @@ def photo_details(ctx, question=None):
             "drawing_understood": res["understood"], "seen_in_drawing": res["seen"]}
 
 
-@tool("Show how to do something with your hands, step by step, as a short flip-book of text drawings (a video is "
-      "far too big for a text connection): CPR, a tourniquet, the recovery position, shutting off gas or water, using "
-      "a fire extinguisher or an EpiPen. Use whenever the person has to perform a physical action, with or without a "
-      "photo, including when an emergency alert tells them to do one.",
-      task=("string", "The action, e.g. 'CPR on an adult' or 'shut off the gas at the meter'", True),
-      from_photo=("boolean", "True if the attached photo shows this action or the object it is done to", False))
-def show_steps(ctx, task, from_photo=False):
-    from . import steps
-    photo_img = _image(ctx) if (from_photo and ctx.image) else None
-    caption = (ctx.store.get("describe_photo") or {}).get("caption", "")
-    res = steps.run(task, photo=photo_img, caption=caption if photo_img is not None else "")
+@tool("How to do something with your hands (CPR, choking, a tourniquet, shutting off gas or water, a fire "
+      "extinguisher, an EpiPen...): numbered steps from cited web sources, always sent, plus one picture of the reader's "
+      "hands doing the key step, only if a separate model verified it shows the cited facts. Use whenever the person "
+      "has to perform a physical action, including when an emergency alert tells them to do one.",
+      task=("string", "The action, e.g. 'CPR on an adult' or 'shut off the gas at the meter'", True))
+def show_steps(ctx, task):
+    from . import howto
+    res = howto.answer(task, you=ctx.you)
     if "error" in res:
         return {"error": res["error"]}
     ctx.store["show_steps"] = res
-    return {"title": res["title"], "steps": [s["say"] for s in res["steps"]], "repeat": res["repeat"]}
+    return {"title": res["title"], "steps": res["steps"], "picture": bool(res.get("picture")),
+            "sources": [x.get("title") or x.get("url") for x in res.get("sources", [])][:5]}

@@ -37,6 +37,31 @@ def geocode(query, near=None):
     return float(hits[0]["lat"]), float(hits[0]["lon"])
 
 
+# The emergency number by country (ISO code); 112 works across the EU and on most GSM phones elsewhere.
+EMERGENCY = {"us": "911", "ca": "911", "mx": "911", "gb": "999", "au": "000", "nz": "111", "jp": "119", "kr": "119",
+             "cn": "120", "in": "112", "br": "192", "za": "10111"}
+_COUNTRY = {}
+
+
+def country(latlon):
+    """ISO country code for a point (Nominatim reverse lookup), or None."""
+    key = (round(latlon[0], 1), round(latlon[1], 1))
+    if key not in _COUNTRY:
+        try:
+            r = requests.get("https://nominatim.openstreetmap.org/reverse", headers=UA, timeout=10,
+                             params={"lat": latlon[0], "lon": latlon[1], "format": "json", "zoom": 3})
+            r.raise_for_status()
+            _COUNTRY[key] = ((r.json().get("address") or {}).get("country_code") or "").lower() or None
+        except Exception:
+            return None
+    return _COUNTRY[key]
+
+
+def emergency_number(latlon):
+    """The local emergency number for a point ('112' if the country is unknown or not listed)."""
+    return EMERGENCY.get(country(latlon) or "", "112") if latlon else "112"
+
+
 def current_location(override=None):
     """GPS stand-in. On a phone this comes from the device; on a laptop we fall back to IP geolocation."""
     if override:
