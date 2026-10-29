@@ -8,6 +8,7 @@
 | **Medium data** | WhatsApp (any app that shows monospace text) | the message + a 58-column monospace map | 2 to 5 KB of text, 0.4 to 1.1 KB compressed |
 | **Small picture** | a slow connection | a 400 px WebP map drawn for that size, or the photo/radar shrunk | 4.5 to 23 KB |
 | **High data** | a working connection | an ordinary picture map, or the photo itself | 50 to 180 KB |
+| **Kit** | plain SMS + a page saved on the phone beforehand | the words + codes the page turns into a real map, a zoomable photo, a GPX route, a signature check | 2 to 16 SMS (a zoom 3 to 19 more) |
 
 Ask it anything in one message; **Muse Spark** decides which tools to call:
 
@@ -22,7 +23,7 @@ Every map and drawing shows **only what the reply is about**: the route, the str
 
 Built on the Meta Model API: Muse Spark plans, words and searches the web, SAM 3.1 finds objects in photos, Muse Image draws step pictures (and made the test pictures), Muse Wonder checks the pictures.
 
-Contents: [Architecture](#architecture) · [The router](#the-router-one-message-in-muse-picks-the-tools) · [Tools](#tools) · [Scene and renderers](#scene-one-description-four-drawings) · [Only what matters](#showing-only-what-matters) · [Emergency](#emergency-alerts) · [Photo](#photos-that-wont-load) · [Radar](#weather-radar) · [Directions](#walking-directions-abroad) · [Text-map rules](#why-the-text-maps-line-up) · [Simulator](#try-it-the-simulator) · [Command line](#run-it-from-the-command-line) · [Code](#code) · [Limits](#known-limits)
+Contents: [Architecture](#architecture) · [The router](#the-router-one-message-in-muse-picks-the-tools) · [Tools](#tools) · [Scene and renderers](#scene-one-description-four-drawings) · [Only what matters](#showing-only-what-matters) · [Emergency](#emergency-alerts) · [Photo](#photos-that-wont-load) · [Radar](#weather-radar) · [Directions](#walking-directions-abroad) · [Offline kit](#the-offline-kit-pictures-maps-and-routes-inside-ordinary-texts) · [Text-map rules](#why-the-text-maps-line-up) · [Simulator](#try-it-the-simulator) · [Command line](#run-it-from-the-command-line) · [Code](#code) · [Limits](#known-limits)
 
 ## Architecture
 
@@ -1014,6 +1015,10 @@ Step 4, after:
 
 What survived: words first, and pictures of objects only.
 
+**Words first, pictures later.** A how-to answer sends its numbered steps at once. The pictures are made in the background (`howto.answer(background=True)`) and follow as a later message when they pass their checks; the simulator polls `/api/pictures`. Over plain SMS they also go as kit `P` codes (1-bit PNG, 3–5 SMS each), and steps that are already in the kit's phrasebook send only its id.
+
+**A check tuned on labels.** 19 before/after pairs were labelled by hand as useful or not (`evals/emergency/label_set.py`, `label_page.py`). `verify.picture_checks` now asks Muse Wonder whether the pair shows a device that looks the same everywhere (a standard extinguisher, an EpiPen, an AED) and whether the change is clear. It sends a pair only if both are true, which agreed with the hand labels on 15 of 19 (the old "could it be" check: 14). The 14 pairs marked useful became the kit's phrasebook (`evals/emergency/build_pack.py` → `sim/pack.json`).
+
 **Agentic.** The router has `photo_details` and `show_steps`. For a photo, Muse calls `describe_photo` and then decides: steps for an action, close-ups for a detail that decides what it is (the spider, the pill). A question with no photo ("How do I do CPR?") gets the steps alone. An alert that tells people to do something physical can add steps after the fixed emergency reply. Steps and close-ups arrive as separate messages after the reply. A slow tool runs at most once per request, even if Muse asks again.
 
 Pages to look at (built from cached runs, under `out/eval/`; `.claude/launch.json` has an `eval-pages` server on port 8766):
@@ -1355,6 +1360,122 @@ MAP (north is up):
 ━ main road   ─ street
 ```
 
+## The offline kit: pictures, maps and routes inside ordinary texts
+
+A text map is drawn in characters, so it is limited to what characters can show. The **kit** is the other way round: a single web page (`sim/kit.html`, 62 KB, 27.5 KB gzipped) that a person saves on their phone once, before they need it. After that it works with no connection. The server puts short **codes** inside an ordinary SMS, and the person pastes the message into the kit. The kit turns the codes back into a real map, a photo, a GPX route, a checked how-to picture, or words in their own language. Codes are base64 and stay in the basic SMS alphabet, so every SMS carries its full 153 characters.
+
+The kit needs no decoders of its own. The browser already decodes PNG and WebP, inflates deflate streams (`DecompressionStream`) and checks Ed25519 signatures (WebCrypto). The kit adds only the code envelope, a 1-bit PNG writer, a QR generator and the drawing.
+
+```
+#P7k.2/14:3DQwdsDX9WFdO8yf…:df2e#
+ │ │  │ │  │                 └ CRC-16 of the chunk (a damaged part is caught and asked for again)
+ │ │  │ │  └ base64 chunk (each part fits one SMS)
+ │ │  └─┴ part 2 of 14 (parts may arrive in any order)
+ │ └ id
+ └ type
+```
+
+| Type | Carries | Direction |
+| --- | --- | --- |
+| `P` picture | 128 px: a **greyscale WebP** for photos, a 1-bit PNG for line drawings (step pictures) | both |
+| `Z` zoom | a closer look at part of an earlier picture, cropped from the full-size original the server kept: parent id + box + WebP | server → phone |
+| `K` key | the named parts of a picture (SAM 3.1 boxes), numbered on the picture so a tap asks for one | server → phone |
+| `M` map | deflated JSON: you, the zone, closures, route, up to 8 named streets, goal, landmarks, in metres from you | server → phone |
+| `G` route | deflated destination + Google encoded polyline; the kit rebuilds a **GPX file** for an offline map app | server → phone |
+| `T` text | deflated UTF-8 words: keeps accented text (and every code beside it) out of 70-character UCS-2 SMS | server → phone |
+| `S` phrasebook | the id of a checked how-to entry already inside the kit (its steps and before/after pictures) | server → phone |
+| `A` signature | Ed25519 over the message's words (plus any `T` text): the kit says **Genuine** or **NOT genuine** | server → phone |
+| `L` location | a check-in: GPS, accuracy, status (safe / need help / someone hurt), people, battery, note | phone → server |
+
+The person can also reply `RESEND 7k 3` (the kit writes it when a part is missing), `ZOOM 7k 2` (part 2 of picture 7k) or `ZOOM 7k 40 22 30 30` (a box in its pixels). A message can be passed to a phone with no signal as a QR code, which the kit draws.
+
+### Zoom into a picture
+
+The server keeps every picture it sends at full size (`cache/kit/`), so the phone only says *where* to look. In the kit, the person drags a box on the picture or taps a numbered part. The kit writes the request as a one-SMS reply, and the answer is cropped from the original. It shows detail the 128 px picture never had. The kit pastes the zoom over its picture (dashed outline), so the picture gets sharper where the person looked, and a zoom can be zoomed again. The kit remembers pictures in the browser, so a zoom can arrive later than its picture.
+
+A real run on the bicycle sample (Muse described it and listed its things; SAM 3.1 boxed them):
+
+```
+A black bicycle with a front basket full of bags is parked leaning against a red brick wall on a sidewalk.
+#Psn.1/14:UklGRmIFAABXRUJQVlA4…ZsLT:7232#      ← "UklGR…" is "RIFF": a WebP
+   … 12 more parts …
+#Psn.14/14:k8aHFz2g4Wdb/mCM+Ss…QAAA:392d#
+#Ka0.1/2:eyJpIjoic24iLCJrIjpbW…MSw5:aadb#      ← 1 bicycle · 2 basket · 3 bag · 4 trash can
+#Ka0.2/2:LDE4XV19:ebc2#
+                                                 16 SMS in all
+> ZOOM sn 2
+Closer look at basket (part 2) in picture sn:   15 SMS (a 1,388-byte WebP)
+> ZOOM sn 30 30 40 40
+Closer look at the area you marked in picture sn:   14 SMS
+```
+
+**Greyscale WebP or 1-bit PNG.** On the six sample photos at 128 px, a greyscale WebP at quality 5 (contrast stretched) costs about what a 1-bit PNG does, but stays readable. The 1-bit bicycle turned to noise against the brick wall, and the white sneaker vanished. So photos and zooms are WebP; line drawings (the step pictures, which the kit compares before/after pixel by pixel) stay 1-bit PNG. On the phone, the kit sends greyscale WebP where the browser can write it (Chrome, Android) and black and white elsewhere (Safari can't write WebP).
+
+### Routes that open in a map app
+
+A walking reply's kit version carries the words, the step's map and the **whole route**: 79 points simplified (Douglas-Peucker, 4 m) to 28, in Google's encoded polyline, 1 SMS. The kit draws it and offers **Open in a map app (GPX)**. Organic Maps and OsmAnd open a GPX file and navigate with no connection, so later steps no longer depend on texts arriving. A real run, Rossio to Castelo de São Jorge (the "ã" would make the plain words UCS-2, so they travel as a `T` code):
+
+```
+#Tue.1/2:LY4xCsJAEEX7nOKXCrJEG…uGoS:8ea1#    ← "Castelo de São Jorge: 0.7 km, about 9 min. Head E on Calçada do Carmo…"
+#Tue.2/2:Tq665CQYuLMi//cnWQCF3…Cw==:7c1b#
+#Mac.1/3:VZG/TsMwEIdfxbr5ItlOm…MXNm:b1ba#    ← the step's map
+#Mac.2/3:yawiNc9rduiMlDuELrSAt…600o:3ca6#
+#Mac.3/3:JTZuEFvbeiduHuk5nSHlc…P34B:79de#
+#G7c.1/1:c04sLknNyVdISVUIPrw4X…AA==:2888#    ← the route: walk-to-Castelo-de-Sao-Jorge.gpx, 28 points
+                                               6 SMS (the plain reply with its text map: 6)
+```
+
+### Words with accents
+
+One character outside the GSM alphabet (á, ã, ç, ê, õ…) makes a whole message UCS-2: 67 characters per SMS instead of 153, and that includes every code in it. Packed as a `T` code, the words stay in the basic alphabet, and deflate shrinks them too. Real answers from the router (Muse answered in the question's language):
+
+```
+> Comment couper l'eau en cas de fuite ?       (Paris)
+Trouver boite compteur rue/trottoir sous plaque 1x2 ft.
+Ouvrir couvercle noir au tournevis, enlever terre/sable.
+Repérer vanne proprio après compteur, côté maison.
+Tourner poignée 1/4 tour en travers tuyau jusqu'à trous alignés.
+Vérifier cadran arrêté, robinet sans eau.
+                                               plain: 5 SMS (UCS-2) · as a T code: 2 SMS
+```
+
+### Also in the kit
+
+- **Signed alerts:** the alert's words, its map (`M`) and a signature (`A`). Changing one word ("Avoid" → "Go to") makes the kit say **NOT genuine**.
+- **Phrasebook:** how-to entries already checked are inside the kit (`sim/pack.json`, the 14 pairs labelled useful), so "How do I shut off the gas at my meter?" sends the steps plus `#Sgw.1/1:MDM=:8ed9#` and the kit shows the valve before and after.
+- **Check-in:** the phone makes an `L` code from its GPS. A real reply: `Check-in received: needs help, 2 people at 40.75310, -73.98220. Keep your phone on; reply with any change.`
+- **Photo from the phone:** the Send tab shrinks a photo to a `P` code (3–14 SMS). The router decodes it and Muse describes it (in one test, Muse named 4 of 6 black-and-white sample photos).
+
+### What it saves (measured)
+
+`evals/kit/measure.py` runs the samples both ways (real runs; one SMS = 140 bytes on the air). Its full report is `evals/kit/RESULTS.md`.
+
+| Reply | Plain SMS (text map) | Kit | Gain in SMS | Kit vs the small picture over data |
+| --- | --- | --- | --- | --- |
+| Alert: NYC fire | 12 SMS = 1.7 KB | 6 SMS = 840 B | 2.0× | 16.6 KB → 840 B (19.8×) |
+| Alert: NYC gas leak | 7 SMS = 980 B | 6 SMS = 840 B | 1.2× | 15.6 KB → 840 B (18.6×) |
+| Alert: Palisades wildfire | 9 SMS = 1.3 KB | 9 SMS = 1.3 KB | 1.0× | 19.2 KB → 1.3 KB (15.3×) |
+| Walk: Rossio → Castelo de São Jorge | 6 SMS = 840 B | 6 SMS = 840 B | 1.0× (+ the whole route as GPX) | 11.1 KB → 840 B (13.2×) |
+| Answer in Portuguese | 3 SMS (UCS-2) | 2 SMS | 1.5× | |
+| Answer in French | 5 SMS (UCS-2) | 2 SMS | 2.5× | |
+| Answer in Spanish | 2 SMS (fits GSM-7) | 2 SMS | 1.0× | |
+
+| Photo | Original | Small picture (400 px) | Kit picture (128 px) | One zoom (a quarter of it) | The same detail without zoom (512 px picture) | Zoom gain |
+| --- | --- | --- | --- | --- | --- | --- |
+| Apple | 37.8 KB | 4.5 KB | 322 B = 4 SMS | 8 SMS | 22 SMS | 2.8× |
+| Bicycle | 114.5 KB | 25.3 KB | 1.4 KB = 14 SMS | 19 SMS | 146 SMS | 7.7× |
+| Dog | 88.6 KB | 17.8 KB | 1.1 KB = 12 SMS | 9 SMS | 87 SMS | 9.7× |
+| Mug | 18.3 KB | 1.7 KB | 284 B = 3 SMS | 3 SMS | 14 SMS | 4.7× |
+| Sneaker | 31.8 KB | 3.3 KB | 386 B = 4 SMS | 6 SMS | 30 SMS | 5.0× |
+| Teapot | 76.1 KB | 14.9 KB | 1.2 KB = 13 SMS | 6 SMS | 80 SMS | 13.3× |
+
+What this means where data is scarce:
+
+- **Against plain SMS:** alerts, the walk and the three answers take 44 SMS plain and 33 with the kit, 1.3× fewer overall. The gain is largest where the plain version is worst: the Manhattan text map (2×) and accented languages (up to 2.5×). The wildfire alert and the walk cost the same but carry more: a real map, a signature, a whole route.
+- **Against pictures over data:** what the kit sends is 13–20× smaller than the small 400 px picture. A photo is 6–18× smaller than its small picture.
+- **Zooming instead of sending more:** seeing a quarter of a photo in detail costs 3–19 SMS, against 14–146 SMS for the whole picture at that resolution (2.8–13.3× less). On a busy photo (the bicycle against a brick wall) one zoom is still 14–19 SMS.
+- **The one-time cost:** the kit page (27.5 KB gzipped) pays for itself after about 200 SMS saved, or 2 small pictures not downloaded. It has to be saved before it is needed.
+
 ## Why the text maps line up
 
 All the maps are drawn from map data, one meaning per character cell, not converted from a photo pixel by pixel:
@@ -1393,6 +1514,7 @@ Open http://127.0.0.1:8765. In the Claude desktop app, `.claude/launch.json` sta
   - **WhatsApp waits** until the whole drawing set is built and checked.
   - **Reply box:** ask about the photo in text ("is this a black widow?").
 - **Ask anything:** the router. Pick where you are (Rome, Lisbon, NYC), type anything or pick an example (including "How do I do CPR?"), optionally attach one of the emergency pictures; the tools Muse called are listed under the box. How-to answers show their before/after pictures as a strip of tiny images in the WhatsApp pane.
+- **The kit:** under each SMS thread, a reply's kit version arrives as a second message, drawn the way the kit draws it, with **open in the kit** for the standalone page (also linked at the top). In the Photo tab, drag a box on the picture or tap a numbered part, then **Send**: the ZOOM request and its answer join the thread, and the zoom is pasted over the picture.
 - **Clear** empties every thread, result and the log.
 
 ## Run it from the command line
@@ -1466,8 +1588,13 @@ python3 main.py --walk "Castelo de São Jorge, Lisbon" --at 38.7139,-9.1406 -v  
 | `evac/segment.py` | Aerial image → terrain masks: SAM 3.1 for water, a colour heuristic for trees and buildings |
 | `evac/llm.py` | Meta Model API client (`chat`, `chat_json`, `chat_tools`); loads `.env`; `reasoning_effort` minimal |
 | `main.py` | Command line: `--ask`, alerts, `--photo`, `--radar`, `--walk` (+ `--from`), `--laptop N` |
-| `sim/server.py` | Simulator server: `/api/message` (router), `/api/alert`, `/api/photo`, `/api/radar`, `/api/directions`, `/api/directions/move` (simulated GPS), `/api/photo/high` and `/api/photo/zoom` (photo detail levels), `/api/find_rain`, sample photos |
+| `sim/server.py` | Simulator server: `/kit.html` and `/kit.js` (the kit, with the phrasebook and public key), `/api/message` (router; also ZOOM and RESEND), `/api/alert`, `/api/photo`, `/api/radar`, `/api/directions`, `/api/directions/move` (simulated GPS), `/api/photo/high` and `/api/photo/zoom` (photo detail levels), `/api/find_rain`, sample photos |
 | `sim/index.html` | The tabs, the four-way result cards, the connection picker |
+| `evac/codes.py` | The kit's codes: envelope, CRC, RESEND; pictures kept for ZOOM; maps, routes (polyline), text, location, phrasebook; Ed25519 signatures (pure Python) |
+| `evac/smsimage.py` | 128 px pictures for codes: greyscale WebP (photos, zooms), 1-bit PNG (line drawings) |
+| `sim/kit.js`, `sim/kit.html` | The offline kit: reads codes (maps, zoomable pictures, GPX routes, text, signatures), writes photo and check-in codes, QR; `/kit.html` is served as one self-contained file |
+| `sim/pack.json` | The kit's phrasebook: checked how-to steps with their before/after pictures |
+| `evals/kit/measure.py` | Every reply plain vs kit, in SMS and bytes → `evals/kit/RESULTS.md` |
 | `CLAUDE.md` | Notes for Claude Code: commands, how the pieces connect, the text-map width rules |
 
 ## Data sources
@@ -1487,6 +1614,7 @@ Roads, paths and towns © OpenStreetMap contributors (via Overpass); geocoding b
 - Walking updates need the phone to send its position. The simulator moves "you" along the route or onto a nearby street off it; a real deployment needs the person to share their location, or reply with it. The wrong-turn button sometimes picks a street behind you.
 - Trees and buildings in the aerial terrain come from a colour heuristic (only water comes from SAM). Walking maps don't use terrain at all, so they make no SAM call per step.
 - SMS replies are long: 6 to 12 parts.
+- The kit has to be saved before it is needed, and pasting a message into a page is a step a person in trouble may not know to take. Kit replies are not shorter in every case (the wildfire alert and the walk cost the same SMS; they carry more). A photo with tones costs 3–14 SMS, and a zoom on a busy photo up to 19 more. Picture ids are 2 characters (1,296 values), so an old picture can be replaced by a new one with the same id and a late ZOOM would crop the wrong photo. GPX opening was checked as valid GPX 1.1, not yet in Organic Maps or OsmAnd on a phone. Phrasebook entries are in English.
 - The emergency picture features are experimental:
   - **Few pictures:** only steps that change an object get pictures (actions on a person get words only), and the "could it be" check is lenient.
   - **Noisy check:** the "understood" check withholds about half the WhatsApp drawings and isn't consistent between runs.

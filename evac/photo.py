@@ -11,6 +11,7 @@ import gzip
 import io
 import math
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 from PIL import Image, ImageFilter, ImageOps
@@ -187,6 +188,30 @@ def edges(L, cell_aspect):
             e = (math.degrees(math.atan2(gy * cell_aspect, gx)) + 90) % 180  # the border runs across the gradient
             out[r][c] = "─" if e < 22.5 or e >= 157.5 else "╲" if e < 67.5 else "│" if e < 112.5 else "╱"
     return out
+
+
+def part_boxes(img, things, limit=5):
+    """[(name, (x0, y0, x1, y1))] for the things SAM 3.1 finds in the photo (its biggest confident match each), so the
+    kit can number them and a tap asks for a closer look. Empty without SAM."""
+    if not things or not sam.available():
+        return []
+    work = img.copy()
+    work.thumbnail((1024, 1024))
+    k = img.width / work.width
+
+    def one(name):
+        try:
+            found = sam.segment(work, name)
+        except Exception:
+            return None
+        ok = [f for f in found if f["score"] >= 0.8 * found[0]["score"]] if found else []
+        if not ok:
+            return None
+        b = max(ok, key=lambda f: (f["box"][2] - f["box"][0]) * (f["box"][3] - f["box"][1]))["box"]
+        return name, tuple(int(v * k) for v in b)
+
+    with ThreadPoolExecutor(limit) as pool:
+        return [x for x in pool.map(one, things[:limit]) if x]
 
 
 def sms_shape_useful(rows, mask, name):

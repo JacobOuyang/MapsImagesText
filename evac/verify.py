@@ -108,3 +108,32 @@ def could_be(instruction, image=None, frames=None):
         return bool(d.get("could_be")), str(d.get("why") or "")
     except Exception as ex:
         return False, "check failed: %s" % type(ex).__name__
+
+
+PICTURE = ("These two small black-and-white pictures (before on the left, after on the right) are meant to show a step: "
+           "the %s goes from %s to %s. Answer three questions about them, strictly:\n"
+           "1. recognisable: without being told, could you tell what the object is?\n"
+           "2. universal: does this kind of object look about the same and work the same way on most makes and models "
+           "(a pipe valve handle, a breaker toggle, a plug, and standardised safety devices such as a fire extinguisher, "
+           "an epinephrine pen or an AED: yes; a stove knob, a car's controls, an appliance panel: no)?\n"
+           "3. clear: is the change from before to after visible at a glance?\n"
+           'Reply as JSON: {"recognisable": true or false, "universal": true or false, "clear": true or false, '
+           '"why": "a few words"}')
+
+
+def picture_checks(pair, item, before, after):
+    """The checks learned from people labelling 19 step pictures (they rejected stove knobs and car controls:
+    "off position isn't universal", "different cars, different mechanisms"; and objects they couldn't name).
+    -> {"recognisable", "universal", "clear", "ok", "why"}. Run on the checker model."""
+    try:
+        d = llm.chat_json([{"role": "user", "content": [{"type": "text", "text": PICTURE % (item, before, after)},
+                                                        {"type": "image_url", "image_url": {"url": image_url(pair)}}]}],
+                          max_tokens=1200, model=MODEL)
+    except Exception as ex:
+        return {"recognisable": False, "universal": False, "clear": False, "ok": False, "why": "check failed: %s" % type(ex).__name__}
+    out = {k: bool(d.get(k)) for k in ("recognisable", "universal", "clear")}
+    # "recognisable" is reported but not required: at 128 px it rejected a breaker, a toilet valve and an EpiPen that
+    # people found useful. "universal" matched them (stove knobs, car controls rejected) and "clear" caught no-change.
+    out["ok"] = out["universal"] and out["clear"]
+    out["why"] = str(d.get("why") or "")
+    return out

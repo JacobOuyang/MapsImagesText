@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Low-Data Kit</title>
+<style>
+  :root { --bg:#fff; --fg:#111; --quiet:#666; --line:#ccc; --card:#f6f6f4; --accent:#1971c2; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#111; --fg:#eee; --quiet:#999; --line:#444; --card:#1c1c1e; --accent:#74c0fc; } }
+  :root[data-theme="dark"] { --bg:#111; --fg:#eee; --quiet:#999; --line:#444; --card:#1c1c1e; --accent:#74c0fc; }
+  body { margin:0; padding:16px; background:var(--bg); color:var(--fg); font:16px system-ui, sans-serif; max-width:640px; }
+  h1 { font-size:20px; margin:0 0 4px; } .quiet { color:var(--quiet); font-size:14px; }
+  .tabs button { font:inherit; padding:8px 14px; border:1px solid var(--line); background:var(--card); color:var(--fg); border-radius:999px; margin:10px 6px 10px 0; }
+  .tabs button.on { background:var(--accent); color:#fff; border-color:var(--accent); }
+  textarea { width:100%; box-sizing:border-box; height:110px; font:12px Menlo, monospace; border:1px solid var(--line); border-radius:8px; padding:8px; background:var(--bg); color:var(--fg); }
+  section { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; margin:10px 0; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0; } .row button, .row select { font:inherit; padding:6px 12px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--fg); }
+  pre.code { white-space:pre-wrap; word-break:break-all; font:11px Menlo, monospace; background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:6px; }
+  [hidden] { display:none !important; }
+</style>
+</head>
+<body>
+<h1>Low-Data Kit</h1>
+<p class="quiet">Save this page on your phone before you need it. It works with no connection: it turns the codes in
+text messages into pictures and maps, checks that alerts are genuine, and makes codes to send a photo or your location
+by plain SMS. Draw a box on a picture (or tap a numbered part) to ask for a closer look; a route opens in an offline
+map app.</p>
+<div class="tabs"><button id="tRead" class="on">Read a message</button><button id="tSend">Send</button></div>
+
+<div id="read">
+  <textarea id="msg" placeholder="Paste the whole message here (parts can come in any order)" aria-label="Message"></textarea>
+  <div class="row"><button id="qrMsg">Show as QR for another phone</button><span class="quiet" id="readNote"></span></div>
+  <div id="out"></div>
+  <div id="qrOut"></div>
+</div>
+
+<div id="send" hidden>
+  <section>
+    <b>Send a photo by SMS</b>
+    <p class="quiet">Shrunk to 128 pixels (usually 3–12 SMS). The service describes it and answers questions about it.</p>
+    <div class="row"><input type="file" id="photo" accept="image/*" capture="environment" aria-label="Photo">
+      <select id="look" aria-label="Picture"><option value="grey">Greyscale (best for photos)</option><option value="bw">Black and white</option><option value="dots">Black and white, shades as dots (about 3× the SMS)</option></select></div>
+    <div id="photoOut"></div>
+  </section>
+  <section>
+    <b>Check in with your location</b>
+    <div class="row">
+      <select id="status" aria-label="Status"><option value="ok">I'm safe</option><option value="help">I need help</option><option value="hurt">Someone is hurt</option></select>
+      <label>People <input id="people" type="number" min="1" value="1" style="width:56px" aria-label="People"></label>
+    </div>
+    <div class="row"><input id="checkNote" placeholder="Short note (optional)" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg)" aria-label="Note"><button id="locate">Make check-in code</button></div>
+    <div id="locOut"></div>
+  </section>
+</div>
+
+<script>/*KIT_JS*/</script>
+<script>
+const $ = id => document.getElementById(id);
+const tab = r => { $('read').hidden = !r; $('send').hidden = r; $('tRead').classList.toggle('on', r); $('tSend').classList.toggle('on', !r); };
+$('tRead').onclick = () => tab(true); $('tSend').onclick = () => tab(false);
+const store = {get: () => { try { return localStorage.getItem('kitSeen'); } catch (e) { return null; } },
+               set: v => { try { localStorage.setItem('kitSeen', v); } catch (e) {} }};
+const ready = KIT.restore(store.get()).catch(() => {});  // pictures from earlier messages, so a zoom finds its picture
+async function read() {
+  await ready;
+  const r = await KIT.show($('msg').value, $('out'));
+  store.set(KIT.dump());
+  $('readNote').textContent = r.count ? r.count + ' code' + (r.count > 1 ? 's' : '') + ' read' : ($('msg').value.trim() ? 'No complete code yet.' : '');
+}
+$('msg').addEventListener('input', read);
+$('qrMsg').onclick = () => {  // pass what you received to a phone without signal: it scans this with its camera
+  const out = $('qrOut'); out.innerHTML = '';
+  const codes = $('msg').value.match(/#[PZKMGTLSA][0-9a-z]{2}\.\d+\/\d+:[A-Za-z0-9+/=]*:[0-9a-f]{4}#/g) || [];
+  const text = KIT.plain($('msg').value) + (codes.length ? '\n' + codes.join('\n') : '');
+  const c = KIT.qrCanvas(text, 3);
+  out.appendChild(c || Object.assign(document.createElement('p'), {textContent: 'Too long for one QR code: show the codes one at a time.'}));
+};
+function codeBox(parts, out) {
+  const text = parts.join('\n'), pre = Object.assign(document.createElement('pre'), {className: 'code', textContent: text});
+  const row = document.createElement('div'); row.className = 'row';
+  const copy = Object.assign(document.createElement('button'), {textContent: 'Copy (' + parts.length + ' SMS)'});
+  copy.onclick = () => navigator.clipboard && navigator.clipboard.writeText(text);
+  const qrb = Object.assign(document.createElement('button'), {textContent: 'Show as QR'});
+  qrb.onclick = () => { const c = KIT.qrCanvas(text, 3); if (c) out.appendChild(c); };
+  row.append(copy, qrb); out.append(pre, row);
+}
+$('photo').onchange = $('look').onchange = async () => {
+  const f = $('photo').files[0]; if (!f) return; const out = $('photoOut'); out.innerHTML = '';
+  const grey = $('look').value === 'grey' && await KIT.photoWebp(f);
+  if ($('look').value === 'grey' && !grey) out.appendChild(Object.assign(document.createElement('div'), {className: 'quiet', textContent: "This browser can't make greyscale pictures; using black and white."}));
+  const {bytes} = grey || await KIT.photoBits(f, 128, $('look').value === 'dots'); const parts = KIT.encode('P', bytes);
+  const im = document.createElement('img'); im.src = 'data:' + (grey ? 'image/webp' : 'image/png') + ';base64,' + KIT.bytesb64(bytes); im.style.cssText = 'width:160px;image-rendering:pixelated;background:#fff';
+  out.appendChild(im); out.appendChild(Object.assign(document.createElement('div'), {className: 'quiet', textContent: bytes.length + ' bytes'}));
+  codeBox(parts, out);
+};
+$('locate').onclick = () => {
+  const out = $('locOut'); out.textContent = 'Getting GPS…';
+  const make = (la, lo, ac) => { out.innerHTML = '';
+    const o = {la: +la.toFixed(5), lo: +lo.toFixed(5), ac: Math.round(ac || 0), st: $('status').value, p: +$('people').value || 1, t: Math.round(Date.now() / 1000)};
+    if ($('checkNote').value) o.n = $('checkNote').value.slice(0, 60);
+    if (navigator.getBattery) navigator.getBattery().then(b => { o.b = Math.round(b.level * 100); codeBox(KIT.encode('L', KIT.locationBytes(o)), out); });
+    else codeBox(KIT.encode('L', KIT.locationBytes(o)), out); };
+  if (!navigator.geolocation) { out.textContent = 'No GPS on this device.'; return; }
+  navigator.geolocation.getCurrentPosition(p => make(p.coords.latitude, p.coords.longitude, p.coords.accuracy),
+    e => { out.textContent = 'GPS not available (' + e.message + ').'; }, {enableHighAccuracy: true, timeout: 20000});
+};
+const q = new URLSearchParams(location.hash.slice(1)).get('m'); if (q) { $('msg').value = q; read(); }
+</script>
+</body>
+</html>

@@ -28,19 +28,13 @@ from PIL import Image, ImageOps
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(ROOT))
 
-from evac import directions, photo, pipeline, radar, router, tonal  # noqa: E402
+from evac import codes, howto, directions, photo, pipeline, radar, router, tonal  # noqa: E402
 
 PORT = int(os.environ.get("PORT", 8765))
 WHATSAPP_COLS = 58  # widest monospace map that fits the simulated WhatsApp Desktop bubble (65% of the chat pane) unwrapped
 
 
-def sms_parts(text):
-    """Parts an SMS of this text takes: GSM-7 (160/153) if it fits that alphabet, else UCS-2 (70/67)."""
-    gsm = set("@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà")
-    if all(ch in gsm for ch in text):
-        return 1 if len(text) <= 160 else -(-len(text) // 153)
-    units = len(text.encode("utf-16-le")) // 2
-    return 1 if units <= 70 else -(-units // 67)
+sms_parts = codes.sms_parts
 
 
 TRIPS = {}  # trip id -> directions.Trip, for the simulated walk
@@ -57,6 +51,8 @@ OBJECT_DIR = "/Library/User Pictures"
 OBJECTS = ["Fun/Fortune Cookie", "Fun/Gingerbread Man", "Animals/Penguin", "Animals/Owl", "Animals/Parrot",
            "Instruments/Guitar", "Instruments/Violin", "Flowers/Sunflower", "Flowers/Red Rose", "Nature/Leaf"]
 CONVERTED = os.path.join(ROOT, "..", "cache", "samples")
+EVAL_DIR = os.path.join(ROOT, "..", "out", "eval")
+LABELS = os.path.join(EVAL_DIR, "labels.json")
 GENERATED = os.path.join(ROOT, "samples")  # one object each, made with Muse Image (muse-image-1.0)
 
 
@@ -124,6 +120,31 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             return self.wfile.write(data)
+        if self.path.split("?")[0] in ("/kit.js", "/kit.html"):  # the offline kit, with its phrasebook and the issuer's key
+            js = "var KIT_PUBKEY = %s;\nvar KIT_PACK = %s;\n" % (json.dumps(codes.public_key()), json.dumps(codes.pack())) + \
+                open(os.path.join(ROOT, "kit.js")).read()
+            if self.path.startswith("/kit.html"):  # one self-contained file a person can save and use offline
+                body, kind = open(os.path.join(ROOT, "kit.html")).read().replace("/*KIT_JS*/", js), "text/html; charset=utf-8"
+            else:
+                body, kind = js, "application/javascript; charset=utf-8"
+            data = body.encode()
+            self.send_response(200)
+            self.send_header("Content-Type", kind)
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            return self.wfile.write(data)
+        if self.path == "/api/labels":  # labels people gave step pictures (evals/emergency/label_set.py)
+            return self.send_json(json.load(open(LABELS)) if os.path.exists(LABELS) else {})
+        if self.path.startswith("/eval/") and ".." not in self.path:  # eval pages, so the label page can save labels here
+            path = os.path.join(EVAL_DIR, unquote(self.path[len("/eval/"):].split("?")[0]))
+            if not os.path.isfile(path):
+                return self.send_error(404)
+            data = open(path, "rb").read()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8" if path.endswith(".html") else "application/octet-stream")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            return self.wfile.write(data)
         if self.path == "/api/find_rain":
             t = time.time()
             lat, lon = radar.find_rain()
@@ -140,6 +161,9 @@ class Handler(SimpleHTTPRequestHandler):
                        "text": res.get("text"), "laptop": res.get("laptop"), "image": res.get("image"),
                        "small": res.get("small")}
                 out["parts"] = sms_parts(out["message"]) if out.get("message") else 0
+                if res.get("scene") is not None:  # the same alert for a phone with the kit: words, map code, signature
+                    out["kit"] = router.kit_alert(res)
+                    out["kit_parts"] = sms_parts(out["kit"])
             elif self.path == "/api/message":
                 img = base64.b64decode(body["image"].split(",", 1)[-1]) if body.get("image") else None
                 if body.get("photo_id") in PHOTOS:  # a question about a photo sent earlier in the Photo tab
@@ -156,7 +180,12 @@ class Handler(SimpleHTTPRequestHandler):
                     return self.send_json({"error": "That file isn't a picture that can be read.", "log": []}, t)
                 out = photo.run(data)
                 out["parts"] = sms_parts(out["sms"])
-                out["photo_id"] = remember_photo(ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB"))
+                full = ImageOps.exif_transpose(Image.open(io.BytesIO(data))).convert("RGB")
+                out["photo_id"] = remember_photo(full)
+                # For a phone with the kit: the description and a 128 px picture with its named parts; a tap on a part
+                # (or a box drawn on the picture) asks the server for a closer look, cropped from this full-size photo.
+                out["kit"] = router.kit_message(out["text"], codes.picture(full, parts=photo.part_boxes(full, out.get("things") or [])))
+                out["kit_parts"] = sms_parts(out["kit"])
             elif self.path in ("/api/photo/high", "/api/photo/zoom"):
                 # High detail: the whole scene in tones. Zoom: the same for one numbered part, on its own crop of the
                 # full-size photo; every result is kept, so a zoom can be zoomed again.
@@ -176,12 +205,20 @@ class Handler(SimpleHTTPRequestHandler):
                 out = {"mono": mono, "mono_bytes": len(mono.encode()), "mono_gzip": len(gzip.compress(mono.encode())),
                        "key": r["key"], "seen": r["seen"], "recognised": r["recognised"], "regions": r["regions"],
                        "photo_id": pid}
+            elif self.path == "/api/labels":  # {key, who, useful, note}: one label for one before/after pair
+                labels = json.load(open(LABELS)) if os.path.exists(LABELS) else {}
+                labels.setdefault(body["key"], {})[body["who"]] = {"useful": bool(body["useful"]), "note": body.get("note", "")}
+                json.dump(labels, open(LABELS, "w"), indent=1)
+                out = {"ok": True, "count": len(labels)}
+            elif self.path == "/api/pictures":  # pictures for a how-to answer, made after its words were sent
+                p = howto.pictures(body["job"])
+                out = dict(router.steps_pictures(p["frames"]), done=p["done"], error=p.get("error"))
             elif self.path == "/api/radar":
                 out = radar.run((float(body["lat"]), float(body["lon"])))
                 out["parts"] = sms_parts(out["sms"])
             elif self.path == "/api/directions":
                 out = directions.run((float(body["lat"]), float(body["lon"])), body["to"], start=body.get("from") or None)
-                out.pop("scene", None)  # the page gets the rendered versions, not the Scene object
+                scene = out.pop("scene", None)  # the page gets the rendered versions, not the Scene object
                 trip = out.pop("trip", None)
                 if trip:
                     out["trip"] = "%x" % id(trip)
@@ -189,6 +226,10 @@ class Handler(SimpleHTTPRequestHandler):
                     out["you"] = trip.you
                 if "sms" in out:
                     out["parts"] = sms_parts(out["sms"])
+                if trip and trip.route and scene is not None:  # the kit version: words, map and the route as GPX
+                    out["kit"] = router.kit_message(out.get("text") or "", codes.map_scene(scene) +
+                                                    codes.route([p for p in [trip.you] if p] + trip.route, trip.name))
+                    out["kit_parts"] = sms_parts(out["kit"])
             elif self.path == "/api/directions/move":
                 # Simulated GPS: walk along the route, or take a wrong turn, then send the update.
                 trip = TRIPS[body["trip"]]

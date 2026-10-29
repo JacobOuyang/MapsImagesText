@@ -10,12 +10,15 @@
 Without a model key, a few keyword rules pick the tool instead.
 """
 import gzip
+import io
 import json
 import re
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from . import llm, photo, render, tools, zooms
+from PIL import Image
+
+from . import codes, llm, photo, render, tools, zooms
 
 MAX_ROUNDS = 3
 ONCE = {"show_steps", "photo_details", "describe_photo", "emergency_reply", "rain_radar"}  # slow: never twice per request
@@ -50,11 +53,78 @@ def handle(message, you, image=None):
         ok = False
     if not ok:  # tools would geocode and route from an impossible point
         return _quick("Your location looks wrong (%s). Check the phone's GPS, or name the place you are in." % (you,))
+    again = codes.resend(message)  # "RESEND 7k 3": the kit asks for parts that were lost or damaged
+    if again is not None:
+        return _quick(codes.text(again) if again else "Nothing to resend: that message is no longer kept.")
+    closer = codes.zoom(message)  # "ZOOM 3f 2": a closer look at part of a picture sent earlier, from its original
+    if closer is not None:
+        out = _quick(closer[0] + ("\n" + codes.text(closer[1]) if closer[1] else ""))
+        out["kit"] = out["text"]
+        return out
+    found, log = codes.decode(message), []
+    for c in found["complete"]:  # codes the kit made on the phone: a photo, or a check-in with GPS
+        if c["kind"] == "P" and image is None:  # a PNG or WebP; the model calls send JPEG
+            buf = io.BytesIO()
+            Image.open(io.BytesIO(c["data"])).convert("RGB").save(buf, "JPEG", quality=95)
+            image = buf.getvalue()
+            log.append("a photo came in as a code (%d bytes)" % len(c["data"]))
+        elif c["kind"] == "L":
+            loc = codes.read_location(c["data"])
+            if loc:
+                lat, lon = loc["lat"], loc["lon"]
+                log.append("check-in: %(status)s, %(people)s people at %(lat).5f, %(lon).5f (±%(accuracy_m)s m)" % loc)
+                if not codes.plain(message):  # a check-in alone: acknowledge it (a real service would alert responders)
+                    out = _quick("Check-in received: %s, %s %s at %.5f, %.5f. Keep your phone on; reply with any change."
+                                 % ({"ok": "safe", "help": "needs help", "hurt": "someone hurt"}.get(loc["status"], loc["status"]),
+                                    loc["people"] or 1, "person" if (loc["people"] or 1) == 1 else "people", lat, lon))
+                    out.update(log=log, checkin=loc)
+                    return out
+    if found["missing"]:
+        log.append("incomplete codes: %s" % found["missing"])
+    message = codes.plain(message) or ("What is in this photo?" if image else message)
     ctx = tools.Context(you=(lat, lon), image=image)
+    ctx.log.extend(log)
     calls, text = _run_model(ctx, message) if llm.available() else _run_rules(ctx, message)
     out = _versions(ctx, text)
+    out["kit"] = _kit(ctx, out)
     out.update({"tools": calls, "log": ctx.log, "seconds": round(time.time() - t, 1)})
     return out
+
+
+def kit_message(text, parts=(), signed=False):
+    """A message for a phone with the kit: the words (or, if they need UCS-2, a T code, so the codes beside them
+    stay in the basic alphabet), the codes, and optionally a signature over all of it."""
+    words, packed = codes.words(text or "")
+    body = "\n".join(x for x in [words, codes.text(list(packed) + list(parts))] if x)
+    return body + ("\n" + codes.text(codes.sign(body)) if signed else "")
+
+
+def kit_alert(r):
+    """The kit version of an emergency reply: the alert's words, its map and a signature over the words."""
+    words = r.get("text") or r["message"].split("\n\n")[0]
+    return kit_message(words, codes.map_scene(r["scene"]) if r.get("scene") else [], signed=True)
+
+
+def _kit(ctx, out):
+    """What a phone with the kit gets (as plain SMS): the same words plus codes the kit draws. None if it would add
+    nothing (no codes, and the words already fit the basic alphabet)."""
+    s = ctx.store
+    try:
+        if "emergency_reply" in s:
+            return kit_alert(s["emergency_reply"])
+        if "walking_route" in s:
+            w = s["walking_route"]
+            trip = w.get("trip")
+            route = codes.route([p for p in [trip.you] if p] + trip.route, trip.name) if trip and trip.route else []
+            return kit_message(out.get("text") or "", codes.map_scene(w["scene"]) + route)
+        if "show_steps" in s and s["show_steps"].get("pack"):
+            return kit_message(out.get("text") or s["show_steps"]["text"], codes.phrase(s["show_steps"]["pack"]))
+        text = out.get("text") or ""
+        if text and codes.sms_parts(kit_message(text)) < codes.sms_parts(text):
+            return kit_message(text)
+    except Exception as ex:  # the plain reply never depends on the codes
+        ctx.log.append("kit codes failed: %s" % ex)
+    return None
 
 
 def _run_model(ctx, message):
@@ -145,23 +215,39 @@ def _versions(ctx, text):
     return out
 
 
+def steps_pictures(pics):
+    """Checked before/after pictures as a message: {"images", "frames" (text, only if they passed), "sms", "mono"}."""
+    frames, sms_art, images, kit_codes = [], "", [], []
+    for f in pics:
+        for label, fr in zip(("before", "after"), f["frames"]):
+            images.append(dict(fr["small"], caption="Step %d, %s" % (f["n"], label)))
+            if fr.get("kit"):
+                kit_codes.append("Step %d, %s:\n%s" % (f["n"], label, fr["kit"]))
+            if f.get("text_ok"):
+                frames.append("Step %d (%s): %s\n%s" % (f["n"], label, f["step"], "\n".join(fr["mono"])))
+                sms_art += "\n\nStep %d, %s:\n%s" % (f["n"], label, "\n".join(fr["sms"]))
+    sms_pics = ("Pictures for the kit:\n" + "\n".join(kit_codes)) if kit_codes else ""
+    return {"images": images, "frames": frames, "sms": sms_art.strip(), "mono": "\n\n".join(frames),
+            "sms_pictures": sms_pics, "sms_pictures_parts": sum(t.count("#P") for t in kit_codes)}
+
+
 def _followups(ctx):
     """Messages sent after the reply: a step-by-step flip-book and close-ups of details, each in every version.
     {"kind", "title", "text" (SMS words), "sms", "mono", "frames" (WhatsApp frames, played in place)}."""
     s, out = ctx.store, []
-    if "show_steps" in s:  # the cited words always; checked before/after pictures as tiny images; text frames if they passed
+    if "show_steps" in s:  # the cited words now; pictures, if any, follow (r["job"]: poll steps_pictures)
         r = s["show_steps"]
-        pics = r.get("frames") or []
-        frames, sms_art, images = [], "", []
-        for f in pics:
-            for label, fr in zip(("before", "after"), f["frames"]):
-                images.append(dict(fr["small"], caption="Step %d, %s" % (f["n"], label)))
-                if f.get("text_ok"):
-                    frames.append("Step %d (%s): %s\n%s" % (f["n"], label, f["step"], "\n".join(fr["mono"])))
-                    sms_art += "\n\nStep %d, %s:\n%s" % (f["n"], label, "\n".join(fr["sms"]))
-        out.append({"kind": "steps", "title": r["title"], "text": r["text"], "sms": r["text"] + sms_art,
-                    "mono": r["text"] + ("\n\n" + frames[0] if frames else ""), "frames": frames, "images": images,
-                    "mono_bytes": len(r["text"].encode())})
+        f = dict(kind="steps", title=r["title"], text=r["text"], sms=r["text"], mono=r["text"], frames=[], images=[],
+                 mono_bytes=len(r["text"].encode()), job=r.get("job"))
+        if r.get("pack"):  # a checked picture already in the kit: only its id travels
+            e = r["pack"]
+            f["images"] = [{"data_url": "data:image/png;base64," + e[k], "bytes": len(e[k]) * 3 // 4,
+                            "caption": "from your kit, %s" % k} for k in ("before", "after")]
+            f["pack"] = e["id"]
+        if r.get("frames"):  # made in the same request (not in the background)
+            f.update(steps_pictures(r["frames"]))
+            f["sms"], f["mono"] = r["text"] + f["sms"], r["text"] + f["mono"]
+        out.append(f)
     for z in (s.get("photo_details") or {}).get("close_ups", []):  # on WhatsApp they are part of the complete picture
         out.append({"kind": "close_up", "title": z["name"], "text": "ZOOM: %s\n%s" % (z["name"], z["look"]), "sms": z["sms"],
                     "mono": None, "sms_only": True})

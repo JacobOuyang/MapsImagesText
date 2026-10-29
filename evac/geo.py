@@ -25,6 +25,17 @@ def compass(a, b):
 
 def geocode(query, near=None):
     """Place name -> (lat, lon) via OSM Nominatim. `near` biases results to a ~50km box."""
+    p = place(query, near)
+    return p[:2] if p else None
+
+
+BUSINESS = {"tourism", "amenity", "shop", "office", "craft", "leisure"}
+
+
+def place(query, near=None):
+    """Place name -> (lat, lon, what was matched) via OSM Nominatim. The label says what the name matched when it
+    isn't the same name ("Atlantis" matched "Atlantis Inn Roma (hotel, Via Muzio Clementi)"), so a reply never
+    passes off a different or fictional place as the one asked for; None when it is."""
     params = {"q": query, "format": "json", "limit": 1}
     if near:
         d = 0.5
@@ -34,7 +45,17 @@ def geocode(query, near=None):
     hits = r.json()
     if not hits:
         return None
-    return float(hits[0]["lat"]), float(hits[0]["lon"])
+    h = hits[0]
+    parts = [x.strip() for x in (h.get("display_name") or "").split(",")]
+    name, asked = (parts[0] if parts else ""), query.split(",")[0].strip()
+    label = None
+    if name and name.lower() != asked.lower():
+        label = name  # a landmark's local name helps with signs ("Colosseo")
+        if h.get("class") in BUSINESS:  # a business may not be what was meant: say what and where
+            kind = (h.get("type") or "").replace("_", " ")
+            street = next((x for x in parts[1:4] if not x[:1].isdigit()), "")
+            label = "%s (%s)" % (name, ", ".join(x for x in (kind, street) if x))
+    return float(h["lat"]), float(h["lon"]), label
 
 
 # The emergency number by country (ISO code); 112 works across the EU and on most GSM phones elsewhere.

@@ -214,7 +214,7 @@ def photo_details(ctx, question=None):
       task=("string", "The action, e.g. 'CPR on an adult' or 'shut off the gas at the meter'", True))
 def show_steps(ctx, task):
     from . import howto
-    res = howto.answer(task, you=ctx.you)
+    res = howto.answer(task, you=ctx.you, background=True)  # the words go now; pictures follow
     if "error" in res:
         return {"error": res["error"]}
     ctx.store["show_steps"] = res

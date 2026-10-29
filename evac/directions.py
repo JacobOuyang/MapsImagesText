@@ -44,9 +44,12 @@ class Trip:
 
 def plan(origin, destination, log, sms_cols=40, mono_cols=58):
     """Geocode, download the streets once, build the routing grids. Returns a Trip or {"error"}."""
-    dest = geo.geocode(destination, near=origin)
-    if not dest:
+    found = geo.place(destination, near=origin)
+    if not found:
         return {"error": "Couldn't find %r." % destination}
+    dest, matched = found[:2], found[2]
+    if matched:
+        log.append("%r matched %s" % (destination, matched))
     d = geo.haversine_m(origin, dest)
     log.append("destination %r at %s, %d m away" % (destination, dest, d))
     if d > MAX_WALK_M:
@@ -67,7 +70,7 @@ def plan(origin, destination, log, sms_cols=40, mono_cols=58):
     for gr in (g, gi):
         gr.terrain[:] = grid.BUILDING  # walk along streets and paths, not through blocks
         gr.add_roads(roads)
-    return Trip(destination.split(",")[0].strip(), dest, roads, g, gi, origin, sms_cols=sms_cols, mono_cols=mono_cols,
+    return Trip(matched or destination.split(",")[0].strip(), dest, roads, g, gi, origin, sms_cols=sms_cols, mono_cols=mono_cols,
                 landmarks=landmarks)
 
 
