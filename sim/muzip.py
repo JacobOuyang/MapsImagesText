@@ -1,6 +1,6 @@
-"""muzip: a small Mac app that sends from your WhatsApp to the Muse number and does the kit's work on this computer.
+"""MuZip: a small Mac app that sends from your WhatsApp to the Muse number and does the kit's work on this computer.
 
-    .venv/bin/python sim/muzip.py          # http://127.0.0.1:8780 (or double-click muzip.app: sim/make_muzip_app.sh)
+    .venv/bin/python sim/muzip.py          # http://127.0.0.1:8780 (or double-click MuZip.app: sim/make_muzip_app.sh)
 
 Drop a photo and ask a question. The kit turns the photo into a 128 px grey code (about 10 texts) and sends it with the
 question from your WhatsApp; the original stays here. When Muse asks for a closer look, the kit crops that part of the

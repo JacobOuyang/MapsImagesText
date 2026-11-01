@@ -345,12 +345,12 @@ Muse           Yes, this is a black widow. The red hourglass mark on its black b
                Do not touch it and keep people and pets away.
 ```
 
-**muzip, the app for a demo.** On a Mac with WhatsApp Desktop: `bash sim/make_muzip_app.sh`, then double-click
-`out/muzip.app`. It starts the bridge and opens its page. Drop a photo, type a question and press Send. muzip turns the
+**MuZip, the app for a demo.** On a Mac with WhatsApp Desktop: `bash sim/make_muzip_app.sh`, then double-click
+`out/MuZip.app`. It starts the bridge and opens its page. Drop a photo, type a question and press Send. MuZip turns the
 photo into the 128 px code, sends it from your WhatsApp, answers each closer look Muse asks for by cropping the
 original, and shows the conversation, the original with every crop outlined, and what Muse saw. The photo never
 leaves the computer. To send from your account it brings WhatsApp forward for about a second to press Return, and
-needs Accessibility permission (System Settings > Privacy & Security > Accessibility > + > muzip). Its "simulated"
+needs Accessibility permission (System Settings > Privacy & Security > Accessibility > + > MuZip). Its "simulated"
 switch sends straight to the bridge instead; Muse's replies still arrive in your WhatsApp.
 
 **Testing without a phone in hand:** `sim/wa_phone.py` is a test phone. It sends messages to the bridge as your
