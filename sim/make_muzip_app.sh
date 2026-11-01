@@ -35,4 +35,7 @@ open "http://127.0.0.1:8780"
 while up 8780; do sleep 5; done
 EOF
 chmod +x "$APP/Contents/MacOS/muzip"
-echo "Built $APP"
+# Sign it locally (ad hoc): macOS keeps an Accessibility grant against an app's signature, and an unsigned app made of
+# scripts gives it nothing stable to keep, so the switch in System Settings doesn't take.
+codesign --force --sign - "$APP"
+echo "Built $APP (after rebuilding, remove muzip from Accessibility and add it again)"
