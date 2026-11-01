@@ -1,9 +1,18 @@
 """Geocoding, user location, and distance helpers."""
+import hashlib
+import json
 import math
+import os
+import threading
+import time
 
 import requests
 
 UA = {"User-Agent": "evac-ascii-prototype/0.1"}
+CACHE_DIR = os.path.join(os.path.dirname(__file__), "..", "cache", "geo")
+_nominatim = threading.Lock()  # Nominatim's policy: at most one request a second (an alert to many people once got 429s)
+_last = [0.0]
+KNOWN = {}  # name -> (lat, lon): places the service already knows (a hub knows its own address), checked first
 EARTH_R = 6371000.0
 
 
@@ -36,13 +45,14 @@ def place(query, near=None):
     """Place name -> (lat, lon, what was matched) via OSM Nominatim. The label says what the name matched when it
     isn't the same name ("Atlantis" matched "Atlantis Inn Roma (hotel, Via Muzio Clementi)"), so a reply never
     passes off a different or fictional place as the one asked for; None when it is."""
+    known = KNOWN.get(query.split(",")[0].strip().lower())
+    if known:
+        return known[0], known[1], None
     params = {"q": query, "format": "json", "limit": 1}
     if near:
         d = 0.5
         params["viewbox"] = "%f,%f,%f,%f" % (near[1] - d, near[0] + d, near[1] + d, near[0] - d)
-    r = requests.get("https://nominatim.openstreetmap.org/search", params=params, headers=UA, timeout=20)
-    r.raise_for_status()
-    hits = r.json()
+    hits = _search(params)
     if not hits:
         return None
     h = hits[0]
@@ -56,6 +66,24 @@ def place(query, near=None):
             street = next((x for x in parts[1:4] if not x[:1].isdigit()), "")
             label = "%s (%s)" % (name, ", ".join(x for x in (kind, street) if x))
     return float(h["lat"]), float(h["lon"]), label
+
+
+def _search(params):
+    """Nominatim search, cached on disk (misses too) and spaced a second apart."""
+    path = os.path.join(CACHE_DIR, hashlib.md5(json.dumps(params, sort_keys=True).encode()).hexdigest() + ".json")
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    with _nominatim:
+        time.sleep(max(0.0, 1.0 - (time.time() - _last[0])))
+        r = requests.get("https://nominatim.openstreetmap.org/search", params=params, headers=UA, timeout=20)
+        _last[0] = time.time()
+    r.raise_for_status()
+    hits = r.json()
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    with open(path, "w") as f:
+        json.dump(hits, f)
+    return hits
 
 
 # The emergency number by country (ISO code); 112 works across the EU and on most GSM phones elsewhere.

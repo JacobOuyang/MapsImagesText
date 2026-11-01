@@ -1,3 +1,17 @@
+# Evals
+
+Every script, what it answers and where its results go:
+
+| Script | Question | Results |
+| --- | --- | --- |
+| `photo_eval.py` (+ `report.py`) | How good is the photo drawn in text, and how much of the photo can be rebuilt from it? (below) | `out/eval/report.html`, `RESULTS.md` |
+| `compress_compare.py` | As an image codec, does text beat just sending a tiny picture? | `RESULTS.md` section 6 |
+| `recompose_more.py`, `focus_zooms.py`, `visualize_zooms.py`, `visualize_tree.py` | Recomposition variants; which zooms to send; pages showing every step and SMS | `out/eval/*.html` |
+| `emergency/run.py`, `score.py`, `agent_page.py`, `illustrate_pilot.py` | The 20 emergency pictures and how-to answers end to end (`dataset.json`; pictures from `make_images.py`) | `out/eval/emergency.html`, `agent.html`, `illustrate.html` |
+| `emergency/build_pack.py` | Builds the kit's phrasebook from the hand-labelled pairs | `sim/pack.json` |
+| `kit/measure.py` | What the offline kit saves, reply by reply | `kit/RESULTS.md` |
+| `closer/sam_small.py` | Can SAM find small things in the 128 px picture if it's enlarged? | `closer/RESULTS.md` |
+
 # Photo drawing evals
 
 How good is the high-detail (tonal) photo drawing, and how much of a photo can be rebuilt from text drawings

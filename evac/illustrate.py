@@ -27,7 +27,6 @@ Pictures are sent as tiny 2-colour PNGs (about 2 KB each); text frames only if t
 """
 import base64
 import io
-from concurrent.futures import ThreadPoolExecutor
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter

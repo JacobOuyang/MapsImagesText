@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Look Closer</title>
+<script src="/kit.js"></script>
+<style>
+  :root { --bg:#0f1419; --panel:#161d24; --card:#1c252e; --line:#2a3540; --fg:#e8edf2; --quiet:#8b98a5; --ask:#f59f00; --yes:#37b24d; --blue:#4dabf7; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; min-height:100%; background:var(--bg); color:var(--fg); font:15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { display:flex; align-items:center; gap:18px; padding:14px 24px; border-bottom:1px solid var(--line); background:#0b1015; flex-wrap:wrap; }
+  header h1 { font-size:21px; margin:0; } header .sub { color:var(--quiet); }
+  .grow { flex:1; }
+  select, input, button { font:inherit; color:var(--fg); background:#25313c; border:1px solid var(--line); border-radius:8px; padding:7px 10px; }
+  input { width:300px; } button { cursor:pointer; } button:hover { border-color:var(--blue); }
+  main { display:grid; grid-template-columns:400px 600px 1fr; gap:22px; padding:20px 24px; align-items:start; }
+  h2 { font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:var(--quiet); margin:0 0 10px; font-weight:650; }
+  .device { width:380px; height:900px; border-radius:46px; background:#000; padding:12px; box-shadow:0 0 0 2px #333, 0 20px 50px #0008; display:flex; flex-direction:column; }
+  .screen { flex:1; border-radius:36px; background:#fff; color:#111; overflow:hidden; display:flex; flex-direction:column; min-height:0; }
+  .status { display:flex; justify-content:space-between; padding:12px 24px 4px; font-weight:600; font-size:14px; }
+  .who { text-align:center; padding:4px 0 8px; border-bottom:1px solid #e5e5ea; }
+  .who .av { width:40px; height:40px; border-radius:50%; background:#5f3dc4; color:#fff; display:flex; align-items:center; justify-content:center; margin:0 auto 3px; font-weight:700; }
+  .who small { color:#8e8e93; display:block; font-size:11px; }
+  .thread { flex:1; overflow:auto; padding:10px; font-size:14px; min-height:0; }
+  .b { max-width:86%; padding:8px 12px; border-radius:18px; margin:4px 0; white-space:pre-wrap; word-break:break-word; }
+  .b.phone { background:#0a84ff; color:#fff; margin-left:auto; }
+  .b.service { background:#e9e9eb; }
+  .b img { display:block; width:150px; border-radius:10px; margin-top:6px; image-rendering:pixelated; }
+  .meta { font-size:11px; color:#8e8e93; margin:8px 6px 0; }
+  .meta.r { text-align:right; }
+  .kit { margin-top:6px; padding:6px 8px; border-radius:10px; background:#fff3bf; color:#5c3d00; font-size:12.5px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; margin-bottom:16px; }
+  .orig { position:relative; }
+  .orig img { width:100%; display:block; border-radius:8px; }
+  .orig .box { position:absolute; border:3px solid var(--ask); border-radius:4px; box-shadow:0 0 0 2px #0008; }
+  .orig .box span { position:absolute; top:-26px; left:-3px; background:var(--ask); color:#111; font-size:12px; font-weight:700; padding:2px 6px; border-radius:4px; white-space:nowrap; }
+  table { width:100%; border-collapse:collapse; font-size:14px; }
+  td { padding:6px 4px; border-top:1px solid var(--line); }
+  td.n { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
+  tr.total td { font-weight:700; border-top:2px solid var(--line); }
+  .round { display:flex; gap:16px; align-items:flex-start; }
+  .seen { position:relative; width:300px; flex:none; }
+  .seen img { width:300px; display:block; border-radius:8px; image-rendering:pixelated; }
+  .seen .box { position:absolute; border:3px dashed var(--ask); border-radius:3px; }
+  .seen .box.sam { border:3px solid var(--yes); }
+  .verdict { flex:1; }
+  .verdict .q { font-size:12px; text-transform:uppercase; letter-spacing:.6px; font-weight:700; }
+  .verdict .q.ask { color:var(--ask); } .verdict .q.yes { color:var(--yes); }
+  .verdict p { margin:6px 0; font-size:16px; }
+  .quiet { color:var(--quiet); font-size:13px; }
+  .empty { color:var(--quiet); padding:30px 0; text-align:center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Look closer</h1><span class="sub">A question about a photo that stays on the phone, answered over text.</span>
+  <div class="grow"></div>
+  <select id="sample" aria-label="Photo"></select>
+  <input id="question" value="Is this a black widow?" aria-label="Question">
+  <button id="ask">Ask by text</button>
+</header>
+<main>
+  <section>
+    <h2>The phone · texts only</h2>
+    <div class="device"><div class="screen">
+      <div class="status"><span>9:41</span><span>●○○○ SMS only</span></div>
+      <div class="who"><div class="av">M</div><b>Ask Muse</b><small>by text message · photos stay on this phone</small></div>
+      <div class="thread" id="thread"><div class="empty" style="color:#8e8e93">Pick a photo and ask.</div></div>
+    </div></div>
+  </section>
+  <section>
+    <h2>Only on the phone · never sent whole</h2>
+    <div class="card"><div class="orig" id="orig"><div class="empty">The full photo appears here.</div></div>
+      <div class="quiet" id="origNote" style="margin-top:8px"></div></div>
+    <h2>What crossed the network</h2>
+    <div class="card"><table id="ledger"><tr><td class="quiet">Nothing yet.</td></tr></table></div>
+  </section>
+  <section>
+    <h2>What Muse saw, round by round</h2>
+    <div id="rounds"><div class="empty">Muse's view appears here.</div></div>
+  </section>
+</main>
+<script>
+const $ = id => document.getElementById(id), Q = new URLSearchParams(location.search);
+const esc = t => String(t || '').replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
+const CODE = /#[PZKMGTLSA][0-9a-z]{2,4}\.\d+\/\d+:[A-Za-z0-9+/=]*:[0-9a-f]{4}#/g;
+const kb = b => b < 1000 ? b + ' B' : (b / 1000).toFixed(1) + ' KB';
+let conv = Q.get('conv'), S = null, timer = null;
+
+function pictureOf(text) {  // the picture a message carries (a photo or a close-up), as a data URL
+  const c = KIT.parse(text).complete.find(x => x.kind === 'P' || x.kind === 'Z'); if (!c) return null;
+  let b = c.bytes; if (c.kind === 'Z') b = b.slice(9 + b[0]);
+  const type = b[0] === 0xFF ? 'image/jpeg' : b[0] === 0x52 ? 'image/webp' : 'image/png';
+  return {url: 'data:' + type + ';base64,' + KIT.bytesb64(b), kind: c.kind, bytes: b.length};
+}
+
+function drawThread() {
+  const th = $('thread'); th.innerHTML = '';
+  for (const t of S.texts) {
+    const pic = pictureOf(t.text), words = KIT.plain(t.text).replace(/\s*ZOOM\s+\S+(\s+\d+){4}(\s+C)?/i, '').trim();
+    th.insertAdjacentHTML('beforeend', `<div class="meta ${t.from === 'phone' ? 'r' : ''}">${t.from === 'phone' ? 'You' : 'Muse'} · ${t.parts} SMS</div>`);
+    const b = document.createElement('div'); b.className = 'b ' + t.from;
+    if (pic && pic.kind === 'Z') b.innerHTML = 'Closer look' + (/ C\b/.test(S.texts[S.texts.indexOf(t) - 1]?.text || '') ? ', in colour' : '') + ` <span style="opacity:.75">(cropped by your kit)</span><img src="${pic.url}" alt="closer look">`;
+    else { b.textContent = words; if (pic) b.insertAdjacentHTML('beforeend', `<img src="${pic.url}" alt="photo sent at 128 px">`); }
+    if (t.from === 'service' && /\bZOOM\b/.test(t.text)) b.insertAdjacentHTML('beforeend', '<div class="kit">↩ Your kit is cropping this from your photo. Tap Send.</div>');
+    th.appendChild(b);
+  }
+  if (!S.done) th.insertAdjacentHTML('beforeend', '<div class="meta">…</div>');
+  th.scrollTop = th.scrollHeight;
+  for (const im of th.querySelectorAll('img')) im.onload = () => { th.scrollTop = th.scrollHeight; };  // after pictures take their height
+}
+
+function drawOriginal() {
+  const o = $('orig'), inq = S.inquiry;
+  o.innerHTML = `<img src="/samples/spiders/${encodeURIComponent(S.sample)}.jpg" alt="the full photo on the phone">`;
+  if (inq) for (const [i, v] of inq.views.entries()) {
+    if (!v.got_box) continue;
+    const [w, h] = inq.pic.size, [x, y, bw, bh] = v.got_box, d = document.createElement('div'); d.className = 'box';
+    Object.assign(d.style, {left: x / w * 100 + '%', top: y / h * 100 + '%', width: bw / w * 100 + '%', height: bh / h * 100 + '%'});
+    d.innerHTML = `<span>closer look ${i + 1}${v.colour ? ' · colour' : ''}</span>`; o.appendChild(d);
+  }
+  $('origNote').textContent = `The phone's photo: ${kb(S.original_bytes)} (a real phone photo is 2–4 MB). Only the pieces Muse asked for leave the phone.`;
+}
+
+function drawLedger() {
+  let total = 0, rows = '';
+  for (const t of S.texts) {
+    total += t.parts;
+    const pic = pictureOf(t.text);
+    const what = t.from === 'phone' ? (pic && pic.kind === 'P' ? 'Question + photo at 128 px, grey' : pic ? 'Closer look' + (pic.bytes ? ', ' + kb(pic.bytes) : '') : 'Text')
+                                    : (/\bZOOM\b/.test(t.text) ? 'Muse asks for a closer look' : 'Muse answers');
+    rows += `<tr><td>${t.from === 'phone' ? '↑' : '↓'} ${esc(what)}</td><td class="n">${t.parts} SMS</td></tr>`;
+  }
+  rows += `<tr class="total"><td>Total</td><td class="n">${total} SMS · ${kb(total * 140)}</td></tr>`;
+  rows += `<tr><td class="quiet">The photo itself, over data</td><td class="n quiet">${kb(S.original_bytes)}</td></tr>`;
+  $('ledger').innerHTML = rows;
+}
+
+function drawRounds() {
+  const r = $('rounds'), inq = S.inquiry; if (!inq) return;
+  r.innerHTML = '';
+  const imgs = [`/store/${inq.id}.jpg`].concat(inq.views.filter(v => v.zoom).map(v => `/store/${v.zoom}.jpg`));
+  inq.decisions.forEach((d, i) => {
+    const card = document.createElement('div'); card.className = 'card round';
+    const seen = document.createElement('div'); seen.className = 'seen';
+    seen.innerHTML = `<img src="${imgs[i]}" alt="what Muse saw in round ${i + 1}"><div class="quiet" style="margin-top:6px">${i === 0 ? `Round 1: the whole photo, ${inq.pic.size.join('×')} px, grey (enlarged for Muse)` : `Round ${i + 1}: the closer look, ${inq.views[i - 1].colour ? 'in colour' : 'grey'}, ${kb(inq.views[i - 1].bytes || 0)}`}</div>`;
+    if (d.need) {  // the box it asked for, drawn on what it was looking at (round 1: the whole photo)
+      if (i === 0) { const [l, t, rr, b] = d.need.box, x = document.createElement('div'); x.className = 'box';
+        Object.assign(x.style, {left: l * 100 + '%', top: t * 100 + '%', width: (rr - l) * 100 + '%', height: (b - t) * 100 + '%'});
+        seen.appendChild(x); }
+    }
+    const view = i > 0 && inq.views[i - 1];
+    if (view && view.sam) {  // SAM's outline of the thing on this close-up
+      const [l, t, rr, b] = view.sam.box, x = document.createElement('div'); x.className = 'box sam';
+      Object.assign(x.style, {left: l * 100 + '%', top: t * 100 + '%', width: (rr - l) * 100 + '%', height: (b - t) * 100 + '%'});
+      seen.appendChild(x);
+    }
+    const v = document.createElement('div'); v.className = 'verdict';
+    v.innerHTML = d.need ? `<div class="q ask">Not sure: asks for a closer look${d.need.colour ? ', in colour' : ''}</div><p>Look at ${esc(d.need.why)}.</p>`
+                         : `<div class="q yes">Answers · ${d.sure === 'yes' ? 'sure' : d.sure === 'fairly' ? 'fairly sure' : 'not sure'}</div><p>${esc(d.answer)}</p>${d.safety ? `<p class="quiet">${esc(d.safety)}</p>` : ''}`;
+    if (view && view.sam_tried) v.insertAdjacentHTML('afterbegin', `<p class="quiet" style="margin:0 0 8px">${view.sam
+      ? `SAM 3.1 outlines ${esc(view.sam.phrase)} in this close-up (${view.sam.score.toFixed(2)}, green). Muse is told where it is.`
+      : `SAM 3.1 found no ${esc(view.object)} in this close-up.`}</p>`);
+    card.append(seen, v); r.appendChild(card);
+  });
+  if (!S.done) r.insertAdjacentHTML('beforeend', '<div class="empty">…</div>');
+}
+
+async function tick() {
+  if (!conv) return;
+  S = await fetch('/api/closer/state?c=' + conv).then(r => r.json());
+  $('sample').value = S.sample; $('question').value = S.question;
+  drawThread(); drawOriginal(); drawLedger(); drawRounds();
+  if (S.done) clearInterval(timer);
+}
+
+async function ask() {
+  const r = await fetch('/api/closer/start', {method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({sample: $('sample').value, question: $('question').value})}).then(r => r.json());
+  conv = r.conv; history.replaceState(null, '', '?conv=' + conv); clearInterval(timer); timer = setInterval(tick, 800); tick();
+}
+$('ask').onclick = ask;
+fetch('/api/closer/samples').then(r => r.json()).then(d => {
+  $('sample').innerHTML = d.samples.map(s => `<option>${s}</option>`).join('');
+  if (Q.get('sample')) $('sample').value = Q.get('sample');
+  if (Q.get('q')) $('question').value = Q.get('q');
+  if (conv) { timer = setInterval(tick, 800); tick(); } else if (Q.get('auto')) ask();
+});
+</script>
+</body>
+</html>

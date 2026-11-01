@@ -40,13 +40,19 @@ class Trip:
     landmarks: list = field(default_factory=list)  # osm.fetch_landmarks over the walk's area
     sms_cols: int = 40
     mono_cols: int = 58
+    hazard: str = None                         # "flood", "fire": the zones added to the grids (avoid) are that kind
 
 
-def plan(origin, destination, log, sms_cols=40, mono_cols=58):
-    """Geocode, download the streets once, build the routing grids. Returns a Trip or {"error"}."""
-    found = geo.place(destination, near=origin)
+def plan(origin, destination, log, sms_cols=40, mono_cols=58, avoid=None):
+    """Geocode, download the streets once, build the routing grids. Returns a Trip or {"error"}. `destination` is a
+    place name, or (name, (lat, lon)) for a known point (a neighbour's pin). `avoid`: {"zones": [((lat, lon),
+    radius_m)], "kind": "flood", "blocked": [((lat, lon), radius_m)]}: the walk goes around them where it can."""
+    if isinstance(destination, tuple):
+        found = (*destination[1], destination[0])
+    else:
+        found = geo.place(destination, near=origin)
     if not found:
-        return {"error": "Couldn't find %r." % destination}
+        return {"error": "Couldn't find %r." % (destination,)}
     dest, matched = found[:2], found[2]
     if matched:
         log.append("%r matched %s" % (destination, matched))
@@ -70,17 +76,34 @@ def plan(origin, destination, log, sms_cols=40, mono_cols=58):
     for gr in (g, gi):
         gr.terrain[:] = grid.BUILDING  # walk along streets and paths, not through blocks
         gr.add_roads(roads)
-    return Trip(matched or destination.split(",")[0].strip(), dest, roads, g, gi, origin, sms_cols=sms_cols, mono_cols=mono_cols,
-                landmarks=landmarks)
+    trip = Trip(matched or destination.split(",")[0].strip(), dest, roads, g, gi, origin, sms_cols=sms_cols, mono_cols=mono_cols,
+                landmarks=landmarks, hazard=(avoid or {}).get("kind"))
+    for center, radius in (avoid or {}).get("zones", []):
+        add_zone(trip, center, radius)
+    for center, radius in (avoid or {}).get("blocked", []):
+        block(trip, center, radius)
+    return trip
+
+
+def add_zone(trip, center, radius_m):
+    """A danger zone (a flood) the walk avoids: costlier the deeper in, so the route stays on its edge or outside."""
+    for gr in (trip.g, trip.gi):
+        gr.add_hazard_circle(center, radius_m)
+
+
+def block(trip, center, radius_m=25):
+    """A spot nobody should pass (a downed power line): the next route goes around it."""
+    for gr in (trip.g, trip.gi):
+        gr.block_circle(center, radius_m)
 
 
 def _route(trip, you):
     """-> (legs [(text, start cell, metres, end cell, heading)], route [(lat, lon)], metres) from `you`."""
     g, gi = trip.g, trip.gi
     u, dc = g.cell_of(you), g.cell_of(trip.dest)
-    path = g.route(u, {dc}, None) if u and dc else []
+    path = g.route(u, {dc}, trip.hazard) if u and dc else []
     ui, di = gi.cell_of(you), gi.cell_of(trip.dest)
-    fine = gi.route(ui, {di}, None) if ui and di else []
+    fine = gi.route(ui, {di}, trip.hazard) if ui and di else []
     route = [gi.cell_center(*c) for c in fine] or [g.cell_center(*c) for c in path]
     walked = sum(geo.haversine_m(g.cell_center(*a), g.cell_center(*b)) for a, b in zip(path, path[1:]))
     # Steps from the fine grid: on the coarse one a 1.5 km walk has ~90 m cells, street names get lost and
@@ -171,7 +194,7 @@ def _left(trip, walked):
     return "%s: %.1f km, about %d min." % (trip.name, walked / 1000, round(walked / WALK_M_PER_MIN))
 
 
-def run(user, destination, start=None, sms_cols=40, mono_cols=58):
+def run(user, destination, start=None, sms_cols=40, mono_cols=58, avoid=None):
     """The first message of a walk, from `start` (a place name) or else from the person's GPS. The result's
     "trip" goes to `move` with each new GPS fix."""
     log = []
@@ -181,7 +204,7 @@ def run(user, destination, start=None, sms_cols=40, mono_cols=58):
         if not origin:
             return {"error": "Couldn't find %r." % start, "log": log}
         log.append("starting from %r at %s instead of GPS" % (start, origin))
-    trip = plan(origin, destination, log, sms_cols, mono_cols)
+    trip = plan(origin, destination, log, sms_cols, mono_cols, avoid)
     if isinstance(trip, dict):
         return dict(trip, log=log)
     legs, route, walked = _route(trip, origin)

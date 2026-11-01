@@ -67,14 +67,19 @@ def encode(kind, data, ident=None):
     """bytes -> the code's parts (each fits one SMS), kept with record `ident` (a new "code" record if None) so
     RESEND can send them again."""
     from . import store
-    b64 = base64.b64encode(data).decode()
     ident = ident or store.new("code", meta={"type": kind})
+    out = parts(kind, data, ident)
+    store.update(ident, sent=out, bump=False)
+    return out
+
+
+def parts(kind, data, ident):
+    """The parts alone, not kept: what a phone's kit makes (its ids are 2 characters)."""
+    b64 = base64.b64encode(data).decode()
     head = len("#%s%s.%d/%d:" % (kind, ident, 9, 9)) + len(":xxxx#")
     size = PART_CHARS - head - 2  # room for two-digit part numbers
     chunks = [b64[i:i + size] for i in range(0, len(b64), size)] or [""]
-    parts = ["#%s%s.%d/%d:%s:%s#" % (kind, ident, i, len(chunks), c, crc16(c)) for i, c in enumerate(chunks, 1)]
-    store.update(ident, sent=parts, bump=False)
-    return parts
+    return ["#%s%s.%d/%d:%s:%s#" % (kind, ident, i, len(chunks), c, crc16(c)) for i, c in enumerate(chunks, 1)]
 
 
 def text(parts):
@@ -145,13 +150,14 @@ def picture(img, tones=True, parts=None, ident=None):
     return out
 
 
-ZOOM = re.compile(r"\bZOOM\s+([0-9a-z]{2,4})((?:\s+\d+){1,4})\b", re.I)
+# "ZOOM 3f 40 22 30 30" or "ZOOM 3f 2", and " C" at the end for colour.
+ZOOM = re.compile(r"\bZOOM\s+([0-9a-z]{2,4})((?:\s+\d+){1,4})(\s+C)?\b", re.I)
 
 
 def zoom(message):
     """"ZOOM 3f 40 22 30 30" (a box in picture 3f's pixels) or "ZOOM 3f 2" (part 2 of its key) -> (words, code
     parts) for a closer look cropped from the kept original, or None if the message asks for no zoom."""
-    from . import smsimage, store
+    from . import store
     m = ZOOM.search(message or "")
     if not m:
         return None
@@ -172,22 +178,40 @@ def zoom(message):
         what = "the area you marked"
     else:
         return "Send ZOOM, the picture's id, then a part number or a box: x y width height.", []
+    data, region, box, size = crop_zoom(img, (x0, y0, x1, y1), (w, h), (bx, by, bw, bh), colour=bool(m.group(3)))
+    child = store.new("zoom", file=rec["file"], parent=ident, box=box, meta={"region": region, "size": size, "parts": []})
+    out = encode("Z", zoom_head(ident, box) + data, child)
+    return "Closer look at %s in picture %s:" % (what, ident), out
+
+
+def crop_zoom(img, region, size, box, colour=False):
+    """A closer look at `box` (x, y, w, h in the pixels of a picture that showed `region` of `img` at `size`) ->
+    (WebP bytes, the crop's region in img, the crop as a box in the picture's pixels, the size it is sent at). The
+    crop has a little margin, is square-ish, and is never smaller than a picture's own 128 px (past the original's
+    resolution a zoom shows nothing new). The server crops its kept originals this way; a phone, its own photos.
+    colour=True sends the crop in colour (when colour decides the answer)."""
+    from . import smsimage
+    (x0, y0, x1, y1), (w, h), (bx, by, bw, bh) = region, size, box
     sx, sy = (x1 - x0) / w, (y1 - y0) / h
-    # The crop in the original's pixels: a little margin, square-ish, and never smaller than a picture's own 128 px
-    # (past the original's resolution a zoom shows nothing new).
     cx, cy = x0 + (bx + bw / 2) * sx, y0 + (by + bh / 2) * sy
-    half = max(bw * sx, bh * sy) * 0.6
-    half = max(half, smsimage.SIDE / 2)
+    half = max(max(bw * sx, bh * sy) * 0.6, smsimage.SIDE / 2)
     rx0, ry0 = max(0, cx - half), max(0, cy - half)
     rx1, ry1 = min(img.width, cx + half), min(img.height, cy + half)
     crop = img.crop((round(rx0), round(ry0), round(rx1), round(ry1)))
-    data = smsimage.webp(crop)
-    box = [(rx0 - x0) / sx, (ry0 - y0) / sy, (rx1 - rx0) / sx, (ry1 - ry0) / sy]  # in the parent's pixels
-    head = bytes([len(ident)]) + ident.encode() + b"".join(int(max(0, min(65535, round(v * 64)))).to_bytes(2, "big") for v in box)
-    child = store.new("zoom", file=rec["file"], parent=ident, box=box,
-                      meta={"region": [rx0, ry0, rx1, ry1], "size": list(smsimage.fit(crop).size), "parts": []})
-    out = encode("Z", head + data, child)
-    return "Closer look at %s in picture %s:" % (what, ident), out
+    box = [(rx0 - x0) / sx, (ry0 - y0) / sy, (rx1 - rx0) / sx, (ry1 - ry0) / sy]
+    return smsimage.webp(crop, colour=colour), [rx0, ry0, rx1, ry1], box, list(smsimage.fit(crop).size)
+
+
+def zoom_head(parent, box):
+    """A Z code's header: the parent's id (length byte + id), then its box as 4 x uint16 in 1/64 px."""
+    return bytes([len(parent)]) + parent.encode() + b"".join(int(max(0, min(65535, round(v * 64)))).to_bytes(2, "big") for v in box)
+
+
+def read_zoom(data):
+    """A Z code's payload -> (parent id, box in the parent's pixels, picture bytes)."""
+    n = data[0]
+    box = [int.from_bytes(data[1 + n + 2 * i:3 + n + 2 * i], "big") / 64 for i in range(4)]
+    return data[1:1 + n].decode(), box, data[9 + n:]
 
 
 # ---------- maps ----------
