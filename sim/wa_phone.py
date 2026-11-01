@@ -46,6 +46,7 @@ tell application "System Events" to keystroke return
 delay 0.4
 if previous is not "WhatsApp" then tell application previous to activate
 """
+HELPER = "/tmp/muzip-%d" % os.getuid()  # where MuZip.app (sim/make_muzip_app.sh) takes requests to press Return
 llm._load_dotenv()
 
 
@@ -59,15 +60,36 @@ def me():
     raise RuntimeError("Set MY_WHATSAPP in .env (your WhatsApp number), or message the bridge once from your phone.")
 
 
+def press_return():
+    """Press Return in WhatsApp: through MuZip.app when it's running (it holds the Accessibility permission and stays out
+    of Documents, so macOS needn't grant it the project folder), else from this process (which then needs the permission)."""
+    alive = os.path.join(HELPER, "alive")
+    if os.path.exists(alive) and time.time() - os.path.getmtime(alive) < 3:
+        done = os.path.join(HELPER, "done")
+        if os.path.exists(done):
+            os.remove(done)
+        open(os.path.join(HELPER, "press"), "w").close()
+        for _ in range(100):
+            if os.path.exists(done):
+                with open(done) as f:
+                    answer = f.read().strip()
+                os.remove(done)
+                return None if answer == "ok" else answer or "failed"
+            time.sleep(0.1)
+        return "MuZip.app didn't answer"
+    r = subprocess.run(["osascript", "-e", PRESS_RETURN], capture_output=True, text=True)
+    return r.stderr.strip() or "failed" if r.returncode else None
+
+
 def send(text, who, via, bridge, at=None):
     """One message from you to the Muse number."""
     if via == "whatsapp":
         number = SANDBOX.split("+")[1]
         subprocess.run(["open", "-g", "whatsapp://send?phone=%s&text=%s" % (number, quote(text))], check=True)  # -g: stay behind
-        r = subprocess.run(["osascript", "-e", PRESS_RETURN], capture_output=True, text=True)
-        if r.returncode:
-            raise RuntimeError("Couldn't press Return in WhatsApp (%s). Give the app running this Accessibility permission "
-                               "(System Settings > Privacy & Security > Accessibility), or use sim." % r.stderr.strip())
+        error = press_return()
+        if error:
+            raise RuntimeError("Couldn't press Return in WhatsApp (%s). Open out/MuZip.app and give it Accessibility permission "
+                               "(System Settings > Privacy & Security > Accessibility), or use sim." % error)
         return
     params = {"From": who, "To": SANDBOX, "Body": text, "NumMedia": "0", "MessageSid": "SMtest%08d" % random.randrange(10 ** 8)}
     if at:

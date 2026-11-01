@@ -1,6 +1,6 @@
 """MuZip: a small Mac app that sends from your WhatsApp to the Muse number and does the kit's work on this computer.
 
-    .venv/bin/python sim/muzip.py          # http://127.0.0.1:8780 (or double-click MuZip.app: sim/make_muzip_app.sh)
+    .venv/bin/python sim/muzip.py          # http://127.0.0.1:8780 (MuZip.app, sim/make_muzip_app.sh, presses Return)
 
 Drop a photo and ask a question. The kit turns the photo into a 128 px grey code (about 10 texts) and sends it with the
 question from your WhatsApp; the original stays here. When Muse asks for a closer look, the kit crops that part of the
@@ -8,8 +8,8 @@ original (in colour if asked) and sends it, by itself, until Muse answers. The p
 original with every crop outlined, and what Muse saw. Plain questions work too.
 
 Muse's replies are read from the bridge's log on this Mac (sim/whatsapp_server.py records every message), so the kit
-never reads WhatsApp. Sending: "whatsapp" (from your account; see sim/wa_phone.py: needs Accessibility permission
-for this app) or "sim" (signed like Twilio, straight to the bridge; replies still reach your WhatsApp).
+never reads WhatsApp. Sending: "whatsapp" (from your account; MuZip.app presses Return in WhatsApp; see
+sim/wa_phone.py) or "sim" (signed like Twilio, straight to the bridge; replies still reach your WhatsApp).
 """
 import base64
 import io

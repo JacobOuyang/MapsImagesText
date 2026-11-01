@@ -345,13 +345,22 @@ Muse           Yes, this is a black widow. The red hourglass mark on its black b
                Do not touch it and keep people and pets away.
 ```
 
-**MuZip, the app for a demo.** On a Mac with WhatsApp Desktop: `bash sim/make_muzip_app.sh`, then double-click
-`out/MuZip.app`. It starts the bridge and opens its page. Drop a photo, type a question and press Send. MuZip turns the
-photo into the 128 px code, sends it from your WhatsApp, answers each closer look Muse asks for by cropping the
-original, and shows the conversation, the original with every crop outlined, and what Muse saw. The photo never
-leaves the computer. To send from your account it brings WhatsApp forward for about a second to press Return, and
-needs Accessibility permission (System Settings > Privacy & Security > Accessibility > + > MuZip). Its "simulated"
-switch sends straight to the bridge instead; Muse's replies still arrive in your WhatsApp.
+**MuZip, the app for a demo.** On a Mac with WhatsApp Desktop: start the bridge and MuZip's server
+(`.venv/bin/python sim/whatsapp_server.py` and `.venv/bin/python sim/muzip.py`), build the app with
+`bash sim/make_muzip_app.sh` and double-click `out/MuZip.app`, which opens MuZip's page at http://127.0.0.1:8780.
+Drop a photo, type a question and press Send. MuZip turns the photo into the 128 px code, sends it from your WhatsApp,
+answers each closer look Muse asks for by cropping the original, and shows the conversation, the original with every
+crop outlined, and what Muse saw. The photo never leaves the computer. A real run from a WhatsApp account (the
+black widow above) took 34 s: three messages out, three answers back.
+
+To send from your account, something has to press Return in WhatsApp, which macOS only allows an app with
+Accessibility permission. That is all MuZip.app does: it waits for requests in a private folder in `/tmp` and
+brings WhatsApp forward for about a second to press Return. It never opens the project folder, so it needs no
+Documents permission (the first version ran the servers itself and stalled on macOS's per-app Documents check). Give
+it Accessibility (System Settings > Privacy & Security > Accessibility > + > MuZip) and allow the "control System
+Events" prompt; after every rebuild remove it from that list and add it again, because the grant is tied to the
+app's signature. MuZip's "simulated" switch sends straight to the bridge instead; Muse's replies still arrive in
+your WhatsApp.
 
 **Testing without a phone in hand:** `sim/wa_phone.py` is a test phone. It sends messages to the bridge as your
 WhatsApp number, plays the kit for photos, and prints Muse's replies, which Twilio also delivers to your WhatsApp.
@@ -361,8 +370,8 @@ A real run took 19 s:
 .venv/bin/python sim/wa_phone.py --photo sim/samples/spiders/black_widow.jpg "Is this a black widow?"
 ```
 
-`--via whatsapp` sends from WhatsApp Desktop itself (it fills in the chat and presses Return), which needs macOS
-Accessibility permission for the app running it.
+`--via whatsapp` sends from WhatsApp Desktop itself: it fills in the chat and has MuZip.app press Return when it's
+running (otherwise it presses Return itself, which needs Accessibility permission for the app running it).
 
 To run it live:
 
