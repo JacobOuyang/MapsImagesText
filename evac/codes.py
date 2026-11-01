@@ -157,7 +157,7 @@ ZOOM = re.compile(r"\bZOOM\s+([0-9a-z]{2,4})((?:\s+\d+){1,4})(\s+C)?\b", re.I)
 def zoom(message):
     """"ZOOM 3f 40 22 30 30" (a box in picture 3f's pixels) or "ZOOM 3f 2" (part 2 of its key) -> (words, code
     parts) for a closer look cropped from the kept original, or None if the message asks for no zoom."""
-    from . import smsimage, store
+    from . import store
     m = ZOOM.search(message or "")
     if not m:
         return None

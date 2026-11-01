@@ -1,15 +1,21 @@
-"""Local two-phone simulator: serves sim/index.html and runs the pipeline for each alert.
+"""The simulator: the pages and the API behind them.
 
-    python3 sim/server.py            # http://localhost:8765
+    .venv/bin/python sim/server.py            # http://localhost:8765
 
-POST /api/alert {"text", "lat", "lon"} -> {"message" (SMS), "text", "laptop" (WhatsApp map), "small", "image", ...}
-POST /api/photo {"image": data URL} -> {"sms", "text", "mono", "small", "parts", sizes, ...}
-POST /api/radar {"lat", "lon"} -> {"sms", "text", "mono", "small", "image", "parts", ...}
-POST /api/directions {"lat", "lon", "to", "from"?} -> {"sms", "text", "mono", "small", "image", "parts", "trip", ...}
-POST /api/directions/move {"trip", "metres" | "astray": true} -> the update after a simulated GPS fix
-"small" is the slow-connection picture (~400 px WebP); "image" the full JPEG.
-POST /api/message {"text", "lat", "lon", "image"?} -> router: Muse picks tools; same versions + "tools" it called
-GET /api/find_rain, /api/samples, /api/sample?name=
+Pages: / (the modes, every reply in its versions), /kit.html (the offline kit, as one file), /dashboard (the community
+hub; the Red Hook drill), /closer (look closer: a question about a photo that stays on the phone).
+
+POST /api/message {"text", "lat", "lon", "image"?, "from"?} -> the router: Muse picks tools; the versions + "tools"
+POST /api/alert {"text", "lat", "lon"} -> {"message" (SMS), "text", "laptop" (WhatsApp map), "small", "image", "kit"}
+POST /api/photo {"image": data URL} -> {"sms", "text", "mono", "small", "kit", "photo_id"}; /api/photo/high and
+     /api/photo/zoom {"photo_id", "n"?} -> the detailed WhatsApp drawing
+POST /api/radar {"lat", "lon"}; /api/directions {"lat", "lon", "to", "from"?}; /api/directions/move {"trip", "metres" |
+     "astray"}; /api/pictures {"job"} (how-to pictures made after the words)
+Hub: GET /api/hub/state, /api/hub/summary, /api/hub/thread?who=; POST /api/hub/send|assign|closer|block,
+     /api/demo/beat {"name"} (sim/redhook.py)
+Look closer: GET /api/closer/samples, /api/closer/state?c=; POST /api/closer/start {"sample", "question"}
+Also: GET /api/find_rain, /api/samples, /api/sample?name=, /store/<record id>.jpg
+"small" is the slow-connection picture (~400 px WebP); "image" the full JPEG; "kit" the plain SMS with codes.
 """
 import base64
 import gzip
@@ -29,28 +35,26 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(ROOT))
 
 from evac import codes, howto, directions, hub, photo, pipeline, radar, router, store, tonal  # noqa: E402
-import redhook  # noqa: E402  (the Red Hook demo: simulated neighbours' phones around the hub)
-import closer_demo  # noqa: E402  (the look-closer demo: a phone asks about a photo it keeps)
+import redhook  # noqa: E402  (the Red Hook drill: simulated neighbours' phones around the hub)
+import closer_demo  # noqa: E402  (look closer: a phone asks about a photo it keeps)
 
 PORT = int(os.environ.get("PORT", 8765))
 WHATSAPP_COLS = 58  # widest monospace map that fits the simulated WhatsApp Desktop bubble (65% of the chat pane) unwrapped
-
-
+PAGES = {"/dashboard": "dashboard.html", "/closer": "closer.html"}
 sms_parts = codes.sms_parts
 
-
-def remember_photo(img, boxes=None, parent=None):
-    """A photo (or a crop of one) kept in the store; `boxes` {key number: box in its pixels} for the WhatsApp zooms."""
-    return store.new("photo", image=img, meta={"boxes": boxes or {}}, parent=parent)
 SAMPLE_DIR = "/Library/Desktop Pictures"  # macOS ships photos here; used as sample "photos a friend sent"
 # One object each, the simplest case for an outline: macOS's account pictures (HEIC, converted with sips).
 OBJECT_DIR = "/Library/User Pictures"
 OBJECTS = ["Fun/Fortune Cookie", "Fun/Gingerbread Man", "Animals/Penguin", "Animals/Owl", "Animals/Parrot",
            "Instruments/Guitar", "Instruments/Violin", "Flowers/Sunflower", "Flowers/Red Rose", "Nature/Leaf"]
 CONVERTED = os.path.join(ROOT, "..", "cache", "samples")
-EVAL_DIR = os.path.join(ROOT, "..", "out", "eval")
-LABELS = os.path.join(EVAL_DIR, "labels.json")
 GENERATED = os.path.join(ROOT, "samples")  # one object each, made with Muse Image (muse-image-1.0)
+
+
+def remember_photo(img, boxes=None, parent=None):
+    """A photo (or a crop of one) kept in the store; `boxes` {key number: box in its pixels} for the WhatsApp zooms."""
+    return store.new("photo", image=img, meta={"boxes": boxes or {}}, parent=parent)
 
 
 def sample_objects():
@@ -85,113 +89,73 @@ def sample_path(name):
     return path
 
 
+def jpeg(img, side, quality):
+    img = img.convert("RGB")
+    img.thumbnail((side, side))
+    buf = io.BytesIO()
+    img.save(buf, "JPEG", quality=quality)
+    return buf.getvalue()
+
+
+def kit_js():
+    """The kit's script with its phrasebook and the issuer's public key in front."""
+    return ("var KIT_PUBKEY = %s;\nvar KIT_PACK = %s;\n" % (json.dumps(codes.public_key()), json.dumps(codes.pack())) +
+            open(os.path.join(ROOT, "kit.js")).read())
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=ROOT, **kw)
 
-    def send_json(self, out, t=None):
-        if t is not None:
-            out["seconds"] = round(time.time() - t, 1)
-        data = json.dumps(out).encode()
+    def send_bytes(self, data, kind):
         self.send_response(200)
-        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Type", kind)
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
 
+    def send_json(self, out, t=None):
+        if t is not None:
+            out["seconds"] = round(time.time() - t, 1)
+        self.send_bytes(json.dumps(out).encode(), "application/json")
+
     def do_GET(self):
-        if self.path == "/api/samples":
-            return self.send_json({"objects": list(sample_objects()), "emergency": list(sample_emergency()),
-                                   "photos": list(sample_photos())})
-        if self.path.startswith("/api/sample?name="):
-            path = sample_path(unquote(self.path.split("=", 1)[1]))
-            if not path:
-                return self.send_error(404)
-            img = Image.open(path).convert("RGB")
-            img.thumbnail((1600, 1600))
-            buf = io.BytesIO()
-            img.save(buf, "JPEG", quality=85)
-            data = buf.getvalue()
-            self.send_response(200)
-            self.send_header("Content-Type", "image/jpeg")
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            return self.wfile.write(data)
-        if self.path.split("?")[0] in ("/kit.js", "/kit.html"):  # the offline kit, with its phrasebook and the issuer's key
-            js = "var KIT_PUBKEY = %s;\nvar KIT_PACK = %s;\n" % (json.dumps(codes.public_key()), json.dumps(codes.pack())) + \
-                open(os.path.join(ROOT, "kit.js")).read()
-            if self.path.startswith("/kit.html"):  # one self-contained file a person can save and use offline
-                body, kind = open(os.path.join(ROOT, "kit.html")).read().replace("/*KIT_JS*/", js), "text/html; charset=utf-8"
-            else:
-                body, kind = js, "application/javascript; charset=utf-8"
-            data = body.encode()
-            self.send_response(200)
-            self.send_header("Content-Type", kind)
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            return self.wfile.write(data)
-        if self.path == "/api/labels":  # labels people gave step pictures (evals/emergency/label_set.py)
-            return self.send_json(json.load(open(LABELS)) if os.path.exists(LABELS) else {})
-        if self.path.startswith("/eval/") and ".." not in self.path:  # eval pages, so the label page can save labels here
-            path = os.path.join(EVAL_DIR, unquote(self.path[len("/eval/"):].split("?")[0]))
-            if not os.path.isfile(path):
-                return self.send_error(404)
-            data = open(path, "rb").read()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8" if path.endswith(".html") else "application/octet-stream")
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            return self.wfile.write(data)
-        # The community hub's dashboard (sim/dashboard.html) and what it reads.
-        if self.path.split("?")[0] in ("/dashboard", "/closer"):
-            data = open(os.path.join(ROOT, self.path.split("?")[0][1:] + ".html"), "rb").read()
-            self.send_response(200)
-            self.send_header("Content-Type", "text/html; charset=utf-8")
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            return self.wfile.write(data)
-        if self.path == "/api/closer/samples":
-            return self.send_json({"samples": closer_demo.samples()})
-        if self.path.startswith("/api/closer/state?c="):
-            return self.send_json(closer_demo.state(unquote(self.path.split("=", 1)[1])))
-        if self.path == "/api/hub/state":
-            return self.send_json(hub.state())
-        if self.path == "/api/hub/summary":
-            return self.send_json({"first": hub.summary()})
-        if self.path.startswith("/api/hub/thread?who="):
-            who = unquote(self.path.split("=", 1)[1])
-            texts = sorted(store.find("sms", limit=100000), key=lambda r: r["created"])
-            return self.send_json({"person": hub.person(who) and {"who": who, **hub.person(who)["meta"]},
-                                   "texts": [{"dir": r["meta"]["dir"], "text": r["meta"]["text"], "parts": r["meta"]["parts"], "at": r["created"]}
-                                             for r in texts if r["who"] == who]})
-        if self.path.startswith("/store/") and self.path.endswith(".jpg"):  # a record's original (a report's photo, a zoom)
-            img = store.image(self.path[len("/store/"):-4])
-            if img is None:
-                return self.send_error(404)
-            img.thumbnail((640, 640))
-            buf = io.BytesIO()
-            img.save(buf, "JPEG", quality=88)
-            data = buf.getvalue()
-            self.send_response(200)
-            self.send_header("Content-Type", "image/jpeg")
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            return self.wfile.write(data)
-        if self.path == "/api/find_rain":
-            t = time.time()
-            lat, lon = radar.find_rain()
-            return self.send_json({"lat": lat, "lon": lon}, t)
+        path, _, query = self.path.partition("?")
+        arg = unquote(query.split("=", 1)[1]) if "=" in query else ""
+        html = "text/html; charset=utf-8"
+        if path in PAGES:
+            return self.send_bytes(open(os.path.join(ROOT, PAGES[path]), "rb").read(), html)
+        if path == "/kit.js":
+            return self.send_bytes(kit_js().encode(), "application/javascript; charset=utf-8")
+        if path == "/kit.html":  # one self-contained file a person can save and use offline
+            return self.send_bytes(open(os.path.join(ROOT, "kit.html")).read().replace("/*KIT_JS*/", kit_js()).encode(), html)
+        if path.startswith("/store/") and path.endswith(".jpg"):  # a record's original (a report's photo, a zoom)
+            img = store.image(path[len("/store/"):-4])
+            return self.send_bytes(jpeg(img, 640, 88), "image/jpeg") if img else self.send_error(404)
+        if path == "/api/sample":
+            p = sample_path(arg)
+            return self.send_bytes(jpeg(Image.open(p), 1600, 85), "image/jpeg") if p else self.send_error(404)
+        api = {
+            "/api/samples": lambda: {"objects": list(sample_objects()), "emergency": list(sample_emergency()), "photos": list(sample_photos())},
+            "/api/find_rain": lambda: dict(zip(("lat", "lon"), radar.find_rain())),
+            "/api/hub/state": hub.state,
+            "/api/hub/summary": lambda: {"first": hub.summary()},
+            "/api/hub/thread": lambda: hub.thread(arg),
+            "/api/closer/samples": lambda: {"samples": closer_demo.samples()},
+            "/api/closer/state": lambda: closer_demo.state(arg),
+        }
+        if path in api:
+            return self.send_json(api[path]())
         return super().do_GET()
 
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers.get("Content-Length", 0))) or b"{}")
         t = time.time()
+        at = lambda: (float(body["lat"]), float(body["lon"]))
         try:
             if self.path == "/api/alert":
-                res = pipeline.run(body["text"], user=(float(body["lat"]), float(body["lon"])), laptop=WHATSAPP_COLS, image=True)
-                out = {"message": res["message"], "affected": res["affected"], "log": res["log"],
-                       "text": res.get("text"), "laptop": res.get("laptop"), "image": res.get("image"),
-                       "small": res.get("small")}
+                res = pipeline.run(body["text"], user=at(), laptop=WHATSAPP_COLS, image=True)
+                out = {k: res.get(k) for k in ("message", "affected", "log", "text", "laptop", "image", "small")}
                 out["parts"] = sms_parts(out["message"]) if out.get("message") else 0
                 if res.get("scene") is not None:  # the same alert for a phone with the kit: words, map code, signature
                     out["kit"] = router.kit_alert(res)
@@ -200,10 +164,8 @@ class Handler(SimpleHTTPRequestHandler):
                 img = base64.b64decode(body["image"].split(",", 1)[-1]) if body.get("image") else None
                 kept = store.image(body["photo_id"]) if body.get("photo_id") else None
                 if kept is not None:  # a question about a photo sent earlier in the Photo tab
-                    buf = io.BytesIO()
-                    kept.save(buf, "JPEG", quality=90)
-                    img = buf.getvalue()
-                out = router.handle(body["text"], (float(body["lat"]), float(body["lon"])), image=img, who=body.get("from"))
+                    img = jpeg(kept, 4096, 90)
+                out = router.handle(body["text"], at(), image=img, who=body.get("from"))
                 out["parts"] = sms_parts(out["sms"]) if out.get("sms") else 0
             elif self.path == "/api/photo":  # the quick version (SMS + low-detail WhatsApp outline)
                 data = base64.b64decode(body["image"].split(",", 1)[-1])
@@ -217,8 +179,8 @@ class Handler(SimpleHTTPRequestHandler):
                 out["photo_id"] = remember_photo(full)
                 # For a phone with the kit: the description and a 128 px picture with its named parts; a tap on a part
                 # (or a box drawn on the picture) asks the server for a closer look, cropped from this full-size photo.
-                out["kit"] = router.kit_message(out["text"], codes.picture(full, parts=photo.part_boxes(full, out.get("things") or []),
-                                                                           ident=out["photo_id"]))
+                parts = codes.picture(full, parts=photo.part_boxes(full, out.get("things") or []), ident=out["photo_id"])
+                out["kit"] = router.kit_message(out["text"], parts)
                 out["kit_parts"] = sms_parts(out["kit"])
             elif self.path in ("/api/photo/high", "/api/photo/zoom"):
                 # High detail: the whole scene in tones. Zoom: the same for one numbered part, on its own crop of the
@@ -233,42 +195,21 @@ class Handler(SimpleHTTPRequestHandler):
                 pid = remember_photo(img, {str(n): [int(v * k) for v in b] for n, b in r["boxes"].items()}, parent=body["photo_id"])
                 mono = tonal.text(r)
                 out = {"mono": mono, "mono_bytes": len(mono.encode()), "mono_gzip": len(gzip.compress(mono.encode())),
-                       "key": r["key"], "seen": r["seen"], "recognised": r["recognised"], "regions": r["regions"],
-                       "photo_id": pid}
-            elif self.path == "/api/labels":  # {key, who, useful, note}: one label for one before/after pair
-                labels = json.load(open(LABELS)) if os.path.exists(LABELS) else {}
-                labels.setdefault(body["key"], {})[body["who"]] = {"useful": bool(body["useful"]), "note": body.get("note", "")}
-                json.dump(labels, open(LABELS, "w"), indent=1)
-                out = {"ok": True, "count": len(labels)}
+                       "key": r["key"], "seen": r["seen"], "recognised": r["recognised"], "regions": r["regions"], "photo_id": pid}
             elif self.path == "/api/pictures":  # pictures for a how-to answer, made after its words were sent
                 p = howto.pictures(body["job"])
                 out = dict(router.steps_pictures(p["frames"]), done=p["done"], error=p.get("error"))
-            elif self.path == "/api/hub/send":
-                out = {"text": hub.send(body["who"], body["text"])}
-            elif self.path == "/api/hub/assign":
-                out = hub.assign(body["volunteer"], body["report"])
-                out.pop("trip_obj", None)
-            elif self.path == "/api/hub/closer":
-                out = {"text": hub.ask_closer(body["report"], body.get("box"))}
-            elif self.path == "/api/hub/block":
-                rep = store.get(body["report"])
-                out = hub.block(tuple(rep["where"]), int(body.get("radius_m", 30)), body.get("note") or "Danger reported here")
-            elif self.path == "/api/closer/start":  # a simulated phone asks about one of the sample photos
-                out = {"conv": closer_demo.start(body["sample"], body.get("question") or "What is this?")}
-            elif self.path == "/api/demo/beat":  # the Red Hook demo, one beat at a time (sim/redhook.py)
-                out = redhook.beat(body["name"], **({"pace": float(body["pace"])} if "pace" in body else {})) or {}
             elif self.path == "/api/radar":
-                out = radar.run((float(body["lat"]), float(body["lon"])))
+                out = radar.run(at())
                 out["parts"] = sms_parts(out["sms"])
             elif self.path == "/api/directions":
-                out = directions.run((float(body["lat"]), float(body["lon"])), body["to"], start=body.get("from") or None)
+                out = directions.run(at(), body["to"], start=body.get("from") or None)
                 scene = out.pop("scene", None)  # the page gets the rendered versions, not the Scene object
                 trip = out.pop("trip", None)
-                if trip:
-                    out["trip"] = store.new("trip", obj=trip, where=trip.you, meta={"to": trip.name})
-                    out["you"] = trip.you
                 if "sms" in out:
                     out["parts"] = sms_parts(out["sms"])
+                if trip:
+                    out.update(trip=store.new("trip", obj=trip, where=trip.you, meta={"to": trip.name}), you=trip.you)
                 if trip and trip.route and scene is not None:  # the kit version: words, map and the route as GPX
                     out["kit"] = router.kit_message(out.get("text") or "", codes.map_scene(scene) +
                                                     codes.route([p for p in [trip.you] if p] + trip.route, trip.name))
@@ -276,12 +217,23 @@ class Handler(SimpleHTTPRequestHandler):
             elif self.path == "/api/directions/move":
                 # Simulated GPS: walk along the route, or take a wrong turn, then send the update.
                 trip = store.obj(body["trip"])
-                you = (directions.astray(trip) if body.get("astray")
-                       else directions.along(trip, float(body.get("metres", 150))))
+                you = directions.astray(trip) if body.get("astray") else directions.along(trip, float(body.get("metres", 150)))
                 out = directions.move(trip, you)
                 store.update(body["trip"], obj=trip, where=you)
                 out.pop("scene", None)
                 out.update(trip=body["trip"], you=you, parts=sms_parts(out["sms"]))
+            elif self.path == "/api/hub/send":
+                out = {"text": hub.send(body["who"], body["text"])}
+            elif self.path == "/api/hub/assign":
+                out = hub.assign(body["volunteer"], body["report"])
+            elif self.path == "/api/hub/closer":
+                out = {"text": hub.ask_closer(body["report"], body.get("box"))}
+            elif self.path == "/api/hub/block":
+                out = hub.block(tuple(store.get(body["report"])["where"]), int(body.get("radius_m", 30)), body.get("note") or "Danger reported here")
+            elif self.path == "/api/demo/beat":  # the Red Hook drill, one beat at a time
+                out = redhook.beat(body["name"], **({"pace": float(body["pace"])} if "pace" in body else {})) or {}
+            elif self.path == "/api/closer/start":  # a simulated phone asks about one of the sample photos
+                out = {"conv": closer_demo.start(body["sample"], body.get("question") or "What is this?")}
             else:
                 return self.send_error(404)
         except Exception as e:  # show the failure in the page rather than hanging it

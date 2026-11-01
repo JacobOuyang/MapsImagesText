@@ -42,7 +42,9 @@ def _quick(text):
 
 
 def handle(message, you, image=None, who=None):
-    """One message from a person (`who`: their number, when known) at `you` (lat, lon), maybe with a photo."""
+    """One message from a person (`who`: their number, when known) at `you` (lat, lon), maybe with a photo. Codes from
+    the kit are dealt with first (requests, a close-up coming back, a check-in, a question about a photo); anything
+    else goes to Muse and its tools."""
     t = time.time()
     message = (message or "").strip()
     if not message and not image:  # an empty text once made Muse call three tools for 45 s
@@ -54,63 +56,27 @@ def handle(message, you, image=None, who=None):
         ok = False
     if not ok:  # tools would geocode and route from an impossible point
         return _quick("Your location looks wrong (%s). Check the phone's GPS, or name the place you are in." % (you,))
-    again = codes.resend(message)  # "RESEND 7k 3": the kit asks for parts that were lost or damaged
-    if again is not None:
-        return _quick(codes.text(again) if again else "Nothing to resend: that message is no longer kept.")
-    kept = codes.zoom(message)  # "ZOOM 3f 2": a closer look at part of a picture sent earlier, from its original
-    if kept is not None:
-        out = _quick(kept[0] + ("\n" + codes.text(kept[1]) if kept[1] else ""))
-        out["kit"] = out["text"]
-        return out
-    found, log, report = codes.decode(message), [], None
-    closer_back = [c for c in found["complete"] if c["kind"] == "Z"]
-    if closer_back:  # a phone answering a ZOOM: a closer look at a photo it sent, cropped from its original
-        parent, box, data = codes.read_zoom(closer_back[0]["data"])
-        went_on = closer.receive(who, parent, box, data)  # a question about the photo, waiting for this view
-        if went_on:
-            out = _quick(went_on[1])
-            out.update(inquiry=went_on[0], log=["closer look at %s for question %s (%d bytes)" % (parent, went_on[0], len(data))])
-            return out
-    if closer_back and who:  # the hub asked for it (a photo report)
-        earlier = next((r for r in store.find("report") if r["who"] == who and (r["meta"].get("pic") or {}).get("id") == parent), None)
-        if earlier:
-            z = store.new("zoom", image=Image.open(io.BytesIO(data)), parent=earlier["id"], box=box, who=who, meta={"bytes": len(data)})
-            store.update(earlier["id"], meta={"zoom": z})
-            out = _quick("Got the closer look, thank you.")
-            out.update(report=earlier["id"], zoom=z)
-            return out
-    for c in found["complete"]:  # codes the kit made on the phone: a photo, or a check-in with GPS
-        if c["kind"] == "P" and image is None:  # a PNG or WebP; the model calls send JPEG
-            buf = io.BytesIO()
-            Image.open(io.BytesIO(c["data"])).convert("RGB").save(buf, "JPEG", quality=95)
-            image = buf.getvalue()
-            log.append("a photo came in as a code (%d bytes)" % len(c["data"]))
-        elif c["kind"] == "L":
-            loc = codes.read_location(c["data"])
-            if loc:
-                lat, lon = loc["lat"], loc["lon"]
-                log.append("check-in: %(status)s, %(people)s people at %(lat).5f, %(lon).5f (±%(accuracy_m)s m)" % loc)
-                # Every check-in is kept as a report (with its photo, if one came with it) for the responders' view.
-                pic = next((p for p in found["complete"] if p["kind"] == "P"), None)
-                picture = Image.open(io.BytesIO(pic["data"])) if pic else None
-                # The picture's own id and size: the hub can ask this phone for a closer look at part of it.
-                meta = dict(loc, text=codes.plain(message), **({"pic": {"id": pic["id"], "size": list(picture.size)}} if pic else {}))
-                report = store.new("report", meta=meta, where=(lat, lon), who=who, image=picture)
-                log.append("kept as report %s" % report)
-                if not codes.plain(message):  # a check-in alone: acknowledge it
-                    out = _quick("Check-in received: %s, %s %s at %.5f, %.5f. Keep your phone on; reply with any change."
-                                 % ({"ok": "safe", "help": "needs help", "hurt": "someone hurt"}.get(loc["status"], loc["status"]),
-                                    loc["people"] or 1, "person" if (loc["people"] or 1) == 1 else "people", lat, lon))
-                    out.update(log=log, checkin=loc, report=report)
-                    return out
-    if found["missing"]:
-        log.append("incomplete codes: %s" % found["missing"])
+    found = codes.decode(message)
+    quick = _requests(message) or _close_up_back(found, who)
+    if quick:
+        return quick
+    log = ["incomplete codes: %s" % found["missing"]] if found["missing"] else []
     pic = next((c for c in found["complete"] if c["kind"] == "P"), None)
+    checkin = next((codes.read_location(c["data"]) for c in found["complete"] if c["kind"] == "L"), None)
+    report = None
+    if checkin:  # every check-in is kept as a report (with its photo, if one came with it) for the hub
+        lat, lon = checkin["lat"], checkin["lon"]
+        report = _report(checkin, pic, message, who, log)
+        if not codes.plain(message):
+            return dict(_quick(_ack(checkin)), log=log, checkin=checkin, report=report)
     if pic and report is None and llm.available():  # a question about a photo the phone keeps: look closer as needed
         inq, text = closer.start(who, Image.open(io.BytesIO(pic["data"])), pic["id"], codes.plain(message) or "What is this?")
-        out = _quick(text)
-        out.update(inquiry=inq, log=log + ["question %s about photo %s" % (inq, pic["id"])], seconds=round(time.time() - t, 1))
-        return out
+        return dict(_quick(text), inquiry=inq, log=log + ["question %s about photo %s" % (inq, pic["id"])], seconds=round(time.time() - t, 1))
+    if pic and image is None:  # a PNG or WebP; the model calls send JPEG
+        buf = io.BytesIO()
+        Image.open(io.BytesIO(pic["data"])).convert("RGB").save(buf, "JPEG", quality=95)
+        image = buf.getvalue()
+        log.append("a photo came in as a code (%d bytes)" % len(pic["data"]))
     message = codes.plain(message) or ("What is in this photo?" if image else message)
     ctx = tools.Context(you=(lat, lon), image=image)
     ctx.log.extend(log)
@@ -119,6 +85,54 @@ def handle(message, you, image=None, who=None):
     out["kit"] = _kit(ctx, out)
     out.update({"tools": calls, "log": ctx.log, "seconds": round(time.time() - t, 1), "report": report})
     return out
+
+
+def _requests(message):
+    """RESEND (the kit lost parts) or ZOOM (a closer look at a picture the server keeps) -> the reply, or None."""
+    again = codes.resend(message)
+    if again is not None:
+        return _quick(codes.text(again) if again else "Nothing to resend: that message is no longer kept.")
+    kept = codes.zoom(message)
+    if kept is not None:
+        text = kept[0] + ("\n" + codes.text(kept[1]) if kept[1] else "")
+        return dict(_quick(text), kit=text)
+    return None
+
+
+def _close_up_back(found, who):
+    """A phone answering a ZOOM with a close-up cropped from its own photo: for an open question about that photo
+    (evac/closer.py), or for a photo report the hub asked about. -> the reply, or None."""
+    z = next((c for c in found["complete"] if c["kind"] == "Z"), None)
+    if z is None:
+        return None
+    parent, box, data = codes.read_zoom(z["data"])
+    went_on = closer.receive(who, parent, box, data)
+    if went_on:
+        return dict(_quick(went_on[1]), inquiry=went_on[0], log=["close-up of %s for question %s (%d bytes)" % (parent, went_on[0], len(data))])
+    earlier = who and next((r for r in store.find("report") if r["who"] == who and (r["meta"].get("pic") or {}).get("id") == parent), None)
+    if earlier:
+        z = store.new("zoom", image=Image.open(io.BytesIO(data)), parent=earlier["id"], box=box, who=who, meta={"bytes": len(data)})
+        store.update(earlier["id"], meta={"zoom": z})
+        return dict(_quick("Got the closer look, thank you."), report=earlier["id"], zoom=z)
+    return None
+
+
+def _report(loc, pic, message, who, log):
+    """A check-in kept as a `report` record, with the photo and the phone's own id and size for it (so the hub can ask
+    that phone for a closer look)."""
+    picture = Image.open(io.BytesIO(pic["data"])) if pic else None
+    meta = dict(loc, text=codes.plain(message), **({"pic": {"id": pic["id"], "size": list(picture.size)}} if pic else {}))
+    report = store.new("report", meta=meta, where=(loc["lat"], loc["lon"]), who=who, image=picture)
+    log.append("check-in: %(status)s, %(people)s people at %(lat).5f, %(lon).5f (±%(accuracy_m)s m)" % loc)
+    log.append("kept as report %s" % report)
+    return report
+
+
+def _ack(loc):
+    people = loc["people"] or 1
+    return ("Check-in received: %s, %s %s at %.5f, %.5f. Keep your phone on; reply with any change."
+            % ({"ok": "safe", "help": "needs help", "hurt": "someone hurt"}.get(loc["status"], loc["status"]),
+               people, "person" if people == 1 else "people", loc["lat"], loc["lon"]))
 
 
 def kit_message(text, parts=(), signed=False):

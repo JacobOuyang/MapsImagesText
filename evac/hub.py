@@ -11,16 +11,14 @@ text. The coordinator's view (sim/dashboard.html) is built on these operations; 
 
 Phones are reached through `deliver` hooks (the simulator's phones; a real SMS gateway later).
 """
-import io
 import json
 import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
 
-from PIL import Image
 
-from . import codes, directions, geo, llm, photo, pipeline, router, sam, store
+from . import closer, codes, directions, geo, llm, pipeline, router, sam, store
 
 SMS_BYTES = 140
 deliver = []            # functions (who, text) called for every text the hub sends
@@ -65,13 +63,18 @@ def send(who, text, translate=True, raw=False):
             except Exception:
                 pass
         text = router.kit_message(text)
+    _deliver(who, text)
+    return text
+
+
+def _deliver(who, text):
+    """Log a text the hub sends and hand it to the phones (the simulator's; an SMS gateway later)."""
     log("out", who, text)
     for f in deliver:
         try:
             f(who, text)
         except Exception:
             pass
-    return text
 
 
 LANGS = {"pt": "Portuguese", "es": "Spanish", "zh": "Chinese", "ar": "Arabic", "ht": "Haitian Creole", "ru": "Russian"}
@@ -87,12 +90,7 @@ def receive(who, text):
     if reply and (p or {}).get("meta", {}).get("lang", "en") != "en" and not codes.CODE.search(reply):
         send(who, reply)  # an acknowledgement in their own language
     elif reply:
-        log("out", who, reply)
-        for f in deliver:
-            try:
-                f(who, reply)
-            except Exception:
-                pass
+        _deliver(who, reply)
     if out.get("report") and not out.get("zoom") and (store.get(out["report"]) or {}).get("file"):  # a new photo report
         _pool.submit(triage, out["report"])
     return out
@@ -138,38 +136,29 @@ TRIAGE = ("You help a volunteer coordinator at a neighbourhood hub during a stor
 
 
 def triage(report_id):
-    """Muse describes the photo and rates it; SAM finds the thing worth a closer look in the picture the phone sent."""
-    rep = store.get(report_id)
-    img = store.image(report_id)
+    """Muse looks at the photo the phone sent: how urgent, what hazard, where to look closer. SAM's box replaces Muse's
+    only when it agrees."""
+    rep, img = store.get(report_id), store.image(report_id)
     if rep is None or img is None:
         return None
-    buf = io.BytesIO()
-    img.save(buf, "JPEG", quality=95)
-    d = photo.describe(buf.getvalue())
     t = {}
-    if llm.available():  # Muse looks at the photo itself: it rates it and points at what matters
-        png = io.BytesIO()
-        img.resize((img.width * 3, img.height * 3), Image.LANCZOS).save(png, "PNG")
+    if llm.available():
         try:
             t = llm.chat_json([{"role": "user", "content": [
                 {"type": "text", "text": TRIAGE.format(note=rep["meta"].get("note") or "", status=rep["meta"].get("status"))},
-                llm.image_part(png.getvalue())]}])
+                llm.image_part(closer.enlarged(img))]}])
         except Exception:
             t = {}
-    pointed = t.get("look_box")
+    fr = closer.box_fractions(t.get("look_box"))
     t = {"urgency": str(t.get("urgency") or "medium"), "hazard": str(t.get("hazard") or ""), "look_at": str(t.get("look_at") or ""),
-         "advice": str(t.get("advice") or ""), "keep_away_m": int(t.get("keep_away_m") or 0), "caption": d.get("caption", "")}
+         "advice": str(t.get("advice") or ""), "keep_away_m": int(t.get("keep_away_m") or 0)}
     # Where to look: Muse's box. At 128 px SAM finds nothing smaller than ~25 px (evals/closer/RESULTS.md), so its
     # box is only taken when it is confident and agrees with Muse (its centre inside Muse's box): then it is tighter.
     box = None
-    if isinstance(pointed, list) and len(pointed) == 4:
-        try:
-            x0, y0, x1, y1 = [min(1.0, max(0.0, float(v))) for v in pointed]
-            if x1 > x0 and y1 > y0:
-                box = [round(x0 * img.width), round(y0 * img.height), max(4, round((x1 - x0) * img.width)), max(4, round((y1 - y0) * img.height))]
-                t["box_from"] = "Muse"
-        except (TypeError, ValueError):
-            pass
+    if fr:
+        W, H = img.size
+        box = [round(fr[0] * W), round(fr[1] * H), max(4, round((fr[2] - fr[0]) * W)), max(4, round((fr[3] - fr[1]) * H))]
+        t["box_from"] = "Muse"
     if t["look_at"] and sam.available():
         try:
             found = [f for f in sam.segment(img, t["look_at"]) if f["score"] >= 0.6]
@@ -264,6 +253,14 @@ def walk(trip_id, metres=60):
 
 
 # ---------- the dashboard ----------
+
+def thread(who):
+    """Everything between the hub and one phone, oldest first (and rumours forwarded to it)."""
+    p = person(who)
+    texts = sorted((r for r in store.find("sms", limit=100000) if r["who"] == who), key=lambda r: r["created"])
+    return {"person": p and {"who": who, **p["meta"]},
+            "texts": [{"dir": r["meta"]["dir"], "text": r["meta"]["text"], "parts": r["meta"]["parts"], "at": r["created"]} for r in texts]}
+
 
 def latest_reports():
     """Each person's latest check-in."""

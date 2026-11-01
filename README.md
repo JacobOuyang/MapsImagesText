@@ -356,7 +356,18 @@ Put a Meta Model API key in `.env` (git-ignored) as `LLAMA_API_KEY=...`. Without
 .venv/bin/python sim/server.py
 ```
 
-The simulator runs at http://127.0.0.1:8765. It has tabs for emergencies (three people with their own GPS), photos, radar, walking (with simulated GPS moves) and "ask anything". Every reply is shown in each of its versions with real sizes, including how the kit draws it.
+The simulator runs at http://127.0.0.1:8765. It has four pages, linked from the top of the first:
+
+- **`/`**: tabs for emergencies (three people with their own GPS), photos, radar, walking (with simulated GPS moves) and "ask anything". Every reply is shown in each of its versions with real sizes, including how the kit draws it.
+- **`/kit.html`**: the offline kit, as the single file a phone saves.
+- **`/dashboard`**: the community hub; the buttons at the bottom left run the Red Hook drill beat by beat. It is laid out for a 1920 × 1080 window.
+- **`/closer`**: look closer; pick a spider photo and ask.
+
+Offline tests (no key or network needed):
+
+```bash
+.venv/bin/python -m unittest discover tests
+```
 
 From the command line:
 
@@ -373,12 +384,6 @@ From the command line:
 ```
 
 `--photo some.jpg` and `--radar LAT,LON` run the other modes.
-
-Offline tests (no model key or network needed):
-
-```bash
-.venv/bin/python -m unittest discover tests
-```
 
 ## Code
 

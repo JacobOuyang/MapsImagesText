@@ -1,7 +1,6 @@
 """Tiny pictures for plain SMS, which evac/codes.py sends as #P and #Z codes and the offline kit (sim/kit.html) draws:
 a 1-bit PNG (line drawings; a step picture is 300-500 bytes, 3-5 SMS) or a greyscale WebP (photos and zooms). Both fit in 128 px with their aspect kept."""
 import io
-import math
 
 from PIL import Image, ImageOps
 
@@ -37,8 +36,3 @@ def webp(img, side=SIDE, quality=5, colour=False):
     else:
         ImageOps.autocontrast(fit(img, side), cutoff=1).save(buf, "WEBP", quality=quality, method=6)
     return buf.getvalue()
-
-
-def sms_count(text):
-    """SMS parts for text in the basic alphabet (base64 is): 160 in one message, 153 per part when split."""
-    return 1 if len(text) <= 160 else math.ceil(len(text) / 153)

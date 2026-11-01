@@ -77,19 +77,13 @@ a session takes about 30 s (six personal routes); the rest take seconds. Streets
 
 ## The video
 
-```bash
-swiftc -O demo/video/encode.swift -o out/demo/encode
-```
+With the simulator running:
 
 ```bash
-.venv/bin/python demo/video/capture.py
+.venv/bin/python demo/video/make_video.py --capture
 ```
 
-```bash
-.venv/bin/python demo/video/make_video.py
-```
-
-`capture.py` runs every beat against the running server and screenshots the dashboard with headless Chrome at 2×.
-`make_video.py` turns the shots into scenes (captions, title cards, slow zooms, crossfades) and encodes
-`out/demo/redhook/redhook.mp4` with AVFoundation. The scenes are data at the top of `make_video.py`; change a caption
-or a duration and rerun it without re-capturing.
+It runs every beat against the server and screenshots the dashboard with headless Chrome at 2× (`capture.py`), turns
+the shots into scenes (captions, title cards, slow zooms, crossfades) and encodes `out/demo/redhook/redhook.mp4` with
+AVFoundation (`encode.swift`, compiled on first use). The scenes are data in `make_video.py`; after changing a caption
+or a duration, run it without `--capture` to re-cut from the same screenshots.

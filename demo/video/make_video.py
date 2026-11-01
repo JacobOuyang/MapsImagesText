@@ -1,7 +1,9 @@
 """The Red Hook demo video, first cut: the screenshots from capture.py, captions, title cards, slow zooms and
-crossfades, encoded with demo/video/encode.swift (AVFoundation, no ffmpeg).
+crossfades, encoded with demo/video/encode.swift (AVFoundation, no ffmpeg; compiled on first use).
 
-    .venv/bin/python demo/video/make_video.py        # -> out/demo/redhook/redhook.mp4
+    .venv/bin/python demo/video/make_video.py --capture   # run the drill and screenshot it first (needs the simulator)
+    .venv/bin/python demo/video/make_video.py             # just re-cut from the last screenshots
+                                                          # -> out/demo/redhook/redhook.mp4
 
 Scenes are data (SCENES below): change a caption or a duration and run it again; nothing is re-captured.
 """
@@ -9,6 +11,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -212,6 +215,11 @@ def render(kind, a, secs):
 
 
 def main():
+    if "--capture" in sys.argv or not os.path.exists(os.path.join(SHOTS, "shots.json")):
+        import capture
+        capture.main()
+    if not os.path.exists(ENCODER):
+        subprocess.run(["swiftc", "-O", os.path.join(os.path.dirname(__file__), "encode.swift"), "-o", ENCODER], check=True)
     counts = json.load(open(os.path.join(SHOTS, "shots.json")))["end"]["counts"]
     shutil.rmtree(FRAMES, ignore_errors=True)
     os.makedirs(FRAMES)

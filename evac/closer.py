@@ -48,7 +48,8 @@ under its body", "object": what that thing most likely is, in one or two plain w
 "safety": one short line of safety advice if the thing could hurt someone, else ""}}"""
 
 
-def _enlarged(img):
+def enlarged(img):
+    """PNG bytes of `img` enlarged to SHOWN px: what Muse is shown of a small picture."""
     k = SHOWN / max(img.size)
     out = img.convert("RGB").resize((round(img.width * k), round(img.height * k)), Image.LANCZOS)
     buf = io.BytesIO()
@@ -60,7 +61,7 @@ def _views(inq):
     """[(label, PNG bytes)]: the whole photo, then every closer look, in order."""
     rec = store.get(inq)
     w, h = rec["meta"]["pic"]["size"]
-    out = [("Image 1 is the whole photo at %dx%d pixels, in grey, enlarged." % (w, h), _enlarged(store.image(inq)))]
+    out = [("Image 1 is the whole photo at %dx%d pixels, in grey, enlarged." % (w, h), enlarged(store.image(inq)))]
     for i, v in enumerate(rec["meta"].get("views", []), 2):
         if not v.get("zoom"):
             continue
@@ -74,7 +75,7 @@ def _views(inq):
                       "whole photo (confidence %.2f)." % ("a " + v["sam"]["phrase"], 100 * l, 100 * r, 100 * t, 100 * b, v["sam"]["score"]))
         elif v.get("sam_tried"):
             label += " A segmentation model (SAM 3.1) found no %s in it." % v["object"]
-        out.append((label, _enlarged(store.image(v["zoom"]))))
+        out.append((label, enlarged(store.image(v["zoom"]))))
     return out
 
 
@@ -92,13 +93,13 @@ def _decide(inq):
     except Exception as ex:
         d = {"answer": "", "sure": "no", "need": None, "error": str(ex)[:120]}
     need = d.get("need") if left > 0 else None
-    if not isinstance(need, dict) or not _box(need.get("box")):
+    if not isinstance(need, dict) or not box_fractions(need.get("box")):
         need = None
     if not need and not d.get("answer"):
         d["answer"] = "I can't tell from what I can see."
         d["sure"] = "no"
     return {"answer": str(d.get("answer") or ""), "sure": str(d.get("sure") or "no"), "safety": str(d.get("safety") or ""),
-            "need": need and {"box": _box(need["box"]), "colour": bool(need.get("colour")), "object": str(need.get("object") or ""),
+            "need": need and {"box": box_fractions(need["box"]), "colour": bool(need.get("colour")), "object": str(need.get("object") or ""),
                               "why": _why(need.get("look_at"), need.get("to_see") or need.get("why"))}}
 
 
@@ -109,7 +110,7 @@ def _why(look_at, to_see):
                                                   " " + to_see if to_see else "")
 
 
-def _box(b):
+def box_fractions(b):
     """[left, top, right, bottom] fractions, clamped; None if it isn't a box."""
     try:
         l, t, r, bo = [min(1.0, max(0.0, float(v))) for v in b]
