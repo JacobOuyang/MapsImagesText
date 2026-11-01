@@ -5,6 +5,8 @@ by SMS, so a demo needs only WhatsApp.
     a photo (with a question)  -> the look-closer loop (evac/closer.py): Muse sees only the 128 px grey picture and
                                   asks for closer looks; this bridge plays the phone's kit, cropping each one from the
                                   original, and shows the person every step
+    a text with kit codes      -> straight to the router, as by SMS: what the kit on the person's computer sends
+                                  (a photo as a 128 px code with a question, a close-up Muse asked for, a check-in)
     a shared location          -> remembered, for alerts and directions ("where are you?" is asked once)
     "help"                     -> what it can do
 
@@ -125,6 +127,9 @@ def reply(params):
         return send(who, HELP)
     if has_photo:
         return look_closer(who, _download(params["MediaUrl0"]), body or "What is this?", user["where"])
+    if codes.CODE.search(body):  # the kit sent codes (the photo never left the person's computer): as by SMS
+        out = router.handle(body, user["where"] or (0.0, 0.0), who=who)
+        return send(who, out.get("kit") or out.get("sms") or out.get("text") or "I couldn't read those codes.")
     if not user["where"]:  # most answers depend on where the person is: ask once, then answer
         store.update(user["id"], meta={"pending": body})
         return send(who, "Where are you? Share your location (📎 > Location) and I'll answer.")

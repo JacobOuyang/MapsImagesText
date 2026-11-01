@@ -26,6 +26,8 @@ text messages into pictures and maps, checks that alerts are genuine, and makes 
 by plain SMS. Draw a box on a picture (or tap a numbered part) to ask for a closer look; a route opens in an offline
 map app.</p>
 <div class="tabs"><button id="tRead" class="on">Read a message</button><button id="tSend">Send</button></div>
+<div class="row quiet"><label>Send texts with WhatsApp to <input id="waTo" placeholder="number, e.g. 14155238886" style="width:170px;padding:5px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg)" aria-label="WhatsApp number"></label>
+  <span>(empty: SMS only)</span></div>
 
 <div id="read">
   <textarea id="msg" placeholder="Paste the whole message here (parts can come in any order)" aria-label="Message"></textarea>
@@ -71,8 +73,10 @@ async function read() {
     box.appendChild(Object.assign(document.createElement('b'), {textContent: 'The service asked for a closer look at your photo' + (z.colour ? ', in colour' : '') + '. Your kit cropped it:'}));
     z.canvas.style.cssText = 'display:block;width:160px;margin:8px 0;border-radius:6px'; box.appendChild(z.canvas);
     codeBox(z.parts, box);
-    const send = Object.assign(document.createElement('a'), {textContent: 'Open in Messages to send (' + z.parts.length + ' SMS)', href: 'sms:?&body=' + encodeURIComponent(z.parts.join('\n'))});
-    send.style.cssText = 'display:inline-block;margin-top:6px;font-weight:600'; box.appendChild(send);
+    if (!waTo()) {
+      const send = Object.assign(document.createElement('a'), {textContent: 'Open in Messages to send (' + z.parts.length + ' SMS)', href: 'sms:?&body=' + encodeURIComponent(z.parts.join('\n'))});
+      send.style.cssText = 'display:inline-block;margin-top:6px;font-weight:600'; box.appendChild(send);
+    }
     $('out').prepend(box);
   }
   store.set(KIT.dump());
@@ -93,8 +97,21 @@ function codeBox(parts, out) {
   copy.onclick = () => navigator.clipboard && navigator.clipboard.writeText(text);
   const qrb = Object.assign(document.createElement('button'), {textContent: 'Show as QR'});
   qrb.onclick = () => { const c = KIT.qrCanvas(text, 3); if (c) out.appendChild(c); };
-  row.append(copy, qrb); out.append(pre, row);
+  row.append(copy, qrb);
+  if (waTo()) row.appendChild(waButton(text, parts.length));
+  out.append(pre, row);
 }
+// WhatsApp stands in for SMS: the codes go out as an ordinary WhatsApp text. The kit only opens the chat with the
+// text filled in; the person presses Enter (nothing is sent for them).
+const waTo = () => ($('waTo').value || '').replace(/\D/g, '');
+function waButton(text, n) {
+  const b = Object.assign(document.createElement('button'), {textContent: 'Send in WhatsApp (' + n + ' texts)'});
+  b.style.fontWeight = '600';
+  b.onclick = () => { location.href = 'whatsapp://send?phone=' + waTo() + '&text=' + encodeURIComponent(text); };
+  return b;
+}
+try { $('waTo').value = localStorage.getItem('kitWhatsApp') ?? '14155238886'; } catch (e) { $('waTo').value = '14155238886'; }
+$('waTo').onchange = () => { try { localStorage.setItem('kitWhatsApp', waTo()); } catch (e) {} };
 $('photo').onchange = $('look').onchange = async () => {
   const f = $('photo').files[0]; if (!f) return; const out = $('photoOut'); out.innerHTML = '';
   const grey = $('look').value === 'grey' && await KIT.photoWebp(f);

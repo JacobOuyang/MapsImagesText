@@ -325,6 +325,11 @@ For a demo without an SMS number, WhatsApp stands in for the text channel: a per
   looks, and the bridge plays the phone's kit, cropping each one from the original. The person sees every step.
 - **A shared location** is remembered for alerts and directions. Muse asks for it once, then answers the question
   it was waiting on.
+- **A photo that never leaves the computer.** With WhatsApp on a laptop, the offline kit (`/kit.html`) stands in for
+  the phone: pick a photo and a question in its Send tab and press **Send in WhatsApp**. WhatsApp opens with the
+  photo already turned into text codes (128 px, ~10–20 texts) in the chat; press Enter. When Muse asks for a closer
+  look, paste its reply into the kit's Read tab: the kit crops the original and **Send in WhatsApp** fills in the
+  close-up. The kit only fills in the chat; it never sends anything by itself.
 
 A real run (no Twilio, replies collected):
 

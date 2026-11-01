@@ -95,6 +95,16 @@ class Bridge(unittest.TestCase):
         self.assertLess(min(crop.getpixel((x, y))[0] for x in range(crop.width) for y in range(crop.height)), 60)  # the blob is in it
 
 
+class KitCodes(Bridge):
+    def test_codes_go_straight_to_the_router_without_a_location(self):
+        reply = "Not sure yet: I need a closer look at the dark spot.\nZOOM ab 80 20 10 10 C"
+        self.script({"text": reply, "sms": reply})
+        msg = "Is this a black widow?\n" + codes.text(codes.parts("P", b"fake", "ab"))
+        whatsapp.reply({"From": ME, "Body": msg})
+        self.assertEqual(self.got, [(msg, (0.0, 0.0), ME)])
+        self.assertTrue(self.said()[-1].endswith("ZOOM ab 80 20 10 10 C"))  # the kit on the computer needs the request line
+
+
 class Webhook(unittest.TestCase):
     """sim/whatsapp_server.py: Twilio's signature is checked; a good request is answered at once; nothing else is served."""
 
