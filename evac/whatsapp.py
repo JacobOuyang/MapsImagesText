@@ -62,9 +62,15 @@ def signature_ok(url, params, signature):
     return hmac.compare_digest(want, signature or "")
 
 
+def log(who, direction, body):
+    """Every message in and out, kept in the store (kind "wa_msg"): what the test phone (sim/wa_phone.py) reads."""
+    store.new("wa_msg", who=who, meta={"dir": direction, "body": body, "at": time.time()})
+
+
 def send(to, body):
     """One WhatsApp message (several if it's longer than MAX_BODY)."""
     for chunk in _split(body):
+        log(to, "out", chunk)
         if not (_env("TWILIO_ACCOUNT_SID") and _env("TWILIO_AUTH_TOKEN")):
             OUTBOX.append({"to": to, "body": chunk, "at": time.time()})
             continue
@@ -115,6 +121,7 @@ def _user(who):
 def reply(params):
     """Work out the answer to one message and send it."""
     who, body = params.get("From", ""), (params.get("Body") or "").strip()
+    log(who, "in", body or ("[location]" if params.get("Latitude") else "[photo]" if params.get("NumMedia", "0") != "0" else ""))
     user = _user(who)
     if params.get("Latitude") and params.get("Longitude"):  # a shared location
         at = (float(params["Latitude"]), float(params["Longitude"]))

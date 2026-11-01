@@ -345,9 +345,20 @@ Muse           Yes, this is a black widow. The red hourglass mark on its black b
                Do not touch it and keep people and pets away.
 ```
 
+**Testing without a phone in hand:** `sim/wa_phone.py` is a test phone. It sends messages to the bridge as your
+WhatsApp number, plays the kit for photos, and prints Muse's replies, which Twilio also delivers to your WhatsApp.
+A real run took 19 s:
+
+```bash
+.venv/bin/python sim/wa_phone.py --photo sim/samples/spiders/black_widow.jpg "Is this a black widow?"
+```
+
+`--via whatsapp` sends from WhatsApp Desktop itself (it fills in the chat and presses Return), which needs macOS
+Accessibility permission for the app running it.
+
 To run it live:
 
-1. **Twilio:** put `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` in `.env`.
+1. **Twilio:** put `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and your own number as `MY_WHATSAPP` (for the test phone) in `.env`.
 2. **The bridge:** `.venv/bin/python sim/whatsapp_server.py` (port 8770). It serves only Twilio's webhook; the
    simulator and its data stay local.
 3. **A tunnel** to port 8770, for example `cloudflared tunnel --url http://127.0.0.1:8770`. Put its https address
