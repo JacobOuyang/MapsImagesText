@@ -117,6 +117,6 @@ WhatsApp shows ```text``` in monospace but can't colour it. Only glyphs measured
 
 ## Conventions
 
-- Every commit updates `README.md` with what the program does, how it works, and example inputs/outputs copied from real runs (re-run the samples; don't hand-write outputs). The commit message describes the same.
+- Every commit updates the docs: `README.md` (overview and setup) and `HOW_IT_WORKS.md` (how each part works, with example inputs/outputs copied from real runs (re-run the samples; don't hand-write outputs)). The commit message describes the same.
 - NYC sample alerts are fictional drills and are labelled as such inside the alert text.
 - Model and network failures always fall back (regex parse, template message, imagery-only routing) instead of blocking the reply.
