@@ -315,6 +315,42 @@ glossy brown spider with no red mark) "not a black widow" 3 times out of 3. Most
 two: first a grey one to find out whether the dark shape was a spider, then a colour one at its belly. That is a
 handful of generated photos, not an evaluation.
 
+## On WhatsApp
+
+For a demo without an SMS number, WhatsApp stands in for the text channel: a person messages the WhatsApp number
+(Twilio's sandbox) and gets exactly what they would get by SMS.
+
+- **A message** goes to Muse and its tools; the reply is the SMS version, map included.
+- **A photo with a question** runs the look-closer loop. Muse sees only the 128 px grey version and asks for closer
+  looks, and the bridge plays the phone's kit, cropping each one from the original. The person sees every step.
+- **A shared location** is remembered for alerts and directions. Muse asks for it once, then answers the question
+  it was waiting on.
+
+A real run (no Twilio, replies collected):
+
+```
+You            [photo] Is this a black widow?
+Muse           Sending your photo as a 128 px grey picture: 11 texts. Muse only sees that.
+Muse           Not sure yet: I need a closer look at the dark spot under the shelf to see the shape and legs.
+               (Your phone sends that part of the photo: 7 texts.)
+Muse           Not sure yet: I need a closer look at the spider's round belly to see the colour of the hourglass
+               marking, in colour.
+               (Your phone sends that part of the photo in colour: 10 texts.)
+Muse           Yes, this is a black widow. The red hourglass mark on its black belly is clearly visible.
+               Do not touch it and keep people and pets away.
+```
+
+To run it live:
+
+1. **Twilio:** put `TWILIO_ACCOUNT_SID` and `TWILIO_AUTH_TOKEN` in `.env`.
+2. **The bridge:** `.venv/bin/python sim/whatsapp_server.py` (port 8770). It serves only Twilio's webhook; the
+   simulator and its data stay local.
+3. **A tunnel** to port 8770, for example `cloudflared tunnel --url http://127.0.0.1:8770`. Put its https address
+   in `.env` as `PUBLIC_URL` (Twilio signs requests with it) and restart the bridge.
+4. **Twilio's sandbox settings:** set "When a message comes in" to `PUBLIC_URL/whatsapp` (POST).
+5. **Each phone** sends the sandbox's join message to its number once; sandbox sessions end after 72 hours without a
+   message.
+
 ## A community hub (demo)
 
 Professional responders have their own radios and dispatch. For the first hours of a disaster, though, it's
@@ -400,8 +436,9 @@ From the command line:
 | Store | `evac/store.py` (every photo, zoom, trip, message and report, in SQLite) |
 | Community hub | `evac/hub.py`, `sim/dashboard.html`, `sim/redhook.py` (the Red Hook drill), `demo/` (story and video) |
 | Look closer | `evac/closer.py` (the loop), `sim/closer.html` + `sim/closer_demo.py` (the demo), `sim/phones.py` (simulated phones that keep their originals) |
+| WhatsApp | `evac/whatsapp.py` (the channel), `sim/whatsapp_server.py` (Twilio's webhook, the only part on the internet) |
 | Simulator | `sim/server.py`, `sim/index.html` |
-| Tests | `tests/` (codes, signatures, the store, RESEND/ZOOM/check-ins, routing around danger, the look-closer loop; offline) |
+| Tests | `tests/` (codes, signatures, the store, RESEND/ZOOM/check-ins, routing around danger, the look-closer loop, the WhatsApp channel; offline) |
 | Evals | `evals/` (photo drawings, emergency pictures, kit sizes) |
 
 `CLAUDE.md` has the details of how the pieces connect.

@@ -24,6 +24,15 @@
       ],
       "port": 8766,
       "url": "http://127.0.0.1:8766"
+    },
+    {
+      "name": "whatsapp",
+      "runtimeExecutable": ".venv/bin/python",
+      "runtimeArgs": [
+        "sim/whatsapp_server.py"
+      ],
+      "port": 8770,
+      "url": "http://127.0.0.1:8770"
     }
   ]
 }
