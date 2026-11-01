@@ -9,8 +9,9 @@ exchange runs without anyone pressing Enter.
 
 --via sim (default): posts to the bridge what Twilio would for a message from you, signed with your Twilio token. The
     replies are real: Twilio delivers them to your WhatsApp. Your own side of the chat won't show what this sent.
---via whatsapp: opens WhatsApp Desktop with the message typed and presses Return (macOS automation: the app running
-    this needs Accessibility permission). The message really comes from your account, through Twilio.
+--via whatsapp: fills in the chat in WhatsApp Desktop without bringing it forward, then brings it forward for about a
+    second to press Return and gives the screen back to the app you were in (macOS only sends a key press to the
+    front app). The app running this needs Accessibility permission. The message really comes from your account.
 Either way the replies are read from the bridge's log in the local store (evac/whatsapp.py records every message).
 
 .env: MY_WHATSAPP (your number, e.g. +15551234567; default: the last WhatsApp user the bridge saw), plus the bridge's
@@ -35,6 +36,16 @@ from PIL import Image  # noqa: E402
 from evac import codes, llm, smsimage, store  # noqa: E402
 
 SANDBOX = "whatsapp:+14155238886"
+# Wait for the filled-in chat, bring WhatsApp forward just long enough to press Return, then give the screen back.
+PRESS_RETURN = """
+delay 1.5
+tell application "System Events" to set previous to name of first application process whose frontmost is true
+tell application "WhatsApp" to activate
+delay 0.6
+tell application "System Events" to keystroke return
+delay 0.4
+if previous is not "WhatsApp" then tell application previous to activate
+"""
 llm._load_dotenv()
 
 
@@ -45,19 +56,18 @@ def me():
     users = store.find("wa_user", limit=1)
     if users:
         return users[0]["who"]
-    sys.exit("Set MY_WHATSAPP in .env (your WhatsApp number), or message the bridge once from your phone.")
+    raise RuntimeError("Set MY_WHATSAPP in .env (your WhatsApp number), or message the bridge once from your phone.")
 
 
 def send(text, who, via, bridge, at=None):
     """One message from you to the Muse number."""
     if via == "whatsapp":
         number = SANDBOX.split("+")[1]
-        subprocess.run(["open", "whatsapp://send?phone=%s&text=%s" % (number, quote(text))], check=True)
-        r = subprocess.run(["osascript", "-e", 'tell application "WhatsApp" to activate', "-e", "delay 2",
-                            "-e", 'tell application "System Events" to keystroke return'], capture_output=True, text=True)
+        subprocess.run(["open", "-g", "whatsapp://send?phone=%s&text=%s" % (number, quote(text))], check=True)  # -g: stay behind
+        r = subprocess.run(["osascript", "-e", PRESS_RETURN], capture_output=True, text=True)
         if r.returncode:
-            sys.exit("Couldn't press Return in WhatsApp (%s). Allow this app under System Settings > Privacy & Security > "
-                     "Accessibility, or use --via sim." % r.stderr.strip())
+            raise RuntimeError("Couldn't press Return in WhatsApp (%s). Give the app running this Accessibility permission "
+                               "(System Settings > Privacy & Security > Accessibility), or use sim." % r.stderr.strip())
         return
     params = {"From": who, "To": SANDBOX, "Body": text, "NumMedia": "0", "MessageSid": "SMtest%08d" % random.randrange(10 ** 8)}
     if at:
@@ -67,7 +77,7 @@ def send(text, who, via, bridge, at=None):
     sig = base64.b64encode(hmac.new(os.environ.get("TWILIO_AUTH_TOKEN", "").encode(), data.encode(), hashlib.sha1).digest()).decode()
     r = requests.post(bridge + "/whatsapp", data=params, headers={"X-Twilio-Signature": sig}, timeout=20)
     if r.status_code != 200:
-        sys.exit("The bridge refused it (%d %s). Is sim/whatsapp_server.py running with the same .env?" % (r.status_code, r.text[:80]))
+        raise RuntimeError("The bridge refused it (%d %s). Is sim/whatsapp_server.py running with the same .env?" % (r.status_code, r.text[:80]))
 
 
 def replies(who, since, quiet=6, timeout=120):
@@ -119,6 +129,13 @@ def photo(path, question, who, via, bridge):
 
 
 def main():
+    try:
+        run()
+    except RuntimeError as ex:
+        sys.exit(str(ex))
+
+
+def run():
     a = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     a.add_argument("text", nargs="?", default="help")
     a.add_argument("--photo")

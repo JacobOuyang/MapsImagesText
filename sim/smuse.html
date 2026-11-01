@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SMuSe</title>
+<style>
+  :root { --bg:#0f1419; --card:#1c252e; --line:#2a3540; --fg:#e8edf2; --quiet:#8b98a5; --green:#25d366; --ask:#f59f00; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.4 system-ui, -apple-system, sans-serif; }
+  header { display:flex; align-items:center; gap:14px; padding:12px 18px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
+  h1 { font-size:19px; margin:0; } .quiet { color:var(--quiet); font-size:13px; }
+  .grow { flex:1; }
+  .seg button { font:inherit; font-size:13px; padding:5px 10px; border:1px solid var(--line); background:var(--card); color:var(--fg); cursor:pointer; }
+  .seg button:first-child { border-radius:8px 0 0 8px; } .seg button:last-child { border-radius:0 8px 8px 0; }
+  .seg button.on { background:var(--green); color:#062; border-color:var(--green); font-weight:700; }
+  main { display:grid; grid-template-columns:minmax(300px, 420px) 1fr; gap:18px; padding:18px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:14px; }
+  .drop { border:2px dashed var(--line); border-radius:10px; padding:18px; text-align:center; cursor:pointer; }
+  .drop.over { border-color:var(--green); }
+  .drop img { max-width:100%; max-height:220px; border-radius:8px; display:block; margin:0 auto; }
+  input[type=text] { width:100%; font:inherit; padding:9px 10px; border-radius:8px; border:1px solid var(--line); background:var(--bg); color:var(--fg); margin-top:10px; }
+  .send { width:100%; margin-top:10px; font:inherit; font-weight:700; padding:10px; border:0; border-radius:8px; background:var(--green); color:#062; cursor:pointer; }
+  .send:disabled { opacity:.5; cursor:default; }
+  .thread { display:flex; flex-direction:column; gap:6px; }
+  .b { max-width:82%; padding:8px 11px; border-radius:12px; white-space:pre-wrap; word-break:break-word; font-size:14px; }
+  .b.you { align-self:flex-end; background:#005c4b; }
+  .b.muse { align-self:flex-start; background:#202c33; }
+  .b.note { align-self:center; background:none; color:var(--quiet); font-size:13px; }
+  .b .meta { display:block; font-size:11px; color:var(--quiet); margin-top:3px; }
+  .codes { color:#9fd8c8; font-size:12px; }
+  .orig { position:relative; margin-top:12px; } .orig img { width:100%; display:block; border-radius:8px; }
+  .orig .box { position:absolute; border:3px solid var(--ask); border-radius:3px; }
+  .seen { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+  .seen figure { margin:0; } .seen img { width:150px; display:block; border-radius:6px; image-rendering:pixelated; }
+  .seen figcaption { font-size:12px; color:var(--quiet); margin-top:3px; max-width:150px; }
+  .err { color:#ff8787; }
+</style>
+</head>
+<body>
+<header>
+  <h1>SMuSe</h1>
+  <span class="quiet">Your photo stays on this computer; Muse gets only what it asks for, by WhatsApp.</span>
+  <div class="grow"></div>
+  <span class="quiet" id="me"></span>
+  <span class="seg"><button id="vWa">from my WhatsApp</button><button id="vSim">simulated</button></span>
+</header>
+<main>
+  <section class="card">
+    <div class="drop" id="drop"><span class="quiet">Drop a photo here, or click to pick one (optional)</span></div>
+    <input type="file" id="file" accept="image/*" hidden>
+    <input type="text" id="question" placeholder="Your question, e.g. Is this a black widow?">
+    <button class="send" id="send">Send to Muse</button>
+    <div class="quiet" id="status" style="margin-top:8px"></div>
+    <div class="orig" id="orig"></div>
+    <div class="seen" id="seen"></div>
+  </section>
+  <section class="card"><div class="thread" id="thread"><div class="b note">Your conversation with Muse appears here.</div></div></section>
+</main>
+<script>
+const $ = id => document.getElementById(id);
+const esc = t => String(t || '').replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
+const CODE = /#[PZKMGTLSA][0-9a-z]{2,4}\.\d+\/\d+:[A-Za-z0-9+/=]*:[0-9a-f]{4}#/g;
+let image = null, shown = '';
+
+function pick(f) {
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { image = r.result; $('drop').innerHTML = `<img src="${image}" alt="your photo">`; };
+  r.readAsDataURL(f);
+}
+$('drop').onclick = () => $('file').click();
+$('file').onchange = e => pick(e.target.files[0]);
+$('drop').ondragover = e => { e.preventDefault(); $('drop').classList.add('over'); };
+$('drop').ondragleave = () => $('drop').classList.remove('over');
+$('drop').ondrop = e => { e.preventDefault(); $('drop').classList.remove('over'); pick(e.dataTransfer.files[0]); };
+const via = v => fetch('/api/via', {method: 'POST', body: JSON.stringify({via: v})}).then(tick);
+$('vWa').onclick = () => via('whatsapp'); $('vSim').onclick = () => via('sim');
+
+$('send').onclick = async () => {
+  $('send').disabled = true;
+  const r = await fetch('/api/ask', {method: 'POST', body: JSON.stringify({image, question: $('question').value})}).then(r => r.json());
+  if (r.error) { $('status').textContent = r.error; $('send').disabled = false; return; }
+  tick();
+};
+
+function bubble(t) {
+  const n = (t.text.match(CODE) || []).length, words = t.text.replace(CODE, '').replace(/\s*ZOOM\s+\S+(\s+\d+){4}(\s+C)?/i, '').trim();
+  const body = esc(words) + (n ? `${words ? '<br>' : ''}<span class="codes">＋ ${n} code part${n > 1 ? 's' : ''} (${t.from === 'you' ? 'made by the kit' : 'for the kit'})</span>` : '');
+  return `<div class="b ${t.from}">${body}${t.from !== 'note' ? `<span class="meta">${t.from === 'you' ? 'you' : 'Muse'} · ${t.parts} text${t.parts > 1 ? 's' : ''}</span>` : ''}</div>`;
+}
+
+async function tick() {
+  const s = await fetch('/api/state').then(r => r.json());
+  $('vWa').classList.toggle('on', s.via === 'whatsapp'); $('vSim').classList.toggle('on', s.via === 'sim');
+  $('me').textContent = s.me ? 'as ' + s.me.replace('whatsapp:', '') : 'set MY_WHATSAPP in .env';
+  const c = s.conv; if (!c) return;
+  const key = JSON.stringify([c.texts.length, c.views.length, c.done, c.error]);
+  if (key === shown) return; shown = key;
+  $('thread').innerHTML = c.texts.map(bubble).join('') + (c.done ? '' : '<div class="b note">…</div>') + (c.error ? `<div class="b note err">${esc(c.error)}</div>` : '');
+  $('thread').lastElementChild.scrollIntoView({block: 'end'});
+  const total = c.texts.reduce((n, t) => n + (t.from === 'note' ? 0 : t.parts), 0);
+  $('status').textContent = (c.done ? 'Done' : 'Working') + ` · ${total} texts so far` + (c.views.length ? ` · ${c.views.length} closer look${c.views.length > 1 ? 's' : ''}` : '');
+  if (c.original) {  // the original that never left, with what Muse asked to see
+    $('orig').innerHTML = `<div class="quiet">Stays on this computer:</div><div style="position:relative"><img src="${c.original}" alt="original">` +
+      c.views.map((v, i) => { const [x, y, w, h] = v.box, [W, H] = c.size;
+        return `<div class="box" style="left:${x / W * 100}%;top:${y / H * 100}%;width:${w / W * 100}%;height:${h / H * 100}%"></div>`; }).join('') + '</div>';
+    $('seen').innerHTML = `<figure><img src="${c.seen}" alt="sent"><figcaption>What Muse got first: ${c.size.join('×')} px, grey</figcaption></figure>` +
+      c.views.map((v, i) => `<figure><img src="${v.image}" alt="closer look ${i + 1}"><figcaption>Closer look ${i + 1}${v.colour ? ', colour' : ''}: ${(v.bytes / 1000).toFixed(1)} KB</figcaption></figure>`).join('');
+  }
+  if (c.done) $('send').disabled = false;
+}
+tick(); setInterval(tick, 2000);  // the loop may also be started from elsewhere (the test phone, another tab)
+</script>
+</body>
+</html>
