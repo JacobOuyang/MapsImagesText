@@ -413,6 +413,32 @@ def _key():
     return a, h[32:], _enc_point(_mul(a, _B))
 
 
+def _dec_point(b):
+    y = int.from_bytes(b, "little") & ((1 << 255) - 1)
+    x = _xrecover(y)
+    if (x & 1) != b[31] >> 7:
+        x = _P - x
+    return (x, y, 1, x * y % _P)
+
+
+def _same(p, q):
+    return (p[0] * q[2] - q[0] * p[2]) % _P == 0 and (p[1] * q[2] - q[1] * p[2]) % _P == 0
+
+
+def verify(message_text, sig, pub=None):
+    """Is `sig` (an A code's 64 bytes) this issuer's signature of the message's text (signed_text)? `pub`: 32 bytes
+    (default: this server's own key). What the kit checks in the browser, for the server (the WhatsApp decoder)."""
+    pub = pub or _key()[2]
+    if len(sig) != 64 or int.from_bytes(sig[32:], "little") >= _L:
+        return False
+    try:
+        A, R = _dec_point(pub), _dec_point(sig[:32])
+    except Exception:
+        return False
+    k = int.from_bytes(hashlib.sha512(sig[:32] + pub + signed_text(message_text).encode()).digest(), "little") % _L
+    return _same(_mul(int.from_bytes(sig[32:], "little"), _B), _add(R, _mul(k, A)))
+
+
 def public_key():
     """The issuer's public key (32 bytes, base64) the kit checks signatures with."""
     return base64.b64encode(_key()[2]).decode()

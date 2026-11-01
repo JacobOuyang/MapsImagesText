@@ -112,6 +112,16 @@ class Signature(unittest.TestCase):
         self.assertEqual(sig.hex(), "e5564300c360ac729086e2cc806e828a84877f1eb8e5d974d873e065224901555fb8821590a33bac"
                                     "c61e39701cf9b46bd25bf5f0595bbe24655141438e7a100b")
 
+    def test_verify(self):
+        sig = codes.decode(codes.text(codes.sign("")))["complete"][0]["data"]
+        self.assertTrue(codes.verify("", sig))
+        self.assertFalse(codes.verify("changed", sig))
+        self.assertFalse(codes.verify("", sig[:-1] + bytes([sig[-1] ^ 1])))
+        msg = "Go to Coffey Park.\n" + codes.text(codes.sign("Go to Coffey Park."))
+        a = codes.decode(msg)["complete"][0]["data"]
+        self.assertTrue(codes.verify(msg, a))
+        self.assertFalse(codes.verify(msg.replace("Coffey Park", "the Navy Yard"), a))
+
     def test_signature_covers_packed_words(self):
         a = codes.decode(codes.text(codes.sign("Saia já para o Largo.")))["complete"][0]["data"]
         packed = codes.text(codes.words("Saia já para o Largo.")[1])
