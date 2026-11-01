@@ -35,10 +35,10 @@
       "url": "http://127.0.0.1:8770"
     },
     {
-      "name": "smuse",
+      "name": "muzip",
       "runtimeExecutable": ".venv/bin/python",
       "runtimeArgs": [
-        "sim/smuse.py"
+        "sim/muzip.py"
       ],
       "port": 8780,
       "url": "http://127.0.0.1:8780"

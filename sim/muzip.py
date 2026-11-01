@@ -1,6 +1,6 @@
-"""SMuSe: a small Mac app that sends from your WhatsApp to the Muse number and does the kit's work on this computer.
+"""muzip: a small Mac app that sends from your WhatsApp to the Muse number and does the kit's work on this computer.
 
-    .venv/bin/python sim/smuse.py          # http://127.0.0.1:8780 (or double-click SMuSe.app: sim/make_smuse_app.sh)
+    .venv/bin/python sim/muzip.py          # http://127.0.0.1:8780 (or double-click muzip.app: sim/make_muzip_app.sh)
 
 Drop a photo and ask a question. The kit turns the photo into a 128 px grey code (about 10 texts) and sends it with the
 question from your WhatsApp; the original stays here. When Muse asks for a closer look, the kit crops that part of the
@@ -29,9 +29,9 @@ from PIL import Image  # noqa: E402
 import wa_phone  # noqa: E402
 from evac import codes, smsimage  # noqa: E402
 
-PORT = int(os.environ.get("SMUSE_PORT", 8780))
+PORT = int(os.environ.get("MUZIP_PORT", 8780))
 BRIDGE = "http://127.0.0.1:%s" % os.environ.get("WHATSAPP_PORT", 8770)
-STATE = {"via": os.environ.get("SMUSE_VIA", "whatsapp"), "conv": None}
+STATE = {"via": os.environ.get("MUZIP_VIA", "whatsapp"), "conv": None}
 _lock = threading.Lock()
 
 
@@ -108,7 +108,7 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         if self.path == "/":
-            return self.send(open(os.path.join(ROOT, "smuse.html"), "rb").read(), "text/html; charset=utf-8")
+            return self.send(open(os.path.join(ROOT, "muzip.html"), "rb").read(), "text/html; charset=utf-8")
         if self.path == "/api/state":
             try:
                 me = wa_phone.me()
@@ -138,5 +138,5 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    print("SMuSe on http://127.0.0.1:%d" % PORT, flush=True)
+    print("muzip on http://127.0.0.1:%d" % PORT, flush=True)
     ThreadingHTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
