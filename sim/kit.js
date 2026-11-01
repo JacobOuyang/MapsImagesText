@@ -119,7 +119,8 @@ var KIT = (function () {
 
   // ---------- showing ----------
   const el = (tag, css, text) => { const e = document.createElement(tag); if (css) e.style.cssText = css; if (text !== undefined) e.textContent = text; return e; };
-  const imageType = b => b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 ? "image/webp" : "image/png";  // "RIFF": WebP
+  const imageType = b => b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 ? "image/webp"  // "RIFF": WebP
+    : b[0] === 0xFF && b[1] === 0xD8 ? "image/jpeg" : "image/png";
   const dataUrl = b => "data:" + imageType(b) + ";base64," + bytesb64(b);
   function pngImg(bytes) { const im = el("img", "width:128px;image-rendering:pixelated;background:#fff;border:1px solid #ccc;border-radius:4px"); im.src = dataUrl(bytes); return im; }
   async function loaded(im) { if (!im.complete) await new Promise(r => { im.onload = r; im.onerror = r; }); return im; }
@@ -418,9 +419,60 @@ var KIT = (function () {
     return c;
   }
 
+  // ---------- the phone's own photos: kept, so the service can ask for a closer look ----------
+  // The service only ever gets the 128 px picture. When that isn't enough it asks "ZOOM <id> x y w h" (a box in the
+  // picture's pixels; " C" at the end: in colour), and the kit crops that box from the original kept here, with the same
+  // arithmetic as the server (evac/codes.py:crop_zoom), and makes the Z code to send back.
+  const OWN = {};  // picture id -> {src: data URL of the original (at most 1600 px), w, h: the size sent}
+  const ownStore = {get() { try { return JSON.parse(localStorage.getItem("kitOwn") || "{}"); } catch (e) { return {}; } },
+                    set(v) { try { localStorage.setItem("kitOwn", JSON.stringify(v)); } catch (e) {} }};
+  Object.assign(OWN, ownStore.get());
+  async function keepOriginal(id, file, w, h) {
+    const img = await createImageBitmap(file), k = Math.min(1, 1600 / Math.max(img.width, img.height));
+    const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+    c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    OWN[id] = {src: c.toDataURL("image/jpeg", 0.85), w, h};
+    const keep = Object.keys(OWN).slice(-5);  // the last few photos: browser storage is small
+    ownStore.set(Object.fromEntries(keep.map(k2 => [k2, OWN[k2]])));
+  }
+  async function cropBox(id, box, colour) {
+    const own = OWN[id], img = await loaded(Object.assign(new Image(), {src: own.src}));
+    const W = img.naturalWidth, H = img.naturalHeight, sx = W / own.w, sy = H / own.h, [bx, by, bw, bh] = box;
+    const cx = (bx + bw / 2) * sx, cy = (by + bh / 2) * sy, half = Math.max(Math.max(bw * sx, bh * sy) * 0.6, 64);
+    const x0 = Math.max(0, cx - half), y0 = Math.max(0, cy - half), x1 = Math.min(W, cx + half), y1 = Math.min(H, cy + half);
+    const k = Math.min(1, 128 / Math.max(x1 - x0, y1 - y0)), c = document.createElement("canvas");
+    c.width = Math.round((x1 - x0) * k); c.height = Math.round((y1 - y0) * k);
+    const g = c.getContext("2d"); g.drawImage(img, x0, y0, x1 - x0, y1 - y0, 0, 0, c.width, c.height);
+    if (!colour) {  // grey, contrast stretched, like every other picture
+      const im = g.getImageData(0, 0, c.width, c.height), d = im.data, L = [];
+      for (let i = 0; i < d.length; i += 4) L.push(0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]);
+      const s = L.slice().sort((a, b) => a - b), lo = s[Math.floor(.01 * s.length)], hi = s[Math.floor(.99 * s.length)];
+      for (let i = 0; i < L.length; i++) d[4 * i] = d[4 * i + 1] = d[4 * i + 2] = Math.max(0, Math.min(255, (L[i] - lo) * 255 / Math.max(1, hi - lo)));
+      g.putImageData(im, 0, 0);
+    }
+    let blob = await new Promise(ok => c.toBlob(ok, "image/webp", colour ? 0.3 : 0.05));
+    if (!blob || blob.type !== "image/webp") blob = await new Promise(ok => c.toBlob(ok, "image/jpeg", colour ? 0.5 : 0.3));  // Safari
+    return {bytes: new Uint8Array(await blob.arrayBuffer()), box: [x0 / sx, y0 / sy, (x1 - x0) / sx, (y1 - y0) / sy], canvas: c};
+  }
+  const ZOOM_ASK = /\bZOOM\s+([0-9a-z]{2,4})\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)(\s+C)?\b/gi;
+  // A message asking for closer looks at this phone's photos -> [{id, colour, parts (the Z code to send), canvas}].
+  async function answerZoom(text) {
+    const out = [];
+    for (const m of (text || "").matchAll(ZOOM_ASK)) {
+      const id = m[1].toLowerCase(); if (!OWN[id]) continue;
+      const colour = !!m[6], got = await cropBox(id, [+m[2], +m[3], +m[4], +m[5]], colour);
+      const head = new Uint8Array(1 + id.length + 8), dv = new DataView(head.buffer);
+      head[0] = id.length; for (let i = 0; i < id.length; i++) head[1 + i] = id.charCodeAt(i);
+      got.box.forEach((v, i) => dv.setUint16(1 + id.length + 2 * i, Math.max(0, Math.min(65535, Math.round(v * 64)))));
+      const bytes = new Uint8Array(head.length + got.bytes.length); bytes.set(head); bytes.set(got.bytes, head.length);
+      out.push({id, colour, parts: encode("Z", bytes), canvas: got.canvas, size: got.bytes.length});
+    }
+    return out;
+  }
+
   // Saving what was seen (the kit page keeps it in the browser, so a zoom can arrive days later).
   const dump = () => JSON.stringify(Object.fromEntries(Object.entries(SEEN).filter(([, p]) => p.bytes).map(([k, p]) => [k, {b: bytesb64(p.bytes), p: p.parent, x: p.box, k: p.keys}])));
   async function restore(json) { for (const [k, p] of Object.entries(JSON.parse(json || "{}"))) { await remember(k, b64bytes(p.b), p.p, p.x); if (p.k) SEEN[k].keys = p.k; } }
-  return {parse, plain, show, encode, photoBits, photoWebp, png1bit, locationBytes, qr, qrCanvas, mapView, pairView, zoomView, routeView, gpx, unpolyline,
+  return {parse, plain, show, encode, photoBits, photoWebp, keepOriginal, answerZoom, png1bit, locationBytes, qr, qrCanvas, mapView, pairView, zoomView, routeView, gpx, unpolyline,
           crc16, bytesb64, b64bytes, dump, restore, set onRequest(f) { onRequest = f; }, get seen() { return SEEN; }};
 })();

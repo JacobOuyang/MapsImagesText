@@ -271,6 +271,67 @@ The person taps part 2 in the kit, which writes the one-SMS reply `ZOOM na 2`. T
 - **Zoom:** a close-up of a quarter of a photo takes 3–19 SMS, against 14–146 SMS for the whole photo at that detail.
 - **Payback:** the page pays for itself after about 200 SMS saved.
 
+## Look closer: a question about a photo that stays on the phone
+
+The kit sends a photo at 128 px in grey. That is often enough, but sometimes the detail that decides the answer is a
+few pixels, or it's a colour. So the server doesn't guess: it asks the phone for just that part.
+
+1. **The phone sends the question and the cheapest useful view:** the whole photo at 128 px, grey (about 10 texts).
+2. **Muse looks** (enlarged) and either answers, saying how sure it is, or asks for **one closer look**: a box in
+   the photo, whether it needs colour, and what it wants to see there.
+3. **The phone's kit crops that box from the original**, in colour if asked, and the person only taps Send.
+4. **Again, with every view so far,** until Muse answers or has used three closer looks; then it must answer with
+   what it has. The full photo never leaves the phone.
+
+The same loop works for anything the phone holds and the server can't see in full: a page of a document, a label, a
+gauge. Here the test case is a spider that might be a black widow. At 128 px in grey it is a dark blob, and the red
+hourglass under its body, which decides the answer, shows only close up and in colour. A real run (`/closer` in the
+simulator; the photos were made with Muse Image):
+
+```
+You (11 SMS)   Is this a black widow?  + the photo at 128 px, grey
+Muse (2 SMS)   Not sure yet: I need a closer look at the dark spot under the shelf to see the shape and markings of
+               spider, in colour. Your kit will crop it from your photo; just tap Send.
+               ZOOM hw 77 13 38 32 C
+You (13 SMS)   the closer look, in colour, cropped by the kit from the original (1.3 KB)
+               [SAM 3.1 outlines "spider" in it, confidence 0.82]
+Muse (1 SMS)   Yes, this is a black widow - shiny black with the red hourglass mark underneath.
+               Do not touch it - black widow bites are venomous, keep people and pets away.
+```
+
+![Look closer: the phone, the original that stays on it, and what Muse saw each round](docs/closer_black_widow.jpg)
+
+**The cost:** 27 SMS, 3.8 KB in all, for a 254 KB photo (a real phone photo is 2–4 MB).
+
+**Where SAM 3.1 fits.** SAM outlines things by name, but it needs enough pixels. In the 128 px picture the spider
+is about 14 pixels, and no enlarging (4×, 8× sharpened, tiled) made SAM find it. Neither did asking Muse Image to
+restore the picture, which erased the spider altogether. It found things from about 25 px up (`evals/closer/RESULTS.md`).
+So Muse aims the first close-up from context ("the dark spot under the shelf"), and SAM works on the close-up, where the
+spider fills the frame: it outlines what Muse thinks the thing is (0.82–0.89 for the black widow, its box within 1% of SAM's
+on the full original) and Muse gets that exact place before deciding again.
+
+**The answers so far:** every live run answered correctly: the black widow 6 times out of 6, the look-alike (a
+glossy brown spider with no red mark) "not a black widow" 3 times out of 3. Most runs took one closer look. One took
+two: first a grey one to find out whether the dark shape was a spider, then a colour one at its belly. That is a
+handful of generated photos, not an evaluation.
+
+## A community hub (demo)
+
+Professional responders have their own radios and dispatch. For the first hours of a disaster, though, it's
+neighbours who check on each other, and their group chats die with mobile data. The hub is the coordinator's side:
+one laptop with the only working connection, and a dashboard for a neighbourhood whose phones can only text.
+
+![The Neighbors Hub dashboard during the Red Hook drill](docs/hub_dashboard.jpg)
+
+- **One signed alert for everyone.** The city's warning goes back out as kit messages: the words, a map and a signature. Neighbours inside the zone get their own way out, and a forged copy shows as *NOT genuine*.
+- **Check-ins become a map.** One tap in the kit sends status, people, battery and GPS. Muse suggests who to help first.
+- **Photos are triaged.** Muse rates a photo report and SAM finds the part worth a closer look. The hub asks *that phone* for a zoom, and the phone crops its own full-size original.
+- **Volunteers get walks that avoid the danger.** Walks go around the flood and around anything marked on the map. Marking a downed line re-routes every volunteer and warns the neighbours nearby.
+- **Everyone in their own language.** A neighbour who writes in Portuguese gets answers in Portuguese, packed so the accents don't cost double.
+- **The night's data bill.** In the drill, everything the hub sent and received came to 187 texts (498 SMS), 69.7 KB, under 3% of one phone photo. That covers an alert to 42 phones, 39 check-ins, two photo reports, a close-up, the warnings and two volunteer walks.
+
+[`demo/README.md`](demo/README.md) has the story (a fictional drill in Red Hook, Brooklyn), the cast, the beats with a voice-over line each, what's real and what's simulated, and how to make the video.
+
 ## Why the text maps line up
 
 - **SMS:** iPhone Messages uses SF Pro, a proportional font. The SMS maps use only characters measured to be exactly one digit wide (`= # + < > 0 $ ¤ £ ¥ ×`, figure spaces for blanks). Each row's width error is logged as `worst row drift`, which must stay under about 0.07 cells.
@@ -332,8 +393,10 @@ Offline tests (no model key or network needed):
 | Radar | `evac/radar.py` |
 | Kit | `evac/codes.py`, `evac/smsimage.py`, `sim/kit.js`, `sim/kit.html`, `sim/pack.json` |
 | Store | `evac/store.py` (every photo, zoom, trip, message and report, in SQLite) |
+| Community hub | `evac/hub.py`, `sim/dashboard.html`, `sim/redhook.py` (the Red Hook drill), `demo/` (story and video) |
+| Look closer | `evac/closer.py` (the loop), `sim/closer.html` + `sim/closer_demo.py` (the demo), `sim/phones.py` (simulated phones that keep their originals) |
 | Simulator | `sim/server.py`, `sim/index.html` |
-| Tests | `tests/` (codes, signatures, the store, RESEND/ZOOM/check-ins; offline) |
+| Tests | `tests/` (codes, signatures, the store, RESEND/ZOOM/check-ins, routing around danger, the look-closer loop; offline) |
 | Evals | `evals/` (photo drawings, emergency pictures, kit sizes) |
 
 `CLAUDE.md` has the details of how the pieces connect.

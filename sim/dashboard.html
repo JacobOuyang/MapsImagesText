@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neighbors Hub</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/kit.js"></script>
+<style>
+  :root { --bg:#0f1419; --panel:#161d24; --card:#1c252e; --line:#2a3540; --fg:#e8edf2; --quiet:#8b98a5;
+          --ok:#37b24d; --help:#f59f00; --hurt:#f03e3e; --none:#6c7a86; --vol:#4dabf7; --flood:#339af0; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:14px/1.35 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { height:64px; display:flex; align-items:center; gap:22px; padding:0 22px; border-bottom:1px solid var(--line); background:#0b1015; }
+  .brand { font-weight:800; font-size:19px; letter-spacing:.3px; display:flex; align-items:center; gap:10px; }
+  .brand i { width:12px; height:12px; border-radius:50%; background:var(--ok); box-shadow:0 0 0 4px #37b24d33; display:inline-block; }
+  .sub { color:var(--quiet); font-size:13px; }
+  .grow { flex:1; }
+  .chip { border:1px solid var(--line); border-radius:999px; padding:6px 12px; font-size:13px; color:var(--fg); white-space:nowrap; }
+  .chip b { font-variant-numeric: tabular-nums; }
+  .chip.data { border-color:#4dabf766; background:#4dabf712; }
+  main { display:flex; height:calc(100% - 64px); }
+  #map { flex:1; min-width:0; }
+  aside { width:500px; background:var(--panel); border-left:1px solid var(--line); display:flex; flex-direction:column; min-height:0; }
+  .counts { display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:var(--line); border-bottom:1px solid var(--line); }
+  .counts div { background:var(--panel); padding:10px 12px; }
+  .counts b { display:block; font-size:24px; font-weight:750; font-variant-numeric:tabular-nums; }
+  .counts span { font-size:12px; color:var(--quiet); }
+  .first { padding:12px 14px; border-bottom:1px solid var(--line); }
+  .first h3, .feed h3 { margin:0 0 8px; font-size:12px; text-transform:uppercase; letter-spacing:.8px; color:var(--quiet); font-weight:650; }
+  .first ol { margin:0; padding-left:20px; }
+  .first li { margin:4px 0; }
+  .first li em { color:var(--quiet); font-style:normal; }
+  .feed { flex:1; overflow:auto; padding:12px 14px; min-height:0; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px; margin-bottom:10px; cursor:pointer; }
+  .card.sel { border-color:var(--vol); box-shadow:0 0 0 1px var(--vol); }
+  .card .top { display:flex; gap:8px; align-items:center; }
+  .pill { font-size:11px; font-weight:700; text-transform:uppercase; border-radius:6px; padding:2px 7px; color:#111; }
+  .pill.ok { background:var(--ok); } .pill.help { background:var(--help); } .pill.hurt { background:var(--hurt); color:#fff; } .pill.reached { background:var(--vol); }
+  .card .meta { color:var(--quiet); font-size:12px; margin-left:auto; white-space:nowrap; }
+  .card .note { margin-top:5px; }
+  .card .note.pt::after { content:" (Portuguese)"; color:var(--quiet); font-size:12px; }
+  .photo { position:relative; margin-top:8px; display:flex; gap:8px; }
+  .photo .pic { position:relative; width:150px; flex:none; }
+  .photo img { width:150px; display:block; border-radius:6px; image-rendering:auto; }
+  .photo .box { position:absolute; border:2px solid #ffd43b; border-radius:3px; box-shadow:0 0 0 2px #0006; }
+  .photo .zoomed img { width:150px; }
+  .tri { margin-top:8px; font-size:13px; padding:7px 9px; border-radius:7px; background:#f03e3e1f; border:1px solid #f03e3e55; }
+  .tri.medium, .tri.low { background:#f59f001a; border-color:#f59f0055; }
+  .tri b { text-transform:uppercase; font-size:11px; letter-spacing:.5px; }
+  .acts { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  button { font:inherit; font-size:12.5px; color:var(--fg); background:#25313c; border:1px solid var(--line); border-radius:7px; padding:5px 10px; cursor:pointer; }
+  button:hover { border-color:var(--vol); }
+  .phone { width:390px; flex:none; background:#0b1015; border-left:1px solid var(--line); display:flex; align-items:center; justify-content:center; padding:14px; }
+  .device { width:350px; height:100%; max-height:900px; border-radius:46px; background:#000; padding:12px; box-shadow:0 0 0 2px #333, 0 20px 50px #0008; display:flex; flex-direction:column; }
+  .screen { flex:1; border-radius:36px; background:#fff; color:#111; overflow:hidden; display:flex; flex-direction:column; min-height:0; }
+  .status { display:flex; justify-content:space-between; padding:12px 24px 4px; font-weight:600; font-size:14px; }
+  .who { text-align:center; padding:4px 0 8px; border-bottom:1px solid #e5e5ea; }
+  .who .av { width:40px; height:40px; border-radius:50%; background:#2b8a3e; color:#fff; display:flex; align-items:center; justify-content:center; margin:0 auto 3px; font-weight:700; }
+  .who small { color:#8e8e93; display:block; font-size:11px; }
+  .thread { flex:1; overflow:auto; padding:10px 10px 16px; font-size:13.5px; min-height:0; }
+  .b { max-width:86%; padding:7px 11px; border-radius:17px; margin:5px 0; white-space:pre-wrap; word-break:break-word; }
+  .b.in { background:#e9e9eb; }
+  .b.out { background:#0a84ff; color:#fff; margin-left:auto; }
+  .b.rumour { background:#fff3bf; border:1px solid #f59f00; }
+  .from { font-size:11px; color:#8e8e93; margin:8px 4px 0; }
+  .kitbox { margin-top:6px; padding-top:6px; border-top:1px dashed #bbb; font-size:12px; color:#333; }
+  .kitbox .tag { font-size:10.5px; color:#666; margin-bottom:3px; }
+  .codes { color:#8e8e93; font-size:11px; }
+  .b.out .codes { color:#d0e4ff; }
+  .b.out .kitbox { background:#fff; color:#111; border:0; border-radius:12px; padding:6px; margin-top:8px; }
+  .empty { color:#8e8e93; text-align:center; margin-top:40%; padding:0 20px; }
+  .demo { position:fixed; left:12px; bottom:12px; z-index:1000; background:#0b1015ee; border:1px solid var(--line); border-radius:10px; padding:8px; display:flex; gap:6px; flex-wrap:wrap; max-width:780px; }
+  .demo span { color:var(--quiet); font-size:12px; align-self:center; margin-right:4px; }
+  body.clean .demo { display:none; }
+  .leaflet-container { background:#d9dde0; font:inherit; }
+  .lbl { background:#fff; color:#111; border:0; box-shadow:0 1px 3px #0004; font-weight:650; font-size:12px; padding:2px 6px; }
+  .lbl.vol { background:var(--vol); color:#fff; }
+  .lbl.hubl { background:#111; color:#fff; }
+  .lbl.danger { background:var(--hurt); color:#fff; }
+  .lbl.flood { background:transparent; box-shadow:none; color:#1864ab; font-weight:800; font-size:15px; letter-spacing:2px; }
+  .leaflet-tooltip.lbl::before { display:none; }
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><i></i>NEIGHBORS HUB</div>
+  <div class="sub" id="where">Coffey Park, Red Hook</div>
+  <div class="sub" id="clock"></div>
+  <div class="grow"></div>
+  <div class="chip">🛰 <b>1</b> connection here · <b id="phones">0</b> phones by text only</div>
+  <div class="chip data">Tonight: <b id="texts">0</b> texts · <b id="kb">0 KB</b> <span class="sub" id="vs"></span></div>
+</header>
+<main>
+  <div id="map"></div>
+  <aside>
+    <div class="counts">
+      <div><b id="cIn">0</b><span id="cOf">checked in</span></div>
+      <div><b id="cOk" style="color:var(--ok)">0</b><span>safe</span></div>
+      <div><b id="cHelp" style="color:var(--help)">0</b><span>need help</span></div>
+      <div><b id="cHurt" style="color:var(--hurt)">0</b><span>hurt</span></div>
+      <div><b id="cReached" style="color:var(--vol)">0</b><span>reached</span></div>
+    </div>
+    <div class="first"><h3>Help first · suggested by Muse</h3><ol id="first"><li><em>Waiting for check-ins.</em></li></ol></div>
+    <div class="feed"><h3>Reports</h3><div id="feed"></div></div>
+  </aside>
+  <div class="phone"><div class="device"><div class="screen">
+    <div class="status"><span id="pClock">9:41</span><span>●●○○ 1 bar · SMS only</span></div>
+    <div class="who"><div class="av" id="pAv">?</div><b id="pName">Pick a neighbour</b><small id="pSub">their phone, as the kit shows it</small></div>
+    <div class="thread" id="thread"><div class="empty">Click a pin or a report to see that neighbour's phone.</div></div>
+  </div></div></div>
+</main>
+<div class="demo"><span>Demo:</span>
+  <button data-beat="setup">Setup</button><button data-beat="alert">1 Alert</button><button data-beat="checkin">2 Check-in</button>
+  <button data-beat="assign">3 Send Dani</button><button data-beat="photo">4 Photo report</button><button data-beat="zoom">5 Closer look</button>
+  <button data-beat="block">6 Mark danger</button><button data-beat="luisa">7 Luísa</button><button data-beat="walk">8 Arrive</button>
+  <span id="demoStatus"></span>
+</div>
+<script>
+const $ = id => document.getElementById(id);
+const Q = new URLSearchParams(location.search);
+if (Q.get('clean')) document.body.classList.add('clean');
+const COLORS = {ok: '#37b24d', help: '#f59f00', hurt: '#f03e3e', none: '#6c7a86', reached: '#4dabf7'};
+const PHOTO_BYTES = 2.5e6;  // a typical phone photo, for scale
+let S = null, sel = Q.get('phone') || null, focusReport = Q.get('focus') || null, threadKey = '';
+
+const map = L.map('map', {zoomControl: false, attributionControl: true}).setView([40.6752, -74.0098], 16);
+L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+  {maxZoom: 19, maxNativeZoom: 16, attribution: 'Esri, OpenStreetMap contributors'}).addTo(map);  // the grey basemap stops at 16
+const layers = {zone: L.layerGroup().addTo(map), routes: L.layerGroup().addTo(map), pins: L.layerGroup().addTo(map), top: L.layerGroup().addTo(map)};
+if (Q.get('z')) map.setZoom(+Q.get('z'));
+if (Q.get('c')) map.setView(Q.get('c').split(',').map(Number), +(Q.get('z') || 16));
+
+const ago = t => { const s = Math.max(0, Date.now() / 1000 - t); return s < 60 ? 'just now' : Math.round(s / 60) + ' min ago'; };
+const nameOf = who => (S.people.find(p => p.who === who) || {}).name || who;
+const status = r => r.reached ? 'reached' : (r.status || 'ok');
+const esc = t => String(t || '').replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
+
+function drawMap() {
+  for (const g of Object.values(layers)) g.clearLayers();
+  const inc = S.incident; if (!inc) return;
+  const [[zlat, zlon], zr] = inc.zone;
+  L.circle([zlat, zlon], {radius: zr, color: '#1c7ed6', weight: 2, dashArray: '6 5', fillColor: '#339af0', fillOpacity: .22}).addTo(layers.zone);
+  L.marker([zlat, zlon], {opacity: 0}).bindTooltip('FLOOD', {permanent: true, direction: 'center', className: 'lbl flood'}).addTo(layers.zone);
+  const hubIcon = L.divIcon({className: '', html: '<div style="width:22px;height:22px;background:#111;border:3px solid #fff;border-radius:4px;box-shadow:0 1px 4px #0006"></div>', iconSize: [22, 22]});
+  L.marker(inc.hub, {icon: hubIcon}).bindTooltip('HUB · Coffey Park', {permanent: true, direction: 'right', offset: [10, 0], className: 'lbl hubl'}).addTo(layers.top);
+  for (const t of S.trips) {
+    L.polyline([t.you].concat(t.route), {color: '#1971c2', weight: 4, opacity: t.done ? .35 : .9, dashArray: t.done ? '' : '8 6'}).addTo(layers.routes);
+    const v = S.people.find(p => p.who === t.who);
+    const icon = L.divIcon({className: '', html: '<div style="width:16px;height:16px;background:#1971c2;border:3px solid #fff;transform:rotate(45deg);box-shadow:0 1px 4px #0006"></div>', iconSize: [16, 16]});
+    L.marker(t.you, {icon}).bindTooltip((v ? v.name : 'Volunteer') + (t.done ? ' · arrived' : ' → ' + t.to), {permanent: true, direction: 'top', offset: [0, -10], className: 'lbl vol'}).addTo(layers.top);
+  }
+  for (const c of S.closures) {
+    L.circle(c.where, {radius: c.radius_m, color: '#e03131', weight: 3, fillColor: '#e03131', fillOpacity: .25}).addTo(layers.top);
+    L.marker(c.where, {opacity: 0}).bindTooltip('⚠ ' + (c.note || 'Danger'), {permanent: true, direction: 'left', offset: [-24, 0], className: 'lbl danger'}).addTo(layers.top);
+  }
+  const reports = Object.fromEntries(S.reports.map(r => [r.who, r]));
+  for (const p of S.people) {
+    if (p.role !== 'resident' || !p.where) continue;
+    const r = reports[p.who], st = r ? status(r) : 'none', big = r && (st === 'help' || st === 'hurt' || r.photo);
+    const m = L.circleMarker(p.where, {radius: big ? 9 : 6, color: '#fff', weight: 2, fillColor: COLORS[st], fillOpacity: 1}).addTo(layers.pins);
+    m.on('click', () => pick(p.who));
+    const named = !/^[A-Z][a-z]+ [A-Z]\.$/.test(p.name);  // the story's people get a name tag
+    if (named && r) m.bindTooltip(p.name + (r.photo ? ' 📷' : ''), {permanent: true, direction: 'right', offset: [8, 0], className: 'lbl'});
+    if (p.who === sel) L.circleMarker(p.where, {radius: 15, color: '#4dabf7', weight: 3, fill: false}).addTo(layers.pins);
+  }
+}
+
+function card(r) {
+  const p = S.people.find(x => x.who === r.who) || {}, st = status(r), t = r.triage;
+  const div = document.createElement('div');
+  div.className = 'card' + (r.who === sel || r.id === focusReport ? ' sel' : '');
+  div.innerHTML = `<div class="top"><span class="pill ${st}">${st === 'reached' ? 'reached' : st === 'ok' ? 'safe' : st === 'help' ? 'needs help' : 'hurt'}</span>
+    <b>${esc(p.name || r.who)}</b><span class="meta">${r.people || 1} ppl · 🔋${r.battery ?? '?'}% · ${ago(r.created)}</span></div>
+    ${r.note ? `<div class="note ${p.lang === 'pt' ? 'pt' : ''}">${esc(r.note)}</div>` : ''}`;
+  if (r.photo) {
+    const ph = document.createElement('div'); ph.className = 'photo';
+    const pic = document.createElement('div'); pic.className = 'pic';
+    pic.innerHTML = `<img src="/store/${r.id}.jpg" alt="photo from ${esc(p.name)}">`;
+    if (r.look_box && r.pic) { const [x, y, w, h] = r.look_box, [W, H] = r.pic.size, b = document.createElement('div'); b.className = 'box';
+      Object.assign(b.style, {left: x / W * 100 + '%', top: y / H * 100 + '%', width: w / W * 100 + '%', height: h / H * 100 + '%'}); pic.appendChild(b); }
+    ph.appendChild(pic);
+    if (r.zoom) { const z = document.createElement('div'); z.className = 'pic zoomed';
+      z.innerHTML = `<img src="/store/${r.zoom}.jpg" alt="closer look"><div class="sub" style="font-size:11px;margin-top:3px">closer look, sent back by their phone</div>`; ph.appendChild(z); }
+    else ph.insertAdjacentHTML('beforeend', `<div class="sub" style="font-size:12px">sent as ${r.pic ? r.pic.size.join('×') : '128'} px by text</div>`);
+    div.appendChild(ph);
+    if (t) div.insertAdjacentHTML('beforeend', `<div class="tri ${esc(t.urgency)}"><b>${esc(t.urgency)}</b> · ${esc(t.hazard)}${t.look_at ? ` · look at: ${esc(t.look_at)}` : ''}<br>${esc(t.advice)}</div>`);
+    else div.insertAdjacentHTML('beforeend', `<div class="tri low">Muse and SAM are looking at the photo…</div>`);
+  }
+  const acts = document.createElement('div'); acts.className = 'acts';
+  const btn = (label, fn) => { const b = document.createElement('button'); b.textContent = label; b.onclick = e => { e.stopPropagation(); fn(); }; acts.appendChild(b); };
+  if (r.photo && r.look_box && !r.zoom) btn('Ask their phone for a closer look', () => post('/api/hub/closer', {report: r.id}));
+  if (r.photo && t && t.keep_away_m) btn('Mark danger on the map', () => post('/api/hub/block', {report: r.id, radius_m: Math.max(20, Math.min(60, t.keep_away_m)), note: t.hazard}));
+  if ((st === 'help' || st === 'hurt') && !r.assigned)
+    for (const v of S.people.filter(x => x.role === 'volunteer')) btn('Send ' + v.name, () => post('/api/hub/assign', {volunteer: v.who, report: r.id}));
+  if (r.assigned && !r.reached) acts.insertAdjacentHTML('beforeend', `<span class="sub">${esc(nameOf(r.assigned))} is on the way</span>`);
+  if (acts.children.length) div.appendChild(acts);
+  div.onclick = () => pick(r.who);
+  return div;
+}
+
+function drawSide() {
+  const c = S.counts;
+  $('cIn').textContent = c.checked_in; $('cOf').textContent = `of ${c.residents} checked in`;
+  $('cOk').textContent = c.ok; $('cHelp').textContent = c.help; $('cHurt').textContent = c.hurt; $('cReached').textContent = c.reached;
+  $('texts').textContent = c.sms.toLocaleString(); $('kb').textContent = (c.bytes / 1000).toFixed(1) + ' KB';
+  $('vs').textContent = c.bytes ? `· ${(c.bytes / PHOTO_BYTES * 100).toFixed(1)}% of one phone photo` : '';
+  $('phones').textContent = S.people.filter(p => p.role !== 'coordinator').length;
+  if (S.incident) { $('clock').textContent = S.incident.clock || ''; }
+  // Most urgent first: a critical photo, an injury, help with a photo, help, then the rest.
+  const rank = r => { const st = status(r), u = (r.triage || {}).urgency;
+    return u === 'critical' && st !== 'reached' ? 0 : st === 'hurt' ? 1 : st === 'help' ? (r.photo ? 2 : 3) : st === 'reached' ? 6 : r.photo ? 4 : 5; };
+  const reps = S.reports.slice().sort((a, b) => rank(a) - rank(b) || b.created - a.created);
+  const feed = $('feed'); feed.innerHTML = '';
+  for (const r of reps.slice(0, 30)) feed.appendChild(card(r));
+  const f = feed.querySelector('.card.sel'); if (f && Q.get('focus')) f.scrollIntoView({block: 'start'});
+}
+
+async function drawFirst() {
+  try { const d = await fetch('/api/hub/summary').then(r => r.json());
+    $('first').innerHTML = d.first.length ? d.first.map(f => `<li><b>${esc(nameOf(f.who))}</b> <em>— ${esc(f.why)}</em></li>`).join('') : '<li><em>Waiting for check-ins.</em></li>';
+  } catch (e) {}
+}
+
+function pick(who) { sel = who; threadKey = ''; drawMap(); drawSide(); drawThread(); }
+
+async function drawThread() {
+  if (!sel) return;
+  const d = await fetch('/api/hub/thread?who=' + encodeURIComponent(sel)).then(r => r.json());
+  const key = sel + d.texts.length; if (key === threadKey) return; threadKey = key;
+  const p = d.person || {};
+  $('pName').textContent = p.name || sel; $('pAv').textContent = (p.name || '?').replace(/^(Mr\.|The) /, '')[0];
+  $('pSub').textContent = (p.role === 'volunteer' ? 'Volunteer · ' : '') + 'messages with the hub, opened in the kit';
+  const th = $('thread'); th.innerHTML = '';
+  for (const t of d.texts) {
+    if (t.dir === 'rumour') th.insertAdjacentHTML('beforeend', '<div class="from">Forwarded by a neighbour · not from the hub</div>');
+    else if (t.dir === 'out') th.insertAdjacentHTML('beforeend', '<div class="from">Neighbors Hub · ' + t.parts + ' SMS</div>');
+    const b = document.createElement('div'); b.className = 'b ' + (t.dir === 'in' ? 'out' : t.dir === 'rumour' ? 'in rumour' : 'in');
+    const codes = (t.text.match(/#[PZKMGTLSA][0-9a-z]{2,4}\.\d+\/\d+:[A-Za-z0-9+/=]*:[0-9a-f]{4}#/g) || []);
+    const words = KIT.plain(t.text);
+    b.textContent = words || (codes.length ? '' : t.text);
+    if (codes.length) {
+      b.insertAdjacentHTML('beforeend', `${words ? '<br>' : ''}<span class="codes">＋ ${codes.length} code part${codes.length > 1 ? 's' : ''}</span>`);
+      const k = document.createElement('div'); k.className = 'kitbox'; k.innerHTML = '<div class="tag">In the kit:</div>';
+      const body = document.createElement('div'); k.appendChild(body); b.appendChild(k);
+      KIT.show(t.text, body).then(() => {
+        if (!words) { const tx = body.querySelector('div[style*="pre-wrap"]'); if (tx) tx.style.color = '#111'; }
+      });
+    }
+    th.appendChild(b);
+  }
+  setTimeout(() => { th.scrollTop = Q.get('top') ? 0 : th.scrollHeight; }, 400);
+}
+
+async function post(url, body) {
+  $('demoStatus').textContent = 'working…';
+  const r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)}).then(r => r.json()).catch(e => ({error: String(e)}));
+  $('demoStatus').textContent = r.error ? 'error: ' + r.error : 'done';
+  await tick(); return r;
+}
+for (const b of document.querySelectorAll('[data-beat]')) b.onclick = () => post('/api/demo/beat', {name: b.dataset.beat});
+
+async function tick() {
+  try { S = await fetch('/api/hub/state').then(r => r.json()); } catch (e) { return; }
+  if (focusReport && !sel) { const r = S.reports.find(x => x.id === focusReport); if (r) sel = r.who; }
+  drawMap(); drawSide(); drawThread();
+}
+tick().then(drawFirst);  // the list names people, so it needs the state first
+setInterval(tick, Q.get('still') ? 1e9 : 1500); setInterval(drawFirst, Q.get('still') ? 1e9 : 5000);
+</script>
+</body>
+</html>

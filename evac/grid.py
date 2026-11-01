@@ -147,7 +147,16 @@ class Grid:
                 d = math.hypot(x - cx, y - cy)
                 if d < radius_m:
                     self.hazard[r, c] = True
-                    self.hazard_depth[r, c] = 1 - d / radius_m
+                    self.hazard_depth[r, c] = max(self.hazard_depth[r, c], 1 - d / radius_m)
+
+    def block_circle(self, center, radius_m):
+        """Close every cell within radius_m of a point (a fallen tree, a downed line): costed like a closed road."""
+        cx, cy = self.proj.to_xy(center)
+        for r in range(self.rows):
+            for c in range(self.cols):
+                x, y = self.x0 + (c + 0.5) * self.cw, self.y1 - (r + 0.5) * self.ch
+                if math.hypot(x - cx, y - cy) < radius_m:
+                    self.blocked[r, c] = True
 
     # --- routing ---
     def cell_cost(self, r, c, hazard_kind):
@@ -158,7 +167,9 @@ class Grid:
         if self.blocked[r, c]:
             base = 60.0
         if self.hazard[r, c]:
-            base *= 1 + 4 * self.hazard_depth[r, c]  # deeper in the zone = more expensive, pushes route outward
+            # Deeper in the zone = more expensive, pushes the route outward. Walking through floodwater is far worse
+            # than walking near a fire's edge, so a flood pushes much harder.
+            base *= 1 + (25 if hazard_kind == "flood" else 4) * self.hazard_depth[r, c]
         return base
 
     def route(self, start, goals, hazard_kind):

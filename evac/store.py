@@ -21,7 +21,7 @@ import sqlite3
 import threading
 import time
 
-ROOT = os.path.join(os.path.dirname(__file__), "..", "cache", "store")
+ROOT = os.environ.get("STORE_DIR") or os.path.join(os.path.dirname(__file__), "..", "cache", "store")
 FIRST = 36 * 36  # "100"
 DIGITS = "0123456789abcdefghijklmnopqrstuvwxyz"
 

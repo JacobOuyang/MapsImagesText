@@ -28,7 +28,9 @@ from PIL import Image, ImageOps
 ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(ROOT))
 
-from evac import codes, howto, directions, photo, pipeline, radar, router, store, tonal  # noqa: E402
+from evac import codes, howto, directions, hub, photo, pipeline, radar, router, store, tonal  # noqa: E402
+import redhook  # noqa: E402  (the Red Hook demo: simulated neighbours' phones around the hub)
+import closer_demo  # noqa: E402  (the look-closer demo: a phone asks about a photo it keeps)
 
 PORT = int(os.environ.get("PORT", 8765))
 WHATSAPP_COLS = 58  # widest monospace map that fits the simulated WhatsApp Desktop bubble (65% of the chat pane) unwrapped
@@ -140,6 +142,41 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             return self.wfile.write(data)
+        # The community hub's dashboard (sim/dashboard.html) and what it reads.
+        if self.path.split("?")[0] in ("/dashboard", "/closer"):
+            data = open(os.path.join(ROOT, self.path.split("?")[0][1:] + ".html"), "rb").read()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            return self.wfile.write(data)
+        if self.path == "/api/closer/samples":
+            return self.send_json({"samples": closer_demo.samples()})
+        if self.path.startswith("/api/closer/state?c="):
+            return self.send_json(closer_demo.state(unquote(self.path.split("=", 1)[1])))
+        if self.path == "/api/hub/state":
+            return self.send_json(hub.state())
+        if self.path == "/api/hub/summary":
+            return self.send_json({"first": hub.summary()})
+        if self.path.startswith("/api/hub/thread?who="):
+            who = unquote(self.path.split("=", 1)[1])
+            texts = sorted(store.find("sms", limit=100000), key=lambda r: r["created"])
+            return self.send_json({"person": hub.person(who) and {"who": who, **hub.person(who)["meta"]},
+                                   "texts": [{"dir": r["meta"]["dir"], "text": r["meta"]["text"], "parts": r["meta"]["parts"], "at": r["created"]}
+                                             for r in texts if r["who"] == who]})
+        if self.path.startswith("/store/") and self.path.endswith(".jpg"):  # a record's original (a report's photo, a zoom)
+            img = store.image(self.path[len("/store/"):-4])
+            if img is None:
+                return self.send_error(404)
+            img.thumbnail((640, 640))
+            buf = io.BytesIO()
+            img.save(buf, "JPEG", quality=88)
+            data = buf.getvalue()
+            self.send_response(200)
+            self.send_header("Content-Type", "image/jpeg")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            return self.wfile.write(data)
         if self.path == "/api/find_rain":
             t = time.time()
             lat, lon = radar.find_rain()
@@ -206,6 +243,20 @@ class Handler(SimpleHTTPRequestHandler):
             elif self.path == "/api/pictures":  # pictures for a how-to answer, made after its words were sent
                 p = howto.pictures(body["job"])
                 out = dict(router.steps_pictures(p["frames"]), done=p["done"], error=p.get("error"))
+            elif self.path == "/api/hub/send":
+                out = {"text": hub.send(body["who"], body["text"])}
+            elif self.path == "/api/hub/assign":
+                out = hub.assign(body["volunteer"], body["report"])
+                out.pop("trip_obj", None)
+            elif self.path == "/api/hub/closer":
+                out = {"text": hub.ask_closer(body["report"], body.get("box"))}
+            elif self.path == "/api/hub/block":
+                rep = store.get(body["report"])
+                out = hub.block(tuple(rep["where"]), int(body.get("radius_m", 30)), body.get("note") or "Danger reported here")
+            elif self.path == "/api/closer/start":  # a simulated phone asks about one of the sample photos
+                out = {"conv": closer_demo.start(body["sample"], body.get("question") or "What is this?")}
+            elif self.path == "/api/demo/beat":  # the Red Hook demo, one beat at a time (sim/redhook.py)
+                out = redhook.beat(body["name"], **({"pace": float(body["pace"])} if "pace" in body else {})) or {}
             elif self.path == "/api/radar":
                 out = radar.run((float(body["lat"]), float(body["lon"])))
                 out["parts"] = sms_parts(out["sms"])

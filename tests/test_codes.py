@@ -36,7 +36,8 @@ class Envelope(unittest.TestCase):
     def test_missing_and_damaged_parts(self):
         parts = codes.encode("P", os.urandom(600))
         ident = codes.CODE.match(parts[0]).group(2)
-        damaged = parts[1].replace(parts[1][20], "A" if parts[1][20] != "A" else "B", 1)
+        p = parts[1]
+        damaged = p[:20] + ("A" if p[20] != "A" else "B") + p[21:]  # one character of the chunk (the header is shorter)
         got = codes.decode("\n".join([parts[0], damaged] + parts[3:]))
         self.assertEqual(got["complete"], [])
         self.assertEqual(sorted(got["missing"][ident]), [2, 3])

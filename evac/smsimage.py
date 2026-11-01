@@ -23,12 +23,19 @@ def png(img, side=SIDE):
     return buf.getvalue()
 
 
-def webp(img, side=SIDE, quality=5):
+def webp(img, side=SIDE, quality=5, colour=False):
     """The picture as a small greyscale WebP (contrast stretched first): photos and zooms. On the six sample photos
     quality 5 took 284-1386 bytes, about what a 1-bit PNG takes, but a busy or dark photo stays readable where the
-    1-bit one turns to noise (the bicycle against a brick wall) or vanishes (a white sneaker). Browsers decode it."""
+    1-bit one turns to noise (the bicycle against a brick wall) or vanishes (a white sneaker). Browsers decode it.
+    colour=True keeps colour, for a close-up where colour decides the answer (a red mark on a spider): at quality 5
+    colour smears into blocks, so it gets quality 30."""
     buf = io.BytesIO()
-    ImageOps.autocontrast(fit(img, side), cutoff=1).save(buf, "WEBP", quality=quality, method=6)
+    if colour:
+        small = img.convert("RGB")
+        small.thumbnail((side, side), Image.LANCZOS)
+        small.save(buf, "WEBP", quality=max(quality, 30), method=6)
+    else:
+        ImageOps.autocontrast(fit(img, side), cutoff=1).save(buf, "WEBP", quality=quality, method=6)
     return buf.getvalue()
 
 

@@ -21,9 +21,9 @@ def locate(place, near, log):
     # into a 5th Ave in Los Angeles for a reader in LA. The bias is only a fallback.
     streets = re.split(r"\s+(?:and|&|at)\s+", place.split(",")[0], flags=re.I)
     area = place.split(",", 1)[1] if "," in place else ""
-    rough = (geo.geocode(place)
-             or (len(streets) == 2 and geo.geocode(streets[0] + ("," + area if area else "")))  # "Lexington Av, Manhattan"
-             or geo.geocode(place, near=near))
+    rough = (_geocode(place, log)
+             or (len(streets) == 2 and _geocode(streets[0] + ("," + area if area else ""), log))  # "Lexington Av, Manhattan"
+             or _geocode(place, log, near=near))
     if len(streets) == 2:
         # Around the rough hit, then around the reader: when the geocoder misses "A and B" and falls back to "A",
         # the rough hit is the middle of a long avenue (Lexington Av: 1.4 km from 51st St). The reader's
@@ -45,6 +45,16 @@ def locate(place, near, log):
     return rough
 
 
+def _geocode(query, log, near=None):
+    """The geocoder, or None when it fails (Nominatim rate-limits): an intersection can still be found in the street
+    data around the reader."""
+    try:
+        return geo.geocode(query, near=near)
+    except Exception as ex:
+        log.append("geocoder failed for %r (%s)" % (query, str(ex)[:80]))
+        return None
+
+
 def fmt_dist(m):
     return "%d m" % round(m, -1) if m < 1000 else "%.1f km" % (m / 1000)
 
@@ -64,7 +74,7 @@ def run(sms, user=None, cols=40, seg_backend="auto", out_dir="out", laptop=False
     if d > radius + ALERT_BUFFER_M:
         return {"affected": False, "message": "You are %s outside the %s zone. No action needed." % (fmt_dist(d - radius), n.get("hazard")), "log": log}
 
-    shelters = [(s, geo.geocode(s, near=user)) for s in n.get("shelters") or []]
+    shelters = [(s, _geocode(s, log, near=user)) for s in n.get("shelters") or []]
     shelters = [(s, p) for s, p in shelters if p]
 
     # User-centric map: big enough to reach the zone edge, and the nearest shelter if it's close.

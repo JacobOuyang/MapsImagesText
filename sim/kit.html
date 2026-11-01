@@ -37,7 +37,9 @@ map app.</p>
 <div id="send" hidden>
   <section>
     <b>Send a photo by SMS</b>
-    <p class="quiet">Shrunk to 128 pixels (usually 3–12 SMS). The service describes it and answers questions about it.</p>
+    <p class="quiet">Shrunk to 128 pixels (usually 3–12 SMS). The service describes it and answers questions about it. The full photo
+    stays on this phone: if the service needs a closer look, paste its reply in "Read a message" and the kit crops it for you.</p>
+    <div class="row"><input id="question" placeholder="Your question (optional), e.g. Is this a black widow?" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--fg)" aria-label="Question"></div>
     <div class="row"><input type="file" id="photo" accept="image/*" capture="environment" aria-label="Photo">
       <select id="look" aria-label="Picture"><option value="grey">Greyscale (best for photos)</option><option value="bw">Black and white</option><option value="dots">Black and white, shades as dots (about 3× the SMS)</option></select></div>
     <div id="photoOut"></div>
@@ -64,6 +66,15 @@ const ready = KIT.restore(store.get()).catch(() => {});  // pictures from earlie
 async function read() {
   await ready;
   const r = await KIT.show($('msg').value, $('out'));
+  for (const z of await KIT.answerZoom($('msg').value)) {  // the service asked for a closer look at one of our photos
+    const box = document.createElement('section');
+    box.appendChild(Object.assign(document.createElement('b'), {textContent: 'The service asked for a closer look at your photo' + (z.colour ? ', in colour' : '') + '. Your kit cropped it:'}));
+    z.canvas.style.cssText = 'display:block;width:160px;margin:8px 0;border-radius:6px'; box.appendChild(z.canvas);
+    codeBox(z.parts, box);
+    const send = Object.assign(document.createElement('a'), {textContent: 'Open in Messages to send (' + z.parts.length + ' SMS)', href: 'sms:?&body=' + encodeURIComponent(z.parts.join('\n'))});
+    send.style.cssText = 'display:inline-block;margin-top:6px;font-weight:600'; box.appendChild(send);
+    $('out').prepend(box);
+  }
   store.set(KIT.dump());
   $('readNote').textContent = r.count ? r.count + ' code' + (r.count > 1 ? 's' : '') + ' read' : ($('msg').value.trim() ? 'No complete code yet.' : '');
 }
@@ -88,7 +99,9 @@ $('photo').onchange = $('look').onchange = async () => {
   const f = $('photo').files[0]; if (!f) return; const out = $('photoOut'); out.innerHTML = '';
   const grey = $('look').value === 'grey' && await KIT.photoWebp(f);
   if ($('look').value === 'grey' && !grey) out.appendChild(Object.assign(document.createElement('div'), {className: 'quiet', textContent: "This browser can't make greyscale pictures; using black and white."}));
-  const {bytes} = grey || await KIT.photoBits(f, 128, $('look').value === 'dots'); const parts = KIT.encode('P', bytes);
+  const {bytes, w, h} = grey || await KIT.photoBits(f, 128, $('look').value === 'dots'); const codes = KIT.encode('P', bytes);
+  await KIT.keepOriginal(codes[0].match(/^#P([0-9a-z]+)\./)[1], f, w, h);  // so the service can ask for a closer look
+  const parts = ($('question').value.trim() ? [$('question').value.trim()] : []).concat(codes);
   const im = document.createElement('img'); im.src = 'data:' + (grey ? 'image/webp' : 'image/png') + ';base64,' + KIT.bytesb64(bytes); im.style.cssText = 'width:160px;image-rendering:pixelated;background:#fff';
   out.appendChild(im); out.appendChild(Object.assign(document.createElement('div'), {className: 'quiet', textContent: bytes.length + ' bytes'}));
   codeBox(parts, out);

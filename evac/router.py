@@ -18,7 +18,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from PIL import Image
 
-from . import codes, llm, photo, render, store, tools, zooms
+from . import closer, codes, llm, photo, render, store, tools, zooms
 
 MAX_ROUNDS = 3
 ONCE = {"show_steps", "photo_details", "describe_photo", "emergency_reply", "rain_radar"}  # slow: never twice per request
@@ -57,12 +57,28 @@ def handle(message, you, image=None, who=None):
     again = codes.resend(message)  # "RESEND 7k 3": the kit asks for parts that were lost or damaged
     if again is not None:
         return _quick(codes.text(again) if again else "Nothing to resend: that message is no longer kept.")
-    closer = codes.zoom(message)  # "ZOOM 3f 2": a closer look at part of a picture sent earlier, from its original
-    if closer is not None:
-        out = _quick(closer[0] + ("\n" + codes.text(closer[1]) if closer[1] else ""))
+    kept = codes.zoom(message)  # "ZOOM 3f 2": a closer look at part of a picture sent earlier, from its original
+    if kept is not None:
+        out = _quick(kept[0] + ("\n" + codes.text(kept[1]) if kept[1] else ""))
         out["kit"] = out["text"]
         return out
     found, log, report = codes.decode(message), [], None
+    closer_back = [c for c in found["complete"] if c["kind"] == "Z"]
+    if closer_back:  # a phone answering a ZOOM: a closer look at a photo it sent, cropped from its original
+        parent, box, data = codes.read_zoom(closer_back[0]["data"])
+        went_on = closer.receive(who, parent, box, data)  # a question about the photo, waiting for this view
+        if went_on:
+            out = _quick(went_on[1])
+            out.update(inquiry=went_on[0], log=["closer look at %s for question %s (%d bytes)" % (parent, went_on[0], len(data))])
+            return out
+    if closer_back and who:  # the hub asked for it (a photo report)
+        earlier = next((r for r in store.find("report") if r["who"] == who and (r["meta"].get("pic") or {}).get("id") == parent), None)
+        if earlier:
+            z = store.new("zoom", image=Image.open(io.BytesIO(data)), parent=earlier["id"], box=box, who=who, meta={"bytes": len(data)})
+            store.update(earlier["id"], meta={"zoom": z})
+            out = _quick("Got the closer look, thank you.")
+            out.update(report=earlier["id"], zoom=z)
+            return out
     for c in found["complete"]:  # codes the kit made on the phone: a photo, or a check-in with GPS
         if c["kind"] == "P" and image is None:  # a PNG or WebP; the model calls send JPEG
             buf = io.BytesIO()
@@ -75,9 +91,11 @@ def handle(message, you, image=None, who=None):
                 lat, lon = loc["lat"], loc["lon"]
                 log.append("check-in: %(status)s, %(people)s people at %(lat).5f, %(lon).5f (±%(accuracy_m)s m)" % loc)
                 # Every check-in is kept as a report (with its photo, if one came with it) for the responders' view.
-                photo_code = next((p["data"] for p in found["complete"] if p["kind"] == "P"), None)
-                report = store.new("report", meta=dict(loc, text=codes.plain(message)), where=(lat, lon), who=who,
-                                   image=Image.open(io.BytesIO(photo_code)) if photo_code else None)
+                pic = next((p for p in found["complete"] if p["kind"] == "P"), None)
+                picture = Image.open(io.BytesIO(pic["data"])) if pic else None
+                # The picture's own id and size: the hub can ask this phone for a closer look at part of it.
+                meta = dict(loc, text=codes.plain(message), **({"pic": {"id": pic["id"], "size": list(picture.size)}} if pic else {}))
+                report = store.new("report", meta=meta, where=(lat, lon), who=who, image=picture)
                 log.append("kept as report %s" % report)
                 if not codes.plain(message):  # a check-in alone: acknowledge it
                     out = _quick("Check-in received: %s, %s %s at %.5f, %.5f. Keep your phone on; reply with any change."
@@ -87,6 +105,12 @@ def handle(message, you, image=None, who=None):
                     return out
     if found["missing"]:
         log.append("incomplete codes: %s" % found["missing"])
+    pic = next((c for c in found["complete"] if c["kind"] == "P"), None)
+    if pic and report is None and llm.available():  # a question about a photo the phone keeps: look closer as needed
+        inq, text = closer.start(who, Image.open(io.BytesIO(pic["data"])), pic["id"], codes.plain(message) or "What is this?")
+        out = _quick(text)
+        out.update(inquiry=inq, log=log + ["question %s about photo %s" % (inq, pic["id"])], seconds=round(time.time() - t, 1))
+        return out
     message = codes.plain(message) or ("What is in this photo?" if image else message)
     ctx = tools.Context(you=(lat, lon), image=image)
     ctx.log.extend(log)
