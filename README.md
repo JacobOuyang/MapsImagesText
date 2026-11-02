@@ -1,48 +1,121 @@
 # MapsImagesText
 
-**Pictures for people who can only receive text.** A server with a good connection does the heavy work: reading an emergency alert, looking at a photo, reading the weather radar, routing on street data. It sends back text that still works as a picture, a map or sketch drawn in characters. Each reply comes in several sizes, and the person gets the richest one their connection can carry.
+**Pictures in a text message.** When a storm or a fire takes down mobile data, phones can still send and receive
+SMS, and satellite texting on newer phones does the same with no towers at all. Those channels carry words, not
+photos or maps. This project carries the pictures as well: a photo you can zoom into, a map with the way out, a
+signed alert, a check-in with your location. Everything travels as ordinary text messages.
 
-| Version | Channel | What arrives | Typical size |
-| --- | --- | --- | --- |
-| **Low data** | SMS on an iPhone | the message + a small map in characters that line up in iPhone Messages | 6 to 12 SMS |
-| **Medium data** | WhatsApp (monospace text) | the message + a 58-column map or drawing | 0.4 to 1.1 KB compressed |
-| **Small picture** | a slow connection | a 400 px WebP drawn for that size | 4.5 to 23 KB |
-| **High data** | a working connection | a picture map, or the photo itself | 50 to 180 KB |
-| **Kit** | plain SMS + a page saved on the phone beforehand | the words + codes the page turns into a real map, a zoomable photo, a GPX route | 2 to 16 SMS |
+Two pieces make it work:
 
-Built on the Meta Model API:
-- **Muse Spark** plans, writes and searches the web.
-- **SAM 3.1** finds objects in photos.
-- **Muse Image** draws the step pictures (and made the test pictures).
-- **Muse Wonder** checks the pictures.
+- **The kit**, one web page (62 KB, 28 KB gzipped) that a person saves on their phone before they need it. It works
+  with no connection. It reads the short codes inside a text message and draws what they carry: a photo, a map, a
+  route, a check-in, a signature check. It also makes those codes, so the phone can send a photo or its location by
+  plain SMS.
+- **A server with a good connection** that runs Meta's models through the Meta Model API. It looks at what phones
+  send, decides what to answer and what to ask for, and packs the reply into as few texts as possible.
 
-## What you can ask
+## Three things it does
 
-Send one message (plus GPS, optionally a photo). Muse Spark picks the tools:
+### 1. Ask about a photo that never leaves the phone
 
-| Message | What comes back |
+*"Is this a black widow?"* The kit sends the photo as about ten texts: 128 pixels, in grey. **Muse Spark** sees only
+that tiny picture. When it can't tell, it doesn't guess. It asks for a closer look at one part ("the dark shape
+under the shelf, in colour"), and the kit crops that part from the phone's own full-size photo and sends it back as
+text. **SAM 3.1** outlines the spider in each close-up, and Muse is told where that is in the whole photo. After two
+close-ups the red hourglass settles it.
+
+![Look closer: the phone's thread, the crops on the original, and what Muse saw](docs/closer_black_widow.jpg)
+
+In a real run, the whole exchange was 43 texts (6 KB) against a 254 KB photo. The same loop ran from a real WhatsApp
+account in 34 s. Muse may ask for at most three close-ups before it has to answer.
+
+### 2. One signed alert for everyone, with a map
+
+A neighbourhood hub (one laptop with the only working connection) re-sends the city's flood warning to every phone
+as plain SMS. **Muse Spark** reads the alert and copies its numbers and street names exactly as written. Code then
+draws the danger zone, routes each person's way out and signs the message. In the kit the codes become a map with
+the zone, closures and the person's position. The signature check shows **✔ Genuine**. A forged copy that changes
+where to go fails it and shows **✘ NOT genuine**.
+
+A Manhattan fire alert with its map is 6 SMS (840 bytes) through the kit. The smallest picture map of it is 16.6 KB.
+
+### 3. Check-ins and photo reports to the hub
+
+One tap in the kit sends status, number of people, battery and GPS in a single text, and a photo can go with it.
+The hub puts every check-in on a map. **Muse Spark** suggests who to help first and rates each photo report from the
+128 px picture (urgency, hazard, advice, where to look). **SAM 3.1** confirms the part worth a closer look. The hub
+then asks *that phone* for a zoom, and the phone's kit crops its own original. Marking a hazard (a power line on the
+street) re-routes every volunteer and warns the neighbours nearby. Anyone who writes in another language gets
+answers in it, packed so that accents don't double the SMS count.
+
+![The hub during the Red Hook drill](docs/hub_dashboard.jpg)
+
+In the full drill (42 phones, 39 check-ins, two photo reports, a close-up, warnings and two volunteer walks), the
+whole night came to 187 texts, 69.7 KB. That is under 3% of one phone photo.
+
+## How Meta's models are used
+
+| Model | What it does here |
 | --- | --- |
-| an emergency alert (fire, gas leak, wildfire, flood) | the fixed, tested reply: are you affected, what to avoid, which way out, with a map |
-| "Walk me to the Colosseum" | one step at a time on real street data, re-sent as you move |
-| "Is it going to rain?" | the latest radar and a 2-hour forecast as text |
-| a photo that won't download + "what is this?" | a description and the main object's outline in characters |
-| "How do I shut off the gas?" | numbered steps from cited web sources, then checked before/after pictures where they help |
+| **Muse Spark** | Looks at a 128 px photo and decides what it still needs to see, as a box, colour or grey, and why. Answers once it is sure. Reads alerts into structured data. Rates photo reports. Suggests who to help first. Translates replies. |
+| **SAM 3.1** | Outlines the thing Muse named on each close-up. Checks the hub's photo reports, where its box is used only if it scores ≥ 0.6 and agrees with Muse's box. |
+| **Muse Image** | Made the drill's photos: the downed line and the flooded corner. |
 
-Every map shows **only what the reply is about**: the route, the streets it uses, closures and the danger zone's edge. Everything else is left blank, so the way to go is the first thing you see.
+What we found about the models along the way:
 
-## How it works, briefly
+- **SAM needs pixels.** It found nothing under about 20 px in the 128 px picture, however the picture was enlarged
+  or restored first. So it runs on the close-ups, where the subject fills the frame, and Muse aims the first close-up
+  from context ([evals/closer/RESULTS.md](evals/closer/RESULTS.md)).
+- **The model copies, code computes.** When Muse converted units itself, the zone's radius changed from run to run.
+  Now it copies numbers as written and code converts them.
 
-Muse Spark reads the message and picks tools (alerts, routing, radar, photos, how-to search), which run in parallel.
-Each tool gives the model a short summary and keeps its bulky result (streets, a route, a radar grid) for drawing.
-Every result becomes one Scene, and every version (SMS, WhatsApp, pictures, kit codes) is drawn from it, so they
-all show the same route. The model plans and writes the words; code computes distances, routes and maps. Anything
-slow or flaky is cached or falls back (no key: keyword rules and templates).
+## How the kit works
 
-**[HOW_IT_WORKS.md](HOW_IT_WORKS.md)** has the details, with real example inputs and outputs for every mode: emergency
-alerts, walking directions, photos and picture compression, how-to answers, radar, the offline kit and its codes,
-the look-closer loop, WhatsApp, the community hub, and why the text maps line up.
+- **A code inside a text:** `#<type><id>.<part>/<parts>:<base64>:<crc16>#`, at most 153 characters per part, in the
+  basic SMS alphabet. Parts can arrive in any order. A damaged or missing part is named, and `RESEND id n` asks for
+  just that part again.
+- **Types:**
+  - `P`: a picture (greyscale WebP at quality 5, or a 1-bit PNG for line drawings).
+  - `Z`: a close-up, with the box it covers in its parent picture, so close-ups can chain.
+  - `M`: a map.
+  - `G`: a route, which opens as a GPX file in an offline map app.
+  - `T`: compressed words, used when text would otherwise be sent as UCS-2.
+  - `L`: a check-in.
+  - `A`: an Ed25519 signature over the words.
+- **Zoom:** the phone keeps the originals. A `ZOOM id x y w h [C]` request (C for colour) makes the kit crop that
+  part of the full-size photo and reply with a `Z` code.
+- **Offline:** the kit is one self-contained file with the issuer's public key built in. A message can be passed on
+  to a phone with no signal as a QR code.
 
-## Try it
+Measured sizes are in [evals/kit/RESULTS.md](evals/kit/RESULTS.md). [HOW_IT_WORKS.md](HOW_IT_WORKS.md#the-offline-kit)
+has examples of every code.
+
+## The demo
+
+```bash
+.venv/bin/python sim/server.py
+```
+
+Open http://127.0.0.1:8765/demo in a 1920 × 1080 window. It plays the three use cases step by step with a caption
+for each step, on the real server and with the real kit. Only the neighbours' phones are simulated.
+
+| Key | What it does |
+| --- | --- |
+| → or space | Next step |
+| 1, 2, 3 | Jump to a scene: look closer, the signed alert, check-in and a photo |
+| R | Show what actually arrives on the phone (the plain texts) instead of what the kit shows |
+| C | Hide the captions, to record clean and add a voice-over later |
+
+Scene 1 runs the look-closer loop (about 30 s, live with Muse and SAM). Scenes 2 and 3 run the Red Hook drill: the
+Okafors' phone, read by the kit, beside the hub's dashboard. Each scene can also be opened on its own:
+
+- `/closer`: look closer.
+- `/phone?who=+15550113`: one neighbour's phone.
+- `/dashboard`: the hub.
+
+[`demo/README.md`](demo/README.md) has the drill's story and how to render a video from screenshots.
+
+## Run it
 
 ```bash
 python3.12 -m venv .venv
@@ -52,121 +125,84 @@ python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-Put a Meta Model API key in `.env` (git-ignored) as `LLAMA_API_KEY=...`. Without one, everything falls back to keyword routing, regex parsing and template text.
+Put a Meta Model API key in `.env` (git-ignored) as `LLAMA_API_KEY=...`, then start the simulator:
 
 ```bash
 .venv/bin/python sim/server.py
 ```
 
-The simulator runs at http://127.0.0.1:8765. It has four pages, linked from the top of the first:
+The simulator serves these pages:
 
-- **`/`**: tabs for emergencies (three people with their own GPS), photos, radar, walking (with simulated GPS moves) and "ask anything". Every reply is shown in each of its versions with real sizes, including how the kit draws it.
-- **`/kit.html`**: the offline kit, as the single file a phone saves.
-- **`/dashboard`**: the community hub; the buttons at the bottom left run the Red Hook drill beat by beat. It is laid out for a 1920 × 1080 window.
-- **`/closer`**: look closer; pick a spider photo and ask.
+- `/demo`: the demo above.
+- `/kit.html`: the kit, as the single file a phone saves.
+- `/closer`: look closer.
+- `/dashboard`: the hub.
+- `/`: every other mode.
 
-Offline tests (no key or network needed):
+Without a key, replies fall back to keyword routing, regex parsing and template text.
+
+The offline tests need no key and no network. They cover codes, signatures against RFC 8032, the store, RESEND, ZOOM,
+check-ins, routing around danger, the look-closer loop and the WhatsApp channel:
 
 ```bash
 .venv/bin/python -m unittest discover tests
 ```
 
-From the command line:
+### Over WhatsApp
 
-```bash
-.venv/bin/python main.py --ask "Is it going to rain on my walk to the Colosseum?" --at 41.9010,12.5016
-```
+Without an SMS gateway, WhatsApp can stand in for the text channel. A person messages the Muse number (Twilio's
+sandbox) and gets exactly what they would get by SMS.
 
-```bash
-.venv/bin/python main.py samples/nyc_fire.txt --at 40.75491,-73.97441 --laptop 58 -v
-```
-
-```bash
-.venv/bin/python main.py --walk "Castelo de São Jorge, Lisbon" --at 38.7139,-9.1406
-```
-
-`--photo some.jpg` and `--radar LAT,LON` run the other modes.
-
-## On WhatsApp
-
-For a demo without an SMS number, WhatsApp stands in for the text channel: a person messages the Muse WhatsApp
-number (Twilio's sandbox) and gets exactly the SMS reply. A photo runs the look-closer loop, and the photo itself
-never leaves the computer ([details](HOW_IT_WORKS.md#on-whatsapp)).
-
-To set it up:
-
-1. **Twilio:** put `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and your own number as `MY_WHATSAPP` (for the test phone) in `.env`.
-2. **The bridge:** `.venv/bin/python sim/whatsapp_server.py` (port 8770). It serves only Twilio's webhook; the
-   simulator and its data stay local.
-3. **A tunnel** to port 8770, for example `cloudflared tunnel --url http://127.0.0.1:8770`. Put its https address
-   in `.env` as `PUBLIC_URL` (Twilio signs requests with it) and restart the bridge.
+1. **Twilio:** put `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN` and your own number as `MY_WHATSAPP` in `.env`.
+2. **The bridge:** `.venv/bin/python sim/whatsapp_server.py` (port 8770). It serves only Twilio's webhook.
+3. **A tunnel** to port 8770, for example `cloudflared tunnel --url http://127.0.0.1:8770`. Put its https address in
+   `.env` as `PUBLIC_URL` and restart the bridge.
 4. **Twilio's sandbox settings:** set "When a message comes in" to `PUBLIC_URL/whatsapp` (POST).
-5. **Each phone** sends the sandbox's join message to its number once; sandbox sessions end after 72 hours without a
-   message.
+5. **Each phone** sends the sandbox's join message once.
 
-**MuZip, the app for a demo.** On a Mac with WhatsApp Desktop: start the bridge and MuZip's server
-(`.venv/bin/python sim/whatsapp_server.py` and `.venv/bin/python sim/muzip.py`), build the app with
-`bash sim/make_muzip_app.sh` and double-click `out/MuZip.app`, which opens MuZip's page at http://127.0.0.1:8780.
-Drop a photo, type a question and press Send. MuZip turns the photo into the 128 px code, sends it from your WhatsApp,
-answers each closer look Muse asks for by cropping the original, and shows the conversation, the original with every
-crop outlined, and what Muse saw. The photo never leaves the computer. A real run from a WhatsApp account (the
-black widow in [HOW_IT_WORKS.md](HOW_IT_WORKS.md#on-whatsapp)) took 34 s: three messages out, three answers back.
+**MuZip** sends from your own WhatsApp on a Mac. Run `.venv/bin/python sim/muzip.py`, build the helper app with
+`bash sim/make_muzip_app.sh` and open `out/MuZip.app`. Then drop a photo at http://127.0.0.1:8780 and ask. MuZip does
+the kit's work: the 128 px code, and a crop for every close-up Muse asks for. The app itself only presses Return in
+WhatsApp, which needs Accessibility permission. Re-add it after every rebuild.
 
-To send from your account, something has to press Return in WhatsApp, which macOS only allows an app with
-Accessibility permission. That is all MuZip.app does: it waits for requests in a private folder in `/tmp` and
-brings WhatsApp forward for about a second to press Return. It never opens the project folder, so it needs no
-Documents permission (the first version ran the servers itself and stalled on macOS's per-app Documents check). Give
-it Accessibility (System Settings > Privacy & Security > Accessibility > + > MuZip) and allow the "control System
-Events" prompt; after every rebuild remove it from that list and add it again, because the grant is tied to the
-app's signature. MuZip's "simulated" switch sends straight to the bridge instead; Muse's replies still arrive in
-your WhatsApp.
+`sim/wa_phone.py` is a test phone that sends as your number and prints the replies.
+[HOW_IT_WORKS.md](HOW_IT_WORKS.md#on-whatsapp) has the details.
 
-**Testing without a phone in hand:** `sim/wa_phone.py` is a test phone. It sends messages to the bridge as your
-WhatsApp number, plays the kit for photos, and prints Muse's replies, which Twilio also delivers to your WhatsApp.
-A real run took 19 s:
+## Also in this repo
 
-```bash
-.venv/bin/python sim/wa_phone.py --photo sim/samples/spiders/black_widow.jpg "Is this a black widow?"
-```
+The same server answers more than the kit's three use cases. These modes are not the focus right now, and
+[HOW_IT_WORKS.md](HOW_IT_WORKS.md) has real inputs and outputs for each:
 
-`--via whatsapp` sends from WhatsApp Desktop itself: it fills in the chat and has MuZip.app press Return when it's
-running (otherwise it presses Return itself, which needs Accessibility permission for the app running it).
-
-## A community hub (demo)
-
-The coordinator's side for a neighbourhood whose phones can only text: one signed alert for everyone, check-ins on a
-map, triaged photo reports, volunteer walks around the danger. Open http://127.0.0.1:8765/dashboard and run the Red
-Hook drill with the buttons at the bottom left. [HOW_IT_WORKS.md](HOW_IT_WORKS.md#a-community-hub-demo) describes it;
-[`demo/README.md`](demo/README.md) has the story and how to make the video.
+- **Emergency alerts:** "are you affected, what to avoid, which way out", with a map in characters that lines up in
+  iPhone Messages.
+- **Walking directions abroad:** one step at a time on street data, re-sent as you move.
+- **Weather radar:** the latest radar and a 2-hour forecast as text.
+- **Photos as drawings in characters**, checked by Muse reading them back blind.
+- **How-to answers:** steps from cited web sources (Muse Spark's web search), with before and after pictures drawn by
+  Muse Image and checked by **Muse Wonder**.
 
 ## Code
 
 | Area | Files |
 | --- | --- |
-| Router and tools | `evac/router.py`, `evac/tools.py`, `evac/llm.py` |
-| Scene and drawing | `evac/scene.py`, `evac/focus.py`, `evac/render.py`, `evac/textmap.py` (SMS), `evac/laptopmap.py` (WhatsApp), `evac/imagemap.py` (pictures) |
-| Emergency | `evac/pipeline.py`, `evac/notice.py`, `evac/grid.py`, `evac/segment.py`, `evac/imagery.py` |
-| Walking | `evac/directions.py`, `evac/osm.py`, `evac/geo.py` |
-| Photos | `evac/photo.py`, `evac/sam.py`, `evac/sketch.py`, `evac/tonal.py`, `evac/zooms.py` |
-| How-to | `evac/howto.py`, `evac/illustrate.py`, `evac/verify.py`, `evac/museimage.py` |
-| Radar | `evac/radar.py` |
-| Kit | `evac/codes.py`, `evac/smsimage.py`, `sim/kit.js`, `sim/kit.html`, `sim/pack.json` |
-| Store | `evac/store.py` (every photo, zoom, trip, message and report, in SQLite) |
-| Community hub | `evac/hub.py`, `sim/dashboard.html`, `sim/redhook.py` (the Red Hook drill), `demo/` (story and video) |
-| Look closer | `evac/closer.py` (the loop), `sim/closer.html` + `sim/closer_demo.py` (the demo), `sim/phones.py` (simulated phones that keep their originals) |
-| WhatsApp | `evac/whatsapp.py` (the channel), `sim/whatsapp_server.py` (Twilio's webhook, the only part on the internet) |
-| Simulator | `sim/server.py`, `sim/index.html` |
-| Tests | `tests/` (codes, signatures, the store, RESEND/ZOOM/check-ins, routing around danger, the look-closer loop, the WhatsApp channel; offline) |
-| Evals | `evals/` (photo drawings, emergency pictures, kit sizes) |
+| The kit | `sim/kit.js`, `sim/kit.html`, `evac/codes.py` (codes, signatures, zoom crops), `evac/smsimage.py` (the 128 px picture) |
+| Look closer | `evac/closer.py` (the loop), `evac/sam.py`, `sim/closer.html`, `sim/closer_demo.py`, `sim/phones.py` (phones that keep their originals) |
+| Hub | `evac/hub.py`, `sim/dashboard.html`, `sim/redhook.py` (the drill), `sim/phone.html` (a neighbour's phone) |
+| Demo | `sim/demo.html` (the three scenes), `demo/` (story and video tooling) |
+| Router and store | `evac/router.py` (codes first, then Muse and its tools), `evac/store.py` (every photo, zoom, message and report, in SQLite) |
+| WhatsApp | `evac/whatsapp.py`, `sim/whatsapp_server.py`, `sim/wa_phone.py`, `sim/muzip.py` |
+| Other modes | `evac/pipeline.py`, `evac/directions.py`, `evac/radar.py`, `evac/photo.py`, `evac/howto.py`, the map renderers |
+| Tests and evals | `tests/` (offline), `evals/` (kit sizes, SAM on small pictures, drawings) |
 
-[HOW_IT_WORKS.md](HOW_IT_WORKS.md) explains each part; `CLAUDE.md` has the details of how the pieces connect.
+`CLAUDE.md` describes how the pieces connect.
 
-## Data sources and limits
+## Limits
 
-Roads and places © OpenStreetMap contributors (via Overpass); geocoding by Nominatim; aerial imagery © Esri; radar © RainViewer; forecasts by Open-Meteo. How-to steps name the sites they came from.
-
-- **Not checked on real phones:** the maps have not been checked on a real iPhone or in WhatsApp, and the GPX files not in a map app on a phone.
-- **Overpass:** the free servers are slow, 30 s to 2 minutes for a new area. Alerts wait at most 15 s for streets, then route on aerial imagery alone.
-- **SMS length:** replies are 6 to 12 parts, and a photo with tones in the kit is 3–14 SMS.
+- **Not yet on real phones:** the kit hasn't been tried on a real phone with real SMS. WhatsApp through Twilio's
+  sandbox is the live channel so far.
+- **The drill's phones are simulated,** and so are its photos (made with Muse Image).
 - **The kit must be saved ahead of time,** and pasting a message into it is a step people have to learn.
-- **The how-to pictures are experimental:** few steps qualify, the checks are noisy, and the test pictures are renders, not real photos.
+- **Small things in a 128 px picture:** Muse aims the first close-up from context alone, because SAM can't find them
+  until the phone sends a close-up.
+
+Roads and places © OpenStreetMap contributors (via Overpass); geocoding by Nominatim; aerial imagery © Esri.

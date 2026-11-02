@@ -3,7 +3,8 @@
     .venv/bin/python sim/server.py            # http://localhost:8765
 
 Pages: / (the modes, every reply in its versions), /kit.html (the offline kit, as one file), /dashboard (the community
-hub; the Red Hook drill), /closer (look closer: a question about a photo that stays on the phone).
+hub; the Red Hook drill), /closer (look closer: a question about a photo that stays on the phone), /demo (the kit's three use cases, step by
+step, for recording the video), /phone?who= (one drill neighbour's texts, read by the kit).
 
 POST /api/message {"text", "lat", "lon", "image"?, "from"?} -> the router: Muse picks tools; the versions + "tools"
 POST /api/alert {"text", "lat", "lon"} -> {"message" (SMS), "text", "laptop" (WhatsApp map), "small", "image", "kit"}
@@ -40,7 +41,7 @@ import closer_demo  # noqa: E402  (look closer: a phone asks about a photo it ke
 
 PORT = int(os.environ.get("PORT", 8765))
 WHATSAPP_COLS = 58  # widest monospace map that fits the simulated WhatsApp Desktop bubble (65% of the chat pane) unwrapped
-PAGES = {"/dashboard": "dashboard.html", "/closer": "closer.html"}
+PAGES = {"/dashboard": "dashboard.html", "/closer": "closer.html", "/demo": "demo.html", "/phone": "phone.html"}
 sms_parts = codes.sms_parts
 
 SAMPLE_DIR = "/Library/Desktop Pictures"  # macOS ships photos here; used as sample "photos a friend sent"

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Neighbour's Phone</title>
+<script src="/kit.js"></script>
+<style>
+  :root { --bg:#0f1419; --fg:#e8edf2; --quiet:#8b98a5; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { display:flex; flex-direction:column; align-items:center; padding:12px; gap:10px; }
+  .device { width:380px; flex:1; max-height:900px; min-height:0; border-radius:46px; background:#000; padding:12px; box-shadow:0 0 0 2px #333, 0 20px 50px #0008; display:flex; flex-direction:column; }
+  .screen { flex:1; border-radius:36px; background:#fff; color:#111; overflow:hidden; display:flex; flex-direction:column; min-height:0; }
+  .status { display:flex; justify-content:space-between; padding:12px 24px 4px; font-weight:600; font-size:14px; }
+  .who { text-align:center; padding:4px 0 8px; border-bottom:1px solid #e5e5ea; }
+  .who .av { width:40px; height:40px; border-radius:50%; background:#2f9e44; color:#fff; display:flex; align-items:center; justify-content:center; margin:0 auto 3px; font-weight:700; }
+  .who small { color:#8e8e93; display:block; font-size:11px; }
+  .thread { flex:1; overflow:auto; padding:10px; font-size:14px; min-height:0; }
+  .b { max-width:88%; padding:8px 12px; border-radius:18px; margin:4px 0; white-space:pre-wrap; word-break:break-word; }
+  .b.in { background:#0a84ff; color:#fff; margin-left:auto; }
+  .b.out, .b.rumour { background:#e9e9eb; }
+  .b.raw { font:10.5px/1.35 Menlo, monospace; word-break:break-all; }
+  .meta { font-size:11px; color:#8e8e93; margin:8px 6px 0; }
+  .meta.r { text-align:right; }
+  .kit { margin:4px 0 4px; padding:8px 10px; border-radius:12px; background:#fff9db; border:1px solid #ffe066; color:#111; font-size:13px; max-width:92%; }
+  .kit.r { margin-left:auto; }
+  .kit .tag { font-size:10.5px; font-weight:700; letter-spacing:.5px; text-transform:uppercase; color:#9c6f00; margin-bottom:2px; }
+  .kit img, .kit canvas, .kit svg { max-width:100%; }
+  .ask { margin-top:6px; padding:6px 8px; border-radius:10px; background:#fff3bf; color:#5c3d00; font-size:12.5px; }
+  .empty { color:#8e8e93; padding:30px 0; text-align:center; }
+  .switch { display:flex; gap:6px; }
+  .switch button { font:inherit; font-size:13px; color:var(--fg); background:#25313c; border:1px solid #2a3540; border-radius:999px; padding:5px 12px; cursor:pointer; }
+  .switch button.on { background:#f59f00; color:#111; border-color:#f59f00; font-weight:650; }
+</style>
+</head>
+<body>
+<div class="switch"><button id="kitOn" class="on">What the kit shows</button><button id="rawOn">What arrives: plain texts</button></div>
+<div class="device"><div class="screen">
+  <div class="status"><span id="clock">9:41</span><span>●○○○ SMS only</span></div>
+  <div class="who"><div class="av">H</div><b>Neighbors Hub</b><small id="sub">by text message · the kit is a page saved on this phone</small></div>
+  <div class="thread" id="thread"><div class="empty">No texts yet.</div></div>
+</div></div>
+<script>
+// One neighbour's phone in the Red Hook drill: every text between it and the hub (and rumours forwarded to it), each
+// read by the real kit (kit.js), as the person sees it after pasting it into the kit page. ?who=+1555... picks the phone;
+// ?raw=1 shows the plain texts; ?hide=rumour holds back forwarded rumours (the demo shows them a step later).
+const $ = id => document.getElementById(id), Q = new URLSearchParams(location.search);
+const WHO = Q.get('who') || '+15550113';
+let raw = Q.get('raw') === '1', hide = (Q.get('hide') || '').split(',').filter(Boolean), shown = '', busy = false;
+const ZOOM_LINE = /\s*ZOOM\s+\S+(\s+\d+){4}(\s+C)?/i;
+
+async function draw(d) {
+  const key = raw + '|' + hide + '|' + d.texts.length; if (key === shown || busy) return; busy = true;
+  const th = $('thread'), frag = document.createDocumentFragment();
+  if (d.person) $('sub').textContent = d.person.name + "'s phone · texts only · the kit is a page saved on it";
+  for (const t of d.texts) {
+    if (hide.includes(t.dir)) { await KIT.show(t.text, document.createElement('div')); continue; }
+    const mine = t.dir === 'in', words = KIT.plain(t.text).replace(ZOOM_LINE, '').trim();
+    frag.appendChild(Object.assign(document.createElement('div'), {className: 'meta' + (mine ? ' r' : ''),
+      textContent: (mine ? 'Sent' : t.dir === 'rumour' ? 'Forwarded by a neighbour' : 'Neighbors Hub') + ' · ' + t.parts + ' SMS'}));
+    const b = document.createElement('div'); b.className = 'b ' + t.dir + (raw ? ' raw' : '');
+    const out = document.createElement('div');
+    await KIT.show(t.text, out);  // always, in order, so a close-up finds the picture it belongs to
+    if (raw) { b.textContent = t.text; frag.appendChild(b); continue; }
+    const kitted = out.childNodes.length > 0;
+    if (words && !(mine && kitted)) { b.textContent = words; frag.appendChild(b); }
+    if (t.dir !== 'in' && ZOOM_LINE.test(t.text))
+      b.insertAdjacentHTML('beforeend', '<div class="ask">↩ The kit crops that part of your photo, which never left this phone. Tap Send.</div>');
+    if (kitted) {
+      const k = document.createElement('div'); k.className = 'kit' + (mine ? ' r' : '');
+      k.appendChild(Object.assign(document.createElement('div'), {className: 'tag', textContent: mine ? 'Made by the kit' : 'Read by the kit'}));
+      k.appendChild(out); frag.appendChild(k);
+    }
+  }
+  th.innerHTML = ''; th.appendChild(d.texts.length ? frag : Object.assign(document.createElement('div'), {className: 'empty', textContent: 'No texts yet.'}));
+  th.scrollTop = th.scrollHeight;
+  for (const im of th.querySelectorAll('img')) im.onload = () => { th.scrollTop = th.scrollHeight; };
+  shown = key; busy = false;
+}
+const setRaw = r => { raw = r; $('kitOn').classList.toggle('on', !r); $('rawOn').classList.toggle('on', r); shown = ''; tick(); };
+$('kitOn').onclick = () => setRaw(false); $('rawOn').onclick = () => setRaw(true);
+window.addEventListener('message', e => {  // the demo page switches these
+  if (e.data && 'raw' in e.data) setRaw(!!e.data.raw);
+  if (e.data && e.data.hide) { hide = e.data.hide; shown = ''; tick(); }
+});
+async function tick() {
+  try { draw(await fetch('/api/hub/thread?who=' + encodeURIComponent(WHO)).then(r => r.json())); } catch (e) {}
+}
+setRaw(raw); setInterval(tick, 1000);
+</script>
+</body>
+</html>
