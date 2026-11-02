@@ -53,6 +53,30 @@ answers in it, packed so that accents don't double the SMS count.
 In the full drill (42 phones, 39 check-ins, two photo reports, a close-up, warnings and two volunteer walks), the
 whole night came to 187 texts, 69.7 KB. That is under 3% of one phone photo.
 
+## How much data it saves
+
+The kit sends a photo as a 128 px grey WebP, packed into SMS codes. Below, that is set against sending the same photo
+the normal way: the file itself, or a 400 px WebP. These are real encodes of the demo's photos (the first four) and
+six test photos (`evals/kit/webp_vs_normal.py`). One SMS carries 140 bytes on the air.
+
+| Photo | Sent normally (the file) | Small picture (400 px WebP) | Kit: 128 px grey WebP | As SMS | Saving vs the file | + one colour close-up |
+|---|---|---|---|---|---|---|
+| Black widow | 253.9 KB (1024×1024) | 20.0 KB | 1.0 KB | 10 SMS = 1.4 KB | 181× | 1.4 KB = 14 SMS |
+| False widow | 239.8 KB (1024×1024) | 19.6 KB | 1.1 KB | 11 SMS = 1.5 KB | 156× | 1.6 KB = 16 SMS |
+| Downed power line | 336.0 KB (1024×1024) | 25.3 KB | 1.4 KB | 14 SMS = 2.0 KB | 171× | 2.8 KB = 28 SMS |
+| Flooded corner | 248.4 KB (1024×1024) | 17.4 KB | 800 B | 8 SMS = 1.1 KB | 222× | 1.9 KB = 19 SMS |
+| Apple | 37.8 KB (640×640) | 4.5 KB | 322 B | 4 SMS = 560 B | 67× | 1.0 KB = 11 SMS |
+| Bicycle | 114.5 KB (640×640) | 25.3 KB | 1.4 KB | 14 SMS = 2.0 KB | 58× | 2.8 KB = 29 SMS |
+| Dog | 88.6 KB (640×640) | 17.8 KB | 1.1 KB | 12 SMS = 1.7 KB | 53× | 1.3 KB = 14 SMS |
+| Mug | 18.3 KB (640×640) | 1.7 KB | 284 B | 3 SMS = 420 B | 43× | 272 B = 3 SMS |
+| Sneaker | 31.8 KB (640×640) | 3.3 KB | 386 B | 4 SMS = 560 B | 57× | 452 B = 5 SMS |
+| Teapot | 76.1 KB (640×640) | 14.9 KB | 1.2 KB | 13 SMS = 1.8 KB | 42× | 956 B = 10 SMS |
+
+When the 128 px picture isn't enough, Muse asks for a close-up of one part instead of the whole photo. The last
+column is one colour close-up of a quarter of the picture. The whole black-widow exchange (the photo, two close-ups
+and three replies) was 43 SMS, 6 KB, against 254 KB for the file. A real phone photo is 2–4 MB, about ten times these
+samples, so the saving against a real photo is larger.
+
 ## How Meta's models are used
 
 | Model | What it does here |
