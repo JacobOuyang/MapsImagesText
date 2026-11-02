@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kit Demo</title>
+<style>
+  :root { --bg:#0f1419; --panel:#161d24; --line:#2a3540; --fg:#e8edf2; --quiet:#8b98a5; --accent:#f59f00; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; overflow:hidden; }
+  body { display:flex; flex-direction:column; }
+  header { display:flex; align-items:center; gap:14px; padding:12px 22px; border-bottom:1px solid var(--line); background:#0b1015; flex-wrap:wrap; }
+  header h1 { font-size:20px; margin:0; } header .sub { color:var(--quiet); }
+  .grow { flex:1; }
+  .scenes { display:flex; gap:6px; }
+  button { font:inherit; color:var(--fg); background:#25313c; border:1px solid var(--line); border-radius:999px; padding:6px 14px; cursor:pointer; }
+  button.on { background:var(--accent); border-color:var(--accent); color:#111; font-weight:650; }
+  #next { border-radius:8px; font-weight:650; }
+  #step { color:var(--quiet); font-variant-numeric:tabular-nums; min-width:90px; text-align:right; }
+  main { flex:1; position:relative; min-height:0; }
+  .stage { position:absolute; inset:0; display:none; }
+  .stage.on { display:flex; }
+  iframe { border:0; background:var(--bg); }
+  #s1 iframe { width:100%; height:100%; }
+  #hubStage { gap:0; }
+  #hubStage .phone { width:420px; flex:none; height:100%; }
+  #hubStage .hubwrap { flex:1; position:relative; overflow:hidden; border-left:1px solid var(--line); }
+  #hubStage .hubwrap iframe { position:absolute; left:0; top:0; width:1920px; height:1080px; transform-origin:0 0; }
+  .caption { padding:14px 26px 16px; border-top:1px solid var(--line); background:#0b1015; font-size:21px; line-height:1.35; min-height:74px; }
+  .caption small { display:block; color:var(--quiet); font-size:13px; margin-top:4px; }
+  body.clean .caption { display:none; }
+  .busy::after { content:" …"; color:var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Pictures in a text message</h1><span class="sub">The kit: a page saved on the phone that turns plain SMS into photos, maps and signed alerts.</span>
+  <div class="grow"></div>
+  <div class="scenes" id="scenes"></div>
+  <button id="raw" title="R">Plain texts</button>
+  <span id="step"></span><button id="next" title="→ or space">Next ▸</button>
+</header>
+<main>
+  <div class="stage" id="s1"><iframe id="closer" title="Look closer"></iframe></div>
+  <div class="stage" id="hubStage">
+    <iframe class="phone" id="phone" title="A neighbour's phone" src="/phone?who=%2B15550113&hide=rumour"></iframe>
+    <div class="hubwrap" id="hubwrap"><iframe id="hub" title="The hub" src="/dashboard?phone=%2B15550113"></iframe></div>
+  </div>
+</main>
+<div class="caption" id="caption"></div>
+<script>
+// The demo, scene by scene, for recording the video. → / space: next step; 1-3: jump to a scene; R: the phone's plain
+// texts instead of what the kit shows; C: hide the captions (record clean, add voice-over later).
+// Scene 1 drives sim/closer.html; scenes 2 and 3 drive the Red Hook drill (sim/redhook.py) through /api/demo/beat and
+// show one neighbour's phone (sim/phone.html: the Okafors) beside the hub's dashboard.
+const $ = id => document.getElementById(id);
+const SCENES = [
+  {name: 'Look closer', stage: 's1', steps: [
+    {go: 'closer', say: 'A photo of a spider, and no data, only SMS. The kit sends it as about ten texts: 128 pixels, grey.',
+     note: 'Muse Spark sees only that tiny picture. The full photo stays on the phone.'},
+    {say: 'Not sure, Muse asks for a closer look at one part. The kit crops it from the original and sends it back as text.',
+     note: 'SAM 3.1 outlines the spider in each close-up; Muse is told where it is in the whole photo.'},
+    {say: 'In colour, the red hourglass decides it: a black widow. About 40 texts (6 KB) in all; the photo never left the phone.',
+     note: 'Each close-up is chosen by Muse Spark, cropped on the phone, and checked by SAM 3.1.'}]},
+  {name: 'Signed alert', stage: 'hubStage', steps: [
+    {beat: 'setup', say: 'Red Hook, Brooklyn, a flood drill at night. Forty neighbours whose phones can only text; one hub with a connection.',
+     note: 'Every neighbour has the kit: one page saved on the phone before the storm.'},
+    {beat: 'alert', say: 'The city\'s flood warning goes out to everyone as plain SMS. The kit turns it into a map and checks the signature.',
+     note: 'Muse Spark reads the alert; code draws the zone, routes the way out and signs the message (Ed25519).'},
+    {raw: true, say: 'This is all that actually arrives: ordinary text messages. Any phone, any network, even satellite SMS.'},
+    {raw: false, rumour: true, say: 'A forged copy goes round, sending people to the wrong place. The kit catches it: NOT genuine.',
+     note: 'The signature covers the words, so a changed destination breaks it.'}]},
+  {name: 'Check-in and a photo', stage: 'hubStage', steps: [
+    {beat: 'checkin', say: 'The hub asks everyone to check in. One tap in the kit sends status, people, battery and GPS in one text.',
+     note: 'Check-ins land on the hub\'s map; Muse Spark suggests who to help first.'},
+    {beat: 'photo', say: 'The Okafors report a tree down on a power line, with a photo, as text.',
+     note: 'Muse Spark rates the danger from the 128 px picture; SAM 3.1 finds the part worth a closer look.'},
+    {beat: 'zoom', say: 'The hub asks their phone for a closer look at the wire. Their kit crops its own full-size photo.',
+     note: 'Only the part that matters crosses the network.'},
+    {beat: 'block', say: 'The hub marks the line as danger: volunteers are routed around it and neighbours nearby are warned.',
+     note: 'The whole night, hub and phones together, came to under 3% of one phone photo.'}]},
+];
+const DASH_PHONE = 390, OKAFORS = '%2B15550113';  // the dashboard's phone column (cut off: ours is bigger); whose phone
+let scene = 0, step = -1, raw = false;
+
+function sceneButtons() {
+  $('scenes').innerHTML = '';
+  SCENES.forEach((s, i) => { const b = document.createElement('button'); b.textContent = (i + 1) + ' ' + s.name; b.className = i === scene ? 'on' : '';
+    b.onclick = () => enter(i); $('scenes').appendChild(b); });
+}
+function show() {
+  for (const s of document.querySelectorAll('.stage')) s.classList.toggle('on', s.id === SCENES[scene].stage);
+  const st = SCENES[scene].steps[step];
+  $('caption').innerHTML = st ? st.say + (st.note ? '<small>' + st.note + '</small>' : '') : '<small>Press → to start: ' + SCENES[scene].name + '</small>';
+  $('step').textContent = 'Step ' + Math.max(step + 1, 0) + ' / ' + SCENES[scene].steps.length;
+  sceneButtons(); fit();
+}
+function setRaw(r) { raw = r; $('raw').classList.toggle('on', r); $('phone').contentWindow.postMessage({raw: r}, '*'); }
+async function run(st) {
+  if (st.go === 'closer') $('closer').src = '/closer?sample=black_widow&q=' + encodeURIComponent('Is this a black widow?') + '&auto=1';
+  if ('raw' in st) setRaw(st.raw);
+  if (st.rumour) $('phone').contentWindow.postMessage({hide: []}, '*');
+  if (st.beat) {
+    $('next').classList.add('busy');
+    await fetch('/api/demo/beat', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({name: st.beat})}).catch(() => {});
+    $('next').classList.remove('busy');
+    if (st.beat === 'setup') { $('hub').src = '/dashboard?phone=' + OKAFORS; $('phone').src = '/phone?who=' + OKAFORS + '&hide=rumour'; }
+  }
+}
+async function next() {
+  const steps = SCENES[scene].steps;
+  if (step + 1 >= steps.length) { if (scene + 1 < SCENES.length) enter(scene + 1); return; }
+  step++; show(); await run(steps[step]);
+}
+function enter(i) { scene = i; step = -1; if (raw) setRaw(false); show(); }
+function fit() {  // the dashboard is laid out for 1920 × 1080: scale it into what's left, without its own phone column
+  const w = $('hubwrap'), s = Math.min(w.clientWidth / (1920 - DASH_PHONE), w.clientHeight / 1080);
+  Object.assign($('hub').style, {transform: 'scale(' + s + ')', clipPath: 'inset(0 ' + DASH_PHONE + 'px 0 0)',
+                                 left: Math.max(0, (w.clientWidth - (1920 - DASH_PHONE) * s) / 2) + 'px'});
+}
+$('next').onclick = next; $('raw').onclick = () => setRaw(!raw);
+addEventListener('resize', fit);
+addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+  else if ('123'.includes(e.key) && e.key) enter(+e.key - 1);
+  else if (e.key === 'r' || e.key === 'R') setRaw(!raw);
+  else if (e.key === 'c' || e.key === 'C') document.body.classList.toggle('clean');
+});
+show();
+</script>
+</body>
+</html>
