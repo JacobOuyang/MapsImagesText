@@ -154,6 +154,11 @@ before it). From WebP Muse made answers up: "take the aspirin", "there's
 Benadryl", "Paracetamol 500 mg" (it was propranolol), "no almond milk visible". Before high detail and the no-repeat
 rule, MuZip scored 17/20 on the generated photos and 7/20 on the real ones; after, 20/20 and 10/20.
 
+On `/compare` MuZip's panel is what Muse saw, put back together: the 128 px sketch enlarged (as blurry as Muse got
+it), each close-up pasted over the part of the photo it came from at its own detail and colour, one per second, with a
+camera that follows them in (into a close-up that holds the next one; around small ones together) and back out. The
+picture is drawn on a hidden canvas sized so the sharpest close-up keeps its own pixels.
+
 **How a photo is normally sent.** An iPhone photo sent on WhatsApp arrived at the bridge as a 2160×3840 JPEG of 543 KB
 and 811 KB (Twilio keeps the media; measured, not estimated). The report's own estimates (a 1,600 px JPEG for WhatsApp,
 `sips` HEIC for the iPhone's file) are lower than that, so its "MuZip vs WhatsApp" column is conservative.

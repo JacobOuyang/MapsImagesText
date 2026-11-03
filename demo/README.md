@@ -12,7 +12,7 @@ phones (and the drone) are simulated, and they crop their own originals exactly 
 
 | Scene | Page | What it shows |
 |---|---|---|
-| 1 Three ways | `/compare` | One question, three ways: the photo, WebP squeezed into MuZip's texts, MuZip; Muse's measured answers (5 runs each). The data is `demo/three_ways/` (a copy of the last `evals/kit/three_ways.py` run), so it works on a fresh clone. |
+| 1 Three ways | `/compare` | One question, three ways: the photo, WebP squeezed into MuZip's texts, MuZip; Muse's measured answers (5 runs each); MuZip's panel builds up what Muse saw, close-up by close-up. The data is `demo/three_ways/` (a copy of the last `evals/kit/three_ways.py` run), so it works on a fresh clone. |
 | 2 Look closer | `/closer` | A phone asks which bottle is for a headache; Muse asks for one high-detail close-up of the shelves and answers. |
 | 3 Group chat | `/group` | A simulated WhatsApp group: Ana shares a photo of her flooded street (the group gets the sketch), Ben and Chen ask Muse about different details, and Muse asks Ana's phone for different close-ups each time. |
 | 4 Drone | `/closer?device=drone` | The same loop on a drone over a flood: Muse reads the sheet on a roof, NEED INSULIN 2 PEOPLE. |

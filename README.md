@@ -99,7 +99,8 @@ baseline:
 ```
 
 The simulator shows the loop with a simulated phone (`/closer`) and the three-way comparison (`/compare`, after
-`.venv/bin/python evals/kit/three_ways.py`):
+`.venv/bin/python evals/kit/three_ways.py`; its MuZip panel rebuilds what Muse saw: the blurry sketch with each
+close-up in its place):
 
 ```bash
 .venv/bin/python sim/server.py
