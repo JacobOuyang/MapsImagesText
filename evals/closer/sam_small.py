@@ -30,15 +30,10 @@ from evac import museimage, sam, smsimage  # noqa: E402
 
 ROOT = os.path.join(os.path.dirname(__file__), "..", "..")
 OUT = os.path.join(ROOT, "out", "eval", "closer")
-CASES = [  # (photo, the thing to find): small things first, then cluttered scenes
+CASES = [  # (photo, the thing to find). RESULTS.md also has six cluttered scenes whose photos are on the
+    # full-prototype branch (sim/samples/redhook/, Bicycle, Teapot)
     ("sim/samples/spiders/black_widow.jpg", "spider"),
     ("sim/samples/spiders/false_widow.jpg", "spider"),
-    ("sim/samples/redhook/downed_line.jpg", "fallen tree"),
-    ("sim/samples/redhook/downed_line.jpg", "power line"),
-    ("sim/samples/redhook/flooded_corner.jpg", "street sign"),
-    ("sim/samples/Bicycle.jpg", "basket"),
-    ("sim/samples/Teapot.jpg", "mug"),
-    ("sim/samples/Teapot.jpg", "lemon"),
 ]
 RESTORE = ("Restore this small, blurry, black-and-white photo at full size and in colour. Keep every object exactly where "
            "it is, with the same framing and layout. Do not add, remove or move anything.")

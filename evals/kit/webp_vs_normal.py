@@ -11,12 +11,22 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
 sys.path.insert(0, ROOT)
 from PIL import Image  # noqa: E402
 
-from evac import codes, imagemap, smsimage  # noqa: E402
+from evac import codes, smsimage  # noqa: E402
 
 SMS = 140  # bytes one SMS carries on the air
-PHOTOS = [("Black widow", "spiders/black_widow"), ("False widow", "spiders/false_widow"),
-          ("Downed power line", "redhook/downed_line"), ("Flooded corner", "redhook/flooded_corner"),
-          ("Apple", "Apple"), ("Bicycle", "Bicycle"), ("Dog", "Dog"), ("Mug", "Mug"), ("Sneaker", "Sneaker"), ("Teapot", "Teapot")]
+PHOTOS = [("Bus timetable", "real/bus_timetable"), ("Milk aisle", "real/milk_aisle"), ("Whole milk", "real/whole_milk_aisle"),
+          ("Old pharmacy", "real/pharmacy_shelves"), ("Medicine cabinet", "hard/medicine_cabinet"), ("Tick", "hard/tick"),
+          ("Office corridor", "hard/extinguisher"), ("Black widow", "spiders/black_widow")]
+
+
+def small_picture(img):
+    """The photo the normal way on a slow link: 400 px WebP."""
+    import io
+    small = img.convert("RGB")
+    small.thumbnail((400, 400))
+    buf = io.BytesIO()
+    small.save(buf, "WEBP", quality=60)
+    return len(buf.getvalue())
 
 
 def kb(b):
@@ -32,7 +42,7 @@ def measure(name, rel):
     data = codes.crop_zoom(img, (0, 0, img.width, img.height), (w, h), [w * 3 // 8, h * 3 // 8, w // 4, h // 4], colour=True)[0]
     zoom_sms = codes.sms_parts(codes.text(codes.parts("Z", codes.zoom_head("ab", (0, 0, 1, 1)) + data, "az")))
     original = os.path.getsize(path)
-    return {"name": name, "px": "%d×%d" % img.size, "original": original, "small": imagemap.shrink(img)["bytes"],
+    return {"name": name, "px": "%d×%d" % img.size, "original": original, "small": small_picture(img),
             "webp": len(grey), "sms": sms, "zoom": len(data), "zoom_sms": zoom_sms, "saving": original / (sms * SMS)}
 
 

@@ -12,7 +12,6 @@ import zlib
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from evac import codes, store  # noqa: E402
-from evac.scene import Scene  # noqa: E402
 
 
 class Envelope(unittest.TestCase):
@@ -69,31 +68,6 @@ class Payloads(unittest.TestCase):
         self.assertLess(codes.sms_parts(codes.text(parts)), codes.sms_parts(text))
         got = codes.decode(codes.text(parts))["complete"][0]
         self.assertEqual((got["kind"], codes.read_text(got["data"])), ("T", text))
-
-    def test_polyline_matches_google_example(self):
-        self.assertEqual(codes.polyline([(38.5, -120.2), (40.7, -120.95), (43.252, -126.453)]), "_p~iF~ps|U_ulLnnqC_mqNvxq`@")
-
-    def test_route_simplified_and_named(self):
-        pts = [(38.7139 + i * 1e-5, -9.1406) for i in range(50)] + [(38.7144, -9.1406 + i * 1e-5) for i in range(50)]
-        got = codes.decode(codes.text(codes.route(pts, "Castelo")))["complete"][0]
-        name, line = zlib.decompress(got["data"], -15).decode().split("\n")
-        self.assertEqual(name, "Castelo")
-        self.assertLessEqual(len(line), 20)  # two straight legs: a handful of points, not 100
-
-    def test_map_code(self):
-        you = (40.7549, -73.9744)
-        scene = Scene(you=you, half_m=300, zone=((40.7570, -73.9790), 150), hazard="fire",
-                      roads=[{"name": "East 47th Street", "kind": "residential", "pts": [(40.7550, -73.9800), (40.7540, -73.9700)]}],
-                      route=[you, (40.7545, -73.9730)])
-        got = codes.decode(codes.text(codes.map_scene(scene)))["complete"][0]
-        m = json.loads(zlib.decompress(got["data"], -15))
-        self.assertEqual(m["k"], "fire")
-        self.assertEqual(m["n"][0][0], "East 47th Street")
-        self.assertEqual(m["r"][0], [0, 0])  # in metres from you
-
-
-class Signature(unittest.TestCase):
-    """RFC 8032 test 1: this secret key signing the empty message gives exactly this signature."""
 
     def setUp(self):
         self.saved = codes.KEY_PATH

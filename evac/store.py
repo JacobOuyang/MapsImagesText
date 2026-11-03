@@ -160,7 +160,6 @@ def image(ident):
 
 def find(kind=None, near=None, radius_m=None, since=None, limit=500):
     """Records, newest first: of one kind, within radius_m of `near`, created after `since` (a timestamp)."""
-    from . import geo
     sql, args = "SELECT %s FROM records WHERE 1" % COLS, []
     if kind:
         sql, args = sql + " AND kind = ?", args + [kind]
@@ -169,5 +168,13 @@ def find(kind=None, near=None, radius_m=None, since=None, limit=500):
     with _lock:
         rows = [_row(r) for r in _conn().execute(sql + " ORDER BY n DESC LIMIT ?", args + [limit]).fetchall()]
     if near and radius_m:
-        rows = [r for r in rows if r["where"] and geo.haversine_m(near, r["where"]) <= radius_m]
+        rows = [r for r in rows if r["where"] and _metres(near, r["where"]) <= radius_m]
     return rows
+
+
+def _metres(a, b):
+    """Great-circle distance between two (lat, lon) points."""
+    import math
+    (la1, lo1), (la2, lo2) = [(math.radians(p[0]), math.radians(p[1])) for p in (a, b)]
+    h = math.sin((la2 - la1) / 2) ** 2 + math.cos(la1) * math.cos(la2) * math.sin((lo2 - lo1) / 2) ** 2
+    return 2 * 6371000 * math.asin(math.sqrt(h))

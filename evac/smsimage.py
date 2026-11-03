@@ -1,4 +1,4 @@
-"""Tiny pictures for plain SMS, which evac/codes.py sends as #P and #Z codes and the offline kit (sim/kit.html) draws:
+"""Tiny pictures for plain text messages, which evac/codes.py sends as #P and #Z codes:
 a 1-bit PNG (line drawings; a step picture is 300-500 bytes, 3-5 SMS) or a greyscale WebP (photos and zooms). Both fit in 128 px with their aspect kept."""
 import io
 

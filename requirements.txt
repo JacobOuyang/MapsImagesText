@@ -1,5 +1,4 @@
 requests
 pillow
 numpy
-fonttools
 meta-sam-parser  # Meta's SAM 3.1 response parser and mask decoder (Python 3.10+)
