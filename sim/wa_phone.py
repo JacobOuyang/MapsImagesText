@@ -33,7 +33,7 @@ sys.path.insert(0, ROOT)
 import requests  # noqa: E402
 from PIL import Image  # noqa: E402
 
-from evac import codes, llm, smsimage, store  # noqa: E402
+from evac import closer, codes, llm, smsimage, store  # noqa: E402
 
 SANDBOX = "whatsapp:+14155238886"
 # Wait for the filled-in chat, bring WhatsApp forward just long enough to press Return, then give the screen back.
@@ -139,15 +139,15 @@ def photo(path, question, who, via, bridge):
     pic = random.choice("abcdefghjkmnpqrstuvwxyz") + random.choice("23456789abcdefghjkmnpqrstuvwxyz")
     message = question + "\n" + codes.text(codes.parts("P", smsimage.webp(img), pic))
     print("(the photo goes out as %d texts of code; the original stays here)" % codes.sms_parts(message))
-    for _ in range(5):
+    for _ in range(closer.MAX_VIEWS + 1):
         out = converse(message, who, via, bridge)
         ask = next((codes.ZOOM.search(r) for r in reversed(out) if codes.ZOOM.search(r)), None)
         if not ask or ask.group(1) != pic:
             return
-        nums = [int(x) for x in ask.group(2).split()]
-        data, region, box, size = codes.crop_zoom(img, (0, 0, img.width, img.height), smsimage.fit(img).size, nums, colour=bool(ask.group(3)))
-        message = codes.text(codes.parts("Z", codes.zoom_head(pic, box) + data, pic[0] + "z"))
-        print("(the kit crops that part of the original%s: %d texts)" % (" in colour" if ask.group(3) else "", codes.sms_parts(message)))
+        message = codes.answer_zoom(img, ask, pic)[0]
+        o = codes.zoom_options(ask)
+        print("(the kit crops that part of the original%s%s: %d texts)" % (" in colour" if o["colour"] else "", " in high detail" if o["side"] else "",
+                                                                         codes.sms_parts(message)))
 
 
 def main():

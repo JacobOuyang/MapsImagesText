@@ -1,0 +1,166 @@
+{
+ "loop": "05748312cc",
+ "runs": 3,
+ "rows": [
+  {
+   "id": "medicine_headache",
+   "kind": "generated",
+   "runs": 3,
+   "right": 3,
+   "hedged": 0,
+   "wrong": 0,
+   "texts": 68,
+   "looks": 1,
+   "seconds": 14.5,
+   "answers": [
+    "You can take the Ibuprofen 200 mg on the bottom right shelf of the open medicine cabinet.",
+    "You can take the Ibuprofen 200 mg pain reliever on the bottom shelf at the far right of the cabinet.",
+    "You can take the Ibuprofen 200 mg Pain Reliever on the bottom right of the medicine cabinet above th"
+   ]
+  },
+  {
+   "id": "medicine_allergy",
+   "kind": "generated",
+   "runs": 3,
+   "right": 3,
+   "hedged": 0,
+   "wrong": 0,
+   "texts": 106,
+   "looks": 2,
+   "seconds": 22.4,
+   "answers": [
+    "Yes. Loratadine Allergy Relief is on the middle shelf on the right.",
+    "Yes, Loratadine Allergy Relief on the middle shelf of the cabinet above the sink.",
+    "Yes. There is Allergy Relief on the middle shelf, just left of the antacid."
+   ]
+  },
+  {
+   "id": "tick",
+   "kind": "generated",
+   "runs": 3,
+   "right": 3,
+   "hedged": 0,
+   "wrong": 0,
+   "texts": 76,
+   "looks": 2,
+   "seconds": 18.6,
+   "answers": [
+    "That's a black tick on your lower leg just above your sock.",
+    "That's a tick biting your lower leg just above your sock.",
+    "That's a tick on your ankle just above your sock."
+   ]
+  },
+  {
+   "id": "extinguisher",
+   "kind": "generated",
+   "runs": 3,
+   "right": 3,
+   "hedged": 0,
+   "wrong": 0,
+   "texts": 53,
+   "looks": 1,
+   "seconds": 12.4,
+   "answers": [
+    "No, do not use it. It is marked EMPTY / RECHARGE and says do not use.",
+    "No. It is marked EMPTY and DO NOT USE, it needs recharging.",
+    "No, do not use it. It is marked empty and for recharge."
+   ]
+  },
+  {
+   "id": "bus_timetable",
+   "kind": "real",
+   "runs": 3,
+   "right": 0,
+   "hedged": 0,
+   "wrong": 0,
+   "texts": 186,
+   "looks": 3,
+   "seconds": 26.9,
+   "answers": [
+    "I can't tell from what I can see. (not sure)",
+    "I can't tell from what I can see. (not sure)",
+    "I can't tell from what I can see. (not sure)"
+   ]
+  },
+  {
+   "id": "whole_milk",
+   "kind": "real",
+   "runs": 3,
+   "right": 1,
+   "hedged": 0,
+   "wrong": 0,
+   "texts": 164,
+   "looks": 5,
+   "seconds": 37.4,
+   "answers": [
+    "A gallon of whole milk is $3.69 on special.",
+    "No price is visible on the milk shelf in these views. (not sure)",
+    "I can't tell from what I can see. (not sure)"
+   ]
+  },
+  {
+   "id": "almond_milk",
+   "kind": "real",
+   "runs": 3,
+   "right": 3,
+   "hedged": 0,
+   "wrong": 0,
+   "texts": 84,
+   "looks": 2,
+   "seconds": 22.5,
+   "answers": [
+    "Yes, there is almond milk - Almond Breeze.",
+    "Yes, there is almond milk. The brand is Almond Breeze (Blue Diamond) Original.",
+    "Yes, there is almond milk - it's Almond Breeze."
+   ]
+  },
+  {
+   "id": "cinnamon",
+   "kind": "real",
+   "runs": 3,
+   "right": 2,
+   "hedged": 0,
+   "wrong": 0,
+   "texts": 146,
+   "looks": 4,
+   "seconds": 37.5,
+   "answers": [
+    "Yes, one jar is labeled SIR. CINNAMOMI.",
+    "Yes, there is a jar labeled SIR. CINNAMOMI on the lower shelf.",
+    "I can't tell from what I can see. (not sure)"
+   ]
+  },
+  {
+   "id": "storage_box",
+   "kind": "easy",
+   "runs": 3,
+   "right": 3,
+   "hedged": 0,
+   "wrong": 0,
+   "texts": 40,
+   "looks": 1,
+   "seconds": 8.9,
+   "answers": [
+    "It is Propranolol 40mg, expiring 02/2020. It is expired and not good in November 2026.",
+    "The box is labeled Propranolol 40mg with expiry 02/2020. It is expired and not good in November 2026",
+    "It is Propranolol 40mg, expiring 02/2020. It is expired and not good to use in November 2026."
+   ]
+  },
+  {
+   "id": "parking",
+   "kind": "easy",
+   "runs": 3,
+   "right": 3,
+   "hedged": 0,
+   "wrong": 0,
+   "texts": 32,
+   "looks": 1,
+   "seconds": 12.7,
+   "answers": [
+    "No. It's no parking 7-9am on Fridays in June for street cleaning, tow zone.",
+    "No. It's street cleaning no parking 7 to 9 am on Fridays in June.",
+    "No, you can't park here at 8 am. Street cleaning is no parking 7 to 9 am on Fridays from April to Oc"
+   ]
+  }
+ ]
+}

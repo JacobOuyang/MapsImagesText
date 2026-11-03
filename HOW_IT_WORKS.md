@@ -250,11 +250,22 @@ The kit sends a photo at 128 px in grey. That is often enough, but sometimes the
 few pixels, or it's a colour. So the server doesn't guess: it asks the phone for just that part.
 
 1. **The phone sends the question and the cheapest useful view:** the whole photo at 128 px, grey (about 10 texts).
-2. **Muse looks** (enlarged) and either answers, saying how sure it is, or asks for **one closer look**: a box in
-   the photo, whether it needs colour, and what it wants to see there.
-3. **The phone's kit crops that box from the original**, in colour if asked, and the person only taps Send.
-4. **Again, with every view so far,** until Muse answers or has used three closer looks; then it must answer with
-   what it has. The full photo never leaves the phone.
+2. **Muse looks** (enlarged) and either answers, saying how sure it is, or asks for **one closer look**: a tight box
+   around the detail, drawn on any view so far (the whole photo, or an earlier close-up to zoom in further), whether
+   it needs colour, and what it wants to see there.
+3. **The phone's kit crops that box from the original**, in colour if asked, and sends it back by itself.
+4. **Again, with every view so far,** each labelled with where it sits in the photo, what it cost in texts and whether
+   it already shows that part at the photo's full resolution (a crop is never under 128 of the original's pixels, so
+   zooming further would show nothing new). It ends when Muse answers, or when the phone has sent 160 texts or eight
+   closer looks; then Muse must answer with what it has. The full photo never leaves the phone.
+5. **Detail, not only place.** A close-up normally comes back at 128 px; for small text or many small things (a
+   timetable, a shelf of labels) Muse asks for high detail (`H` on the ZOOM line): 256 px, grey at quality 20 instead
+   of 5 (a 6 blurred into an 8 at 5), about 3–4× the texts. A box that overlaps a view Muse already has (IoU 0.6) at
+   no more detail is refused and Muse is told why: on the bus timetable runs had asked eight times for the same 128 px
+   view of the whole table, which never got sharper.
+
+Boxes go out as `ZOOM <picture> x y w h` in the 128 px picture's pixels whichever view Muse drew them on: even the
+deepest useful zoom is several of those pixels wide, so the message format didn't need to change.
 
 The same loop works for anything the phone holds and the server can't see in full: a page of a document, a label, a
 gauge. Here the test case is a spider that might be a black widow. At 128 px in grey it is a dark blob, and the red
@@ -286,7 +297,66 @@ on the full original) and Muse gets that exact place before deciding again.
 **The answers so far:** every live run answered correctly: the black widow 6 times out of 6, the look-alike (a
 glossy brown spider with no red mark) "not a black widow" 3 times out of 3. Most runs took one closer look. One took
 two: first a grey one to find out whether the dark shape was a spider, then a colour one at its belly. That is a
-handful of generated photos, not an evaluation.
+handful of generated photos, not an evaluation. (That run was recorded when the reply still asked the person to tap
+Send; the kit now sends a close-up back by itself.)
+
+**Zooming in step by step.** A close-up can be drawn inside an earlier one, so Muse can find a thing first and then
+read it. A real run on an office corridor (`/closer`, `hard/extinguisher`, a 1600 px photo made with Muse Image):
+
+```
+You (12 SMS)   Is the fire extinguisher in this corridor ready to use?  + the photo at 128 px, grey
+Muse (2 SMS)   Not sure yet: I need a closer look at the fire extinguisher on the wall to see the gauge and pin and
+               seal, in colour. Your kit crops it from your photo and sends it back.
+               ZOOM v2 81 47 26 32 C
+You (15 SMS)   the closer look, in colour (1.5 KB)            [SAM 3.1 outlines "fire extinguisher", 0.98]
+Muse (2 SMS)   Not sure yet: I need a closer look at the extinguisher gauge and label to see the gauge needle
+               position and label wording, in colour. ...      ZOOM v2 88 55 19 27 C
+You (14 SMS)   the closer look, in colour (1.4 KB)            [0.98]
+Muse (2 SMS)   Not sure yet: I need a closer look at the pressure gauge on top to see the needle position, in
+               colour. ...                                     ZOOM v2 93 53 10 8 C
+You (11 SMS)   the closer look, in colour (1.0 KB)            [0.92]
+Muse (1 SMS)   No, it is not ready to use. It is marked EMPTY / RECHARGE.
+               Do not use it - report it for recharge or replacement.
+```
+
+59 texts both ways, for a 476 KB photo. The prompt makes Muse answer only when it is sure: while it can still ask,
+it may not answer "can't tell" or "fairly sure", and it asks for colour when the question names a colour or colour
+helps find the thing. Before that rule, runs on these photos gave up early, hedged after reading "EMPTY / RECHARGE",
+or zoomed in grey onto the wrong bottle (in grey an amber bottle looks like any other).
+
+**The same texts, three ways** (`evals/kit/three_ways.py`, report in `evals/kit/THREE_WAYS.md`, shown by `/compare`).
+Muse Spark answers one open question about one photo three ways, five times each: from the photo itself (a JPEG of
+at most 2,048 px: phone originals are too big to send whole); from the whole photo as WebP squeezed into the loop's
+median texts (WebP's best shot: 128, 256 and 384 px, the highest quality that fits, colour and grey; 192 and 512 px
+were never best); and through the loop with a simulated phone. A separate text-only call judges each answer against a
+reference (right, wrong, not sure), and an answer counts only when it is right and Muse said it was sure. The photos
+each hide the detail that decides the answer, and each passed a screen first (sure and right from the full photo,
+never from a 3–5 KB WebP). Four were made with Muse Image (`sim/samples/hard/`, prompts in `prompts.json`), four are
+real (`sim/samples/real/`, Wikimedia Commons). Dropped by the screen: the spiders (from the full black widow Muse said
+"a fake plastic toy spider"; a 3 KB colour WebP shows its red mark), Muse Image's snakes and brown recluse (band order
+and the violin mark weren't drawn clearly enough to be ground truth), and two real photos whose detail is big (street
+parking signs, a handwritten label on a box): a 5 KB WebP reads those, and the loop answers them in one close-up.
+
+| Photo | Question (answer) | The photo itself | WebP, same texts | Look closer |
+|---|---|---|---|---|
+| Medicine cabinet (generated) | I have a headache. Which of these can I take, and where? (the ibuprofen, bottom shelf) | 412 KB: 5/5 | 66 texts: 0/5 | 69 texts: **5/5** |
+| Medicine cabinet (generated) | Anything here for allergies? Which, and where? (loratadine, middle shelf) | 412 KB: 5/5 | 102 texts: 0/5 | 103 texts: **5/5** |
+| Leg after a hike (generated) | What's that on my leg? (a tick) | 581 KB: 0/5 (5 hedged) | 83 texts: 0/5 (5 hedged) | 85 texts: **5/5** |
+| Office corridor (generated) | Can I use this fire extinguisher? (no: EMPTY / RECHARGE) | 476 KB: 5/5 | 52 texts: 0/5 | 53 texts: **5/5** |
+| Bus stop timetable (real) | Saturday, 9 am: when's the next bus? (10:06) | 4.7 MB: 1/5 | 181 texts: 0/5 | 183 texts: 1/5 |
+| Milk aisle (real) | How much is a gallon of whole milk? ($3.69) | 1.0 MB: 5/5 | 166 texts: 0/5 | 169 texts: 0/5 |
+| Milk aisle (real) | Any almond milk? Which brand? (Almond Breeze) | 3.3 MB: 5/5 | 91 texts: 0/5 (5 hedged) | 93 texts: **5/5** |
+| Old pharmacy (real) | Anything with cinnamon? What does its label say? (SIR. CINNAMOMI) | 5.8 MB: 5/5 | 86 texts: 0/5 | 87 texts: **4/5** |
+
+The report also sets the loop against how a photo is normally sent. An iPhone photo sent on WhatsApp arrived at the
+bridge as a 2160×3840 JPEG of 543 KB and 811 KB (Twilio keeps the media; measured, not estimated); the report's own
+estimates (a 1,600 px JPEG for WhatsApp, `sips` HEIC for the iPhone's file) are lower than that.
+
+**The loop's own eval** (`evals/loop/run.py`, `dataset.json`): the eight questions plus the two easy ones, three runs
+each, all at once, in about 80 s; results are kept by a hash of the loop's code, and `--save` makes a run the baseline
+(`BASELINE.json`, `RESULTS.md`) that later runs are compared with. The baseline: generated 12/12, real 6/12, easy 6/6
+in one close-up each (median 36 texts). A budget of 240 texts instead of 160 got the timetable to 2/3 but cost 45
+more texts and didn't help the price tag, so it wasn't kept.
 
 ## On WhatsApp
 

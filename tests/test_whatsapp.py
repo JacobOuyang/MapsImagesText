@@ -39,7 +39,7 @@ class Bridge(unittest.TestCase):
         whatsapp.OUTBOX.clear()
         self.got = []  # what the router was sent
         self.saved = (router.handle, whatsapp._download)
-        whatsapp._download = lambda url: photo()
+        whatsapp._download = lambda url, who="": photo()
 
     def tearDown(self):
         router.handle, whatsapp._download = self.saved
@@ -74,8 +74,8 @@ class Bridge(unittest.TestCase):
     def test_photo_runs_the_look_closer_loop_with_the_bridge_as_the_phone(self):
         def ask_closer(text):  # Muse can't tell: it asks for the part of the photo with the blob, in colour
             pic = codes.CODE.search(text).group(2)
-            return {"text": "Not sure yet: I need a closer look at the dark spot, in colour. Your kit will crop it from your "
-                            "photo; just tap Send.\nZOOM %s 82 18 10 12 C" % pic}
+            return {"text": "Not sure yet: I need a closer look at the dark spot, in colour. Your kit crops it from your "
+                            "photo and sends it back.\nZOOM %s 82 18 10 12 C" % pic}
         self.script(ask_closer, lambda text: {"text": "Yes, a black widow." if "#Z" in text else "?"})
         whatsapp.reply(dict(PHOTO, From=ME, Body="Is this a black widow?"))
         said = self.said()
@@ -83,7 +83,7 @@ class Bridge(unittest.TestCase):
         self.assertIn("I need a closer look at the dark spot, in colour.", said[1])
         self.assertIn("Your phone sends that part of the photo in colour", said[1])
         self.assertNotIn("ZOOM", said[1])
-        self.assertNotIn("tap Send", said[1])
+        self.assertNotIn("Your kit crops", said[1])
         self.assertEqual(said[2], "Yes, a black widow.")
         first, second = self.got[0][0], self.got[1][0]
         self.assertTrue(first.startswith("Is this a black widow?\n#P"))

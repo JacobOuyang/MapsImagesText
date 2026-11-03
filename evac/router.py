@@ -70,7 +70,8 @@ def handle(message, you, image=None, who=None):
         if not codes.plain(message):
             return dict(_quick(_ack(checkin)), log=log, checkin=checkin, report=report)
     if pic and report is None and llm.available():  # a question about a photo the phone keeps: look closer as needed
-        inq, text = closer.start(who, Image.open(io.BytesIO(pic["data"])), pic["id"], codes.plain(message) or "What is this?")
+        inq, text = closer.start(who, Image.open(io.BytesIO(pic["data"])), pic["id"], codes.plain(message) or "What is this?",
+                                 texts=codes.sms_parts(message))
         return dict(_quick(text), inquiry=inq, log=log + ["question %s about photo %s" % (inq, pic["id"])], seconds=round(time.time() - t, 1))
     if pic and image is None:  # a PNG or WebP; the model calls send JPEG
         buf = io.BytesIO()

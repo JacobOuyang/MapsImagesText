@@ -1,5 +1,5 @@
 """Simulated phones with the kit: they keep their own photos (the originals never leave the phone) and answer a ZOOM
-request by cropping the original, the way the kit does when its owner pastes the request in and taps Send.
+request by cropping the original, the way the kit does by itself when a request comes in.
 
     phone = Phone("+15550120", send)       # send(who, text): where the phone's texts go (the hub, the router)
     message = phone.picture(img)            # P code parts: 128 px, grey
@@ -29,12 +29,9 @@ class Phone:
     def got(self, message):
         self.inbox.append(message)
         m = codes.ZOOM.search(message)
-        if m and m.group(1) in self.originals:  # the kit crops the original; the person taps Send
-            img, nums = self.originals[m.group(1)], [int(x) for x in m.group(2).split()]
-            if len(nums) == 4:
-                data, region, box, size = codes.crop_zoom(img, (0, 0, img.width, img.height), smsimage.fit(img).size, nums,
-                                                          colour=bool(m.group(3)))
-                reply = codes.text(codes.parts("Z", codes.zoom_head(m.group(1), box) + data, m.group(1)[0] + "z"))
+        if m and m.group(1) in self.originals:  # the kit crops the original and sends it back
+            if len(m.group(2).split()) == 4:
+                reply = codes.answer_zoom(self.originals[m.group(1)], m, m.group(1))[0]
                 if self.delay:
                     threading.Timer(self.delay, self.text, (reply,)).start()
                 else:

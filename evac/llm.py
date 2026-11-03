@@ -107,6 +107,6 @@ def search(prompt, effort="low", timeout=180):
     return {"text": text, "citations": cites, "searches": searches}
 
 
-def image_part(png_bytes):
-    b64 = base64.b64encode(png_bytes).decode()
-    return {"type": "image_url", "image_url": {"url": "data:image/png;base64," + b64}}
+def image_part(data, kind="png"):
+    b64 = base64.b64encode(data).decode()
+    return {"type": "image_url", "image_url": {"url": "data:image/%s;base64,%s" % (kind, b64)}}

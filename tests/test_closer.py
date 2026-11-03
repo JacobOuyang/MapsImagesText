@@ -66,7 +66,7 @@ class Loop(unittest.TestCase):
         self.assertEqual(len(texts), 2)
         self.assertIn("I need a closer look at the spider to see the mark under its body, in colour", texts[0])
         m = codes.ZOOM.search(texts[0])
-        self.assertTrue(m.group(3))  # " C": in colour
+        self.assertTrue(codes.zoom_options(m)["colour"])  # " C": in colour
         self.assertEqual(texts[1], "Yes, a black widow: red hourglass.\nDon't touch it.")
         self.assertEqual(self.seen, [1, 2])  # round 1: the 128 px photo; round 2: plus the close-up
         inq = store.find("inquiry")[0]
@@ -79,8 +79,9 @@ class Loop(unittest.TestCase):
         self.assertTrue(((px[..., 0] > 150) & (px[..., 1] < 90) & (px[..., 2] < 90)).any())
 
     def test_budget_forces_an_answer(self):
-        ask = {"answer": "", "sure": "no", "need": {"box": [0.6, 0.1, 0.8, 0.3], "colour": False, "look_at": "the spider"}}
-        self.script(*[ask] * closer.MAX_VIEWS, dict(ask))  # it would keep asking
+        def ask(k):  # a different small part of the photo each time
+            return {"answer": "", "sure": "no", "need": {"box": [0.1 * k, 0.05, 0.1 * k + 0.08, 0.13], "colour": False, "look_at": "the spider"}}
+        self.script(*[ask(k) for k in range(closer.MAX_VIEWS)], ask(0))  # it would keep asking
         texts = self.run_phone()
         self.assertEqual(len(texts), closer.MAX_VIEWS + 1)
         self.assertNotIn("ZOOM", texts[-1])
@@ -107,6 +108,38 @@ class Loop(unittest.TestCase):
         l, t, r, b = view["sam"]["in_photo"]  # inside the close-up's place in the photo
         x, y, w, h = view["got_box"]
         self.assertTrue(x / 128 <= l < r <= (x + w) / 128 and y / 128 <= t < b <= (y + h) / 128)
+
+    def test_zooms_in_step_by_step_inside_a_closer_look(self):
+        self.script({"answer": "", "sure": "no", "need": {"in": 1, "box": [0.6, 0.1, 0.8, 0.3], "colour": False, "look_at": "the blob"}},
+                    {"answer": "", "sure": "no", "need": {"in": 2, "box": [0.25, 0.25, 0.75, 0.75], "colour": True, "look_at": "the blob"}},
+                    {"answer": "", "sure": "no", "need": {"in": 3, "box": [0.4, 0.4, 0.6, 0.6], "colour": True, "look_at": "the mark"}},
+                    {"answer": "Yes, a black widow.", "sure": "yes", "need": None})
+        texts = self.run_phone()
+        self.assertEqual(len(texts), 4)
+        self.assertEqual(self.seen, [1, 2, 3, 4])
+        first, second, third = store.find("inquiry")[0]["meta"]["views"]
+        inside = lambda a, b: b[0] <= a[0] and b[1] <= a[1] and a[0] + a[2] <= b[0] + b[2] + 1 and a[1] + a[3] <= b[1] + b[3] + 1
+        self.assertTrue(inside(second["box"], first["got_box"]))  # asked inside the first close-up, sent in the photo's pixels
+        self.assertTrue(inside(third["box"], second["got_box"]))
+        self.assertLess(second["got_box"][2], first["got_box"][2])
+        self.assertEqual([v["full"] for v in (first, second, third)], [False, False, True])  # the third hit the original's pixels
+        self.assertTrue(all(v["texts"] > 0 for v in (first, second, third)))
+
+    def test_the_same_view_again_is_refused_unless_in_high_detail(self):
+        prompts = []
+        first = {"answer": "", "sure": "no", "need": {"in": 1, "box": [0.6, 0.1, 0.8, 0.3], "colour": True, "look_at": "the blob"}}
+        again = {"answer": "", "sure": "no", "need": {"in": 2, "box": [0.05, 0.05, 0.95, 0.95], "colour": True, "look_at": "the blob"}}
+        high = dict(again, need=dict(again["need"], detail="high"))
+        self.script(first, again, high, {"answer": "Yes.", "sure": "yes", "need": None})
+        inner = llm.chat_json
+        llm.chat_json = lambda messages, **kw: (prompts.append(messages[0]["content"][0]["text"]), inner(messages))[1]
+        texts = self.run_phone()
+        self.assertIn("about the same part as image 2", prompts[2])  # the repeat was refused and Muse told why
+        self.assertIn("in high detail", texts[1])
+        self.assertTrue(codes.ZOOM.search(texts[1]).group(3).split() == ["C", "H"])
+        views = store.find("inquiry")[0]["meta"]["views"]
+        self.assertEqual([v.get("high") for v in views], [False, True])
+        self.assertEqual(max(store.image(views[1]["zoom"]).size), codes.HIGH)  # the phone sent it at 256 px
 
     def test_a_zoom_nobody_asked_for_is_not_a_question(self):
         self.assertIsNone(closer.receive("+15550140", "zz", [0, 0, 10, 10], b""))

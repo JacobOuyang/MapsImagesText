@@ -27,7 +27,7 @@ sys.path.insert(0, os.path.join(ROOT, ".."))
 from PIL import Image  # noqa: E402
 
 import wa_phone  # noqa: E402
-from evac import codes, smsimage  # noqa: E402
+from evac import closer, codes, smsimage  # noqa: E402
 
 PORT = int(os.environ.get("MUZIP_PORT", 8780))
 BRIDGE = "http://127.0.0.1:%s" % os.environ.get("WHATSAPP_PORT", 8770)
@@ -72,16 +72,15 @@ def run(conv, img, question):
         conv.update(original=data_url(img, side=900), size=list(smsimage.fit(img).size),
                     seen="data:image/webp;base64," + base64.b64encode(sent).decode())
         message = question + "\n" + codes.text(codes.parts("P", sent, pic))
-        for _ in range(5):
+        for _ in range(closer.MAX_VIEWS + 1):  # Muse answers by then (closer.BUDGET may end it sooner)
             out = _exchange(conv, message, who)
             ask = next((codes.ZOOM.search(r) for r in reversed(out) if codes.ZOOM.search(r)), None)
             if not ask or ask.group(1) != pic:
                 return
-            nums, colour = [int(x) for x in ask.group(2).split()], bool(ask.group(3))
-            data, region, box, size = codes.crop_zoom(img, (0, 0, img.width, img.height), smsimage.fit(img).size, nums, colour=colour)
-            conv["views"].append({"box": box, "colour": colour, "bytes": len(data),
+            message, data = codes.answer_zoom(img, ask, pic)
+            box = codes.read_zoom(codes.decode(message)["complete"][0]["data"])[1]
+            conv["views"].append({"box": box, "colour": codes.zoom_options(ask)["colour"], "bytes": len(data),
                                   "image": "data:image/webp;base64," + base64.b64encode(data).decode()})
-            message = codes.text(codes.parts("Z", codes.zoom_head(pic, box) + data, pic[0] + "z"))
     except Exception as ex:
         conv["error"] = str(ex)
     finally:
