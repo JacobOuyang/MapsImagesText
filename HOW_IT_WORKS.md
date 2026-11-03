@@ -18,8 +18,8 @@ answer is a few pixels, or it's a colour. So the server doesn't guess: it asks t
    place in the whole photo before deciding again.
 5. **Again, with every view so far,** each labelled with where it sits in the photo, its colour and detail, how many
    times closer it is than the whole photo, what it cost in texts, and whether it already shows that part at the
-   photo's full resolution (a crop is never smaller than the picture it is sent as, so zooming further would show
-   nothing new). It ends when Muse answers, or when the phone has sent 160 texts or eight close-ups; then Muse must
+   photo's full resolution (a crop is never enlarged: a part smaller than the picture it would be sent as comes back
+   at its own pixels, down to 48 of them, so zooming further would show nothing new). It ends when Muse answers, or when the phone has sent 160 texts or eight close-ups; then Muse must
    answer with what it has. The full photo never leaves the phone.
 
 **Rules that made it work,** each added after a failure in the evals:
@@ -37,6 +37,11 @@ answer is a few pixels, or it's a colour. So the server doesn't guess: it asks t
   told why. On a bus timetable runs had asked eight times for the same 128 px view of the whole table, which never got
   sharper.
 - **Tight boxes.** A box much bigger than the detail costs texts and shows it no sharper.
+- **One symbol at a time.** To tell apart two or three small symbols (warning lights, icons), Muse closes in on each
+  one by itself. A close-up used to be at least 128 of the photo's pixels, so on a dashboard where each light is about
+  40 px wide, every close-up held both lights; now a crop can be as small as 48 px and goes at that size. The first
+  wording also named labels, and Muse then read a pharmacy shelf one jar at a time and ran out of texts (cinnamon 0/3,
+  87 more texts); naming only symbols brought it back to its baseline.
 
 **A real run** on an office corridor (`/closer`, `hard/extinguisher`, a 1600 px photo made with Muse Image), zooming in
 three times, each close-up inside the last:
@@ -58,6 +63,25 @@ Muse (1 SMS)   No, it is not ready to use. It is marked EMPTY / RECHARGE.
 ```
 
 59 texts both ways, for a 476 KB photo.
+
+**A second real run,** on a car at night (`hard/dashboard`, a 1600×980 photo made with Muse Image), one warning light
+per close-up:
+
+```
+You (7 SMS)    Two warning lights came on on my dashboard. Which ones are they, and what do they mean?  + the sketch
+Muse           Not sure yet: I need a closer look at the instrument cluster behind the steering wheel to see the
+               two lit warning symbols, in colour.
+You (12 SMS)   the closer look, in colour, 128 px (1.2 KB)
+Muse           ... the red dashboard light to see the shape and symbol inside it, in colour, in high detail.
+You (6 SMS)    the red light alone, 121 px: the photo's full resolution (528 B)   [SAM 3.1 "warning light", 0.83]
+Muse           ... the amber symbol right of the red light to see its shape to identify it, in colour, in high detail.
+You (8 SMS)    the amber light alone, 120 px (770 B)                              [0.93]
+Muse           The red battery light and the amber check-engine light. The red one means the battery is not
+               charging, the amber one means an engine fault that needs checking.
+               Stop somewhere safe soon and get the car checked, a charging fault can stall you.
+```
+
+33 texts from the phone (3.1 KB) for a 214 KB photo.
 
 **Where SAM 3.1 fits.** SAM outlines things by name, but it needs enough pixels. In the 128 px sketch a spider is
 about 14 pixels, and no enlarging (4×, 8× sharpened, tiled) made SAM find it. Neither did asking Muse Image to restore
@@ -119,12 +143,14 @@ full photo, never from a 3–5 KB WebP. Four were made with Muse Image at 1600 p
 | Medicine cabinet (generated) | Anything here for allergies? Which, and where? (loratadine, middle shelf) | 412 KB: 5/5 | 102 texts: 0/5 | 103 texts: **5/5** |
 | Leg after a hike (generated) | What's that on my leg? (a tick) | 581 KB: 0/5 (5 hedged) | 83 texts: 0/5 (5 hedged) | 85 texts: **5/5** |
 | Office corridor (generated) | Can I use this fire extinguisher? (no: EMPTY / RECHARGE) | 476 KB: 5/5 | 52 texts: 0/5 | 53 texts: **5/5** |
+| Car at night (generated) | Two warning lights came on. Which ones, and what do they mean? (battery and check-engine) | 214 KB: 5/5 | 38 texts: 0/5 | 41 texts: **5/5** |
 | Bus stop timetable (real) | Saturday, 9 am: when's the next bus? (10:06) | 4.7 MB: 1/5 | 181 texts: 0/5 | 183 texts: 1/5 |
 | Milk aisle (real) | How much is a gallon of whole milk? ($3.69) | 1.0 MB: 5/5 | 166 texts: 0/5 | 169 texts: 0/5 |
 | Milk aisle (real) | Any almond milk? Which brand? (Almond Breeze) | 3.3 MB: 5/5 | 91 texts: 0/5 (5 hedged) | 93 texts: **5/5** |
 | Old pharmacy (real) | Anything with cinnamon? What does its label say? (SIR. CINNAMOMI) | 5.8 MB: 5/5 | 86 texts: 0/5 | 87 texts: **4/5** |
 
-MuZip 30/40, WebP 0/40, the photo itself 36/40. From WebP Muse made answers up: "take the aspirin", "there's
+MuZip 35/45, WebP 0/45, the photo itself 36/45 (the dashboard was measured with the one-symbol rule, the others
+before it). From WebP Muse made answers up: "take the aspirin", "there's
 Benadryl", "Paracetamol 500 mg" (it was propranolol), "no almond milk visible". Before high detail and the no-repeat
 rule, MuZip scored 17/20 on the generated photos and 7/20 on the real ones; after, 20/20 and 10/20.
 
@@ -134,12 +160,13 @@ and 811 KB (Twilio keeps the media; measured, not estimated). The report's own e
 
 ## The loop's own eval
 
-`evals/loop/run.py` runs only MuZip on `evals/loop/dataset.json` (the eight questions plus the two easy controls),
+`evals/loop/run.py` runs only MuZip on `evals/loop/dataset.json` (the comparison's questions except the dashboard, plus two easy controls and, on this branch, two field questions),
 three runs each, all at once, in about 80 s, and prints right-and-sure, hedged and wrong per question with the median
 texts, close-ups and seconds, against `BASELINE.json`. Results are kept by a hash of the loop's code (`out/eval/loop/`),
 so an unchanged loop isn't re-run; `--save` makes a run the baseline and writes `RESULTS.md`.
 
-The baseline: generated 12/12, real 6/12, easy 6/6, each easy one in a single close-up (median 36 texts). A budget of
+The baseline: generated 12/12, real 5/12, easy 6/6 (median 48 texts), field 5/6 (on this branch). The real photos
+swing by about one per question between 3-run evals; check a change there with `--runs 5`. A budget of
 240 texts instead of 160 got the timetable to 2/3 but cost 45 more texts and didn't help the price tag, so it wasn't
 kept.
 

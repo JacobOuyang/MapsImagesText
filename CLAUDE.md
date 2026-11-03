@@ -44,11 +44,12 @@ image the box is drawn on: 1 = the photo, 2… = close-ups; `in_photo` converts 
 box overlapping a view it has (IoU ≥ `SAME` 0.6) at no more detail, and an unsure answer while looks remain is sent back
 once. Budget: `BUDGET` (160) texts from the phone or `MAX_VIEWS` (8) close-ups, then it must answer. `_reply` turns a
 `need` into words + `ZOOM <pic id> x y w h[ C][ H]` (box in the 128 px sketch's pixels). `receive(who, parent, box,
-data)` takes the phone's `Z` code: a `zoom` record, `full` when it came back `FULL` (1.3)× wider than asked (it hit the
-minimum crop), its texts, and `_outline`: SAM 3.1 on the close-up for `need.object` (a match ≥ `SAM_MIN` 0.5 and ≥
+data)` takes the phone's `Z` code: a `zoom` record, `full` when it came back `FULL` (1.3)× wider than asked or smaller than the size it
+would be sent at (either way, the photo's own pixels), its texts, and `_outline`: SAM 3.1 on the close-up for `need.object` (a match ≥ `SAM_MIN` 0.5 and ≥
 `SAM_SIZE` 15% of the side), mapped into the whole photo. The prompt's rules each fixed a measured failure: answer only
 when sure; colour when colour helps find the thing (grey runs picked the wrong amber bottle); high detail for small
-text; no repeats (eight identical timetable views); tight boxes. **After any change to the loop run
+text; no repeats (eight identical timetable views); tight boxes; one symbol per close-up for two or three
+warning lights or icons (naming labels too made it read shelves jar by jar). **After any change to the loop run
 `.venv/bin/python evals/loop/run.py`** (results keyed by a hash of the loop's code in `out/eval/loop/`; `--save`
 updates `evals/loop/BASELINE.json`).
 
@@ -57,7 +58,8 @@ the basic SMS alphabet; `decode` reassembles any order and names missing parts; 
 the parts a record `sent`. `P`: the sketch (`smsimage.webp`: 128 px grey, contrast-stretched, WebP q5). `Z`: a close-up
 (`zoom_head`: length byte + parent id + box as 4 × uint16 /64, then WebP). `ZOOM` regex group 3 holds the flags;
 `zoom_options` → `crop_zoom(colour=, side=)`: colour is q30, `H` is `HIGH` 256 px (grey q20); the crop is square-ish
-with a 20% margin and never smaller than the size it is sent at. Every phone answers a ZOOM with
+with a 20% margin, at least `MIN_CROP` (48) of the original's pixels, and never enlarged (a smaller crop goes at its
+own size). Every phone answers a ZOOM with
 `answer_zoom(img, match, pic_id)` → (Z message, WebP bytes): MuZip, the bridge, `sim/wa_phone.py`, `sim/phones.py`;
 `sim/kit.js` (the browser reader the simulator's pages use) has the same arithmetic in `cropBox`. Other types (`T`,
 `L`, `S`, `A`, `K`) are older kit codes the reader still understands.

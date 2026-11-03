@@ -842,6 +842,233 @@
   }
  },
  {
+  "name": "dashboard",
+  "sample": "hard/dashboard",
+  "question": "Two warning lights came on on my dashboard. Which ones are they, and what do they mean?",
+  "truth": "The red battery (charging system) warning light and the amber check engine light.",
+  "size": [
+   1600,
+   980
+  ],
+  "normally": {
+   "whatsapp": 115444,
+   "heic": 124883
+  },
+  "full": {
+   "bytes": 214194,
+   "texts": 2162,
+   "runs": [
+    {
+     "answer": "The red battery light and the orange check-engine light are on. The battery light means a charging system problem, and the check-engine light means the engine needs to be checked.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "The red battery light and the orange check engine light are on. The battery light means a charging system problem, and the check engine light means the engine needs to be checked.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "The red battery light and the orange check engine light are on. The battery light means a charging system problem and the check engine light means the engine needs to be checked.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "The red battery light and the orange check engine light are on. The battery light means a charging system problem, and the check engine light means the engine needs to be checked.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "The red battery light and the orange check engine light are on, meaning a charging system problem and an engine fault.",
+     "sure": "yes",
+     "verdict": "right"
+    }
+   ],
+   "right": 5,
+   "guessed": 0
+  },
+  "webp": {
+   "side": 384,
+   "quality": 35,
+   "colour": true,
+   "bytes": 3854,
+   "runs": [
+    {
+     "answer": "The check engine light and the battery warning light are on. It means there is an engine problem and the battery is not charging.",
+     "sure": "no",
+     "verdict": "right"
+    },
+    {
+     "answer": "The check engine and battery lights look to be on, meaning an engine fault and a charging system problem.",
+     "sure": "no",
+     "verdict": "right"
+    },
+    {
+     "answer": "The check engine light and battery light appear to be on, meaning an engine fault and a charging system problem.",
+     "sure": "no",
+     "verdict": "right"
+    },
+    {
+     "answer": "The check engine light and another warning light are on, which means there is an engine problem that needs checking.",
+     "sure": "no",
+     "verdict": "not sure"
+    },
+    {
+     "answer": "The photo is too dark and blurry to tell which warning lights are on.",
+     "sure": "no",
+     "verdict": "not sure"
+    }
+   ],
+   "right": 0,
+   "guessed": 3,
+   "texts": 38,
+   "image": "dashboard/webp.png",
+   "tried": [
+    {
+     "side": 128,
+     "quality": 95,
+     "colour": true,
+     "bytes": 3460,
+     "right": 0,
+     "guessed": 0
+    },
+    {
+     "side": 256,
+     "quality": 76,
+     "colour": true,
+     "bytes": 3744,
+     "right": 0,
+     "guessed": 3
+    },
+    {
+     "side": 384,
+     "quality": 35,
+     "colour": true,
+     "bytes": 3854,
+     "right": 0,
+     "guessed": 3
+    },
+    {
+     "side": 128,
+     "quality": 95,
+     "colour": false,
+     "bytes": 2918,
+     "right": 0,
+     "guessed": 0
+    },
+    {
+     "side": 256,
+     "quality": 78,
+     "colour": false,
+     "bytes": 3860,
+     "right": 0,
+     "guessed": 0
+    },
+    {
+     "side": 384,
+     "quality": 37,
+     "colour": false,
+     "bytes": 3862,
+     "right": 0,
+     "guessed": 0
+    }
+   ]
+  },
+  "muzip": {
+   "runs": [
+    {
+     "answer": "They are the red battery / charging-system light and the amber check-engine light. The battery light means your car is not charging, and the check-engine light means an engine or emissions fault.\nPull over safely soon and get the car checked, it could stop running.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 30,
+     "bytes": 2815,
+     "views": 3,
+     "inquiry": "104"
+    },
+    {
+     "answer": "They are the red battery / charging-system light and the amber check-engine light. The battery light means the battery is not charging, and the check-engine light means an engine or emissions fault is detected.\nPull over safely soon and get the car checked, as loss of charging can stall the car.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 27,
+     "bytes": 2473,
+     "views": 3,
+     "inquiry": "100"
+    },
+    {
+     "answer": "They are the red battery / charging-system light and the amber check-engine light. The battery light means the car is not charging and could stall, the check-engine light means an engine fault is detected.\nGet it checked right away as the car could stall or lose power.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 41,
+     "bytes": 3895,
+     "views": 5,
+     "inquiry": "102"
+    },
+    {
+     "answer": "The red one is the battery / charging-system light and the amber one is the check-engine light. The battery light means the battery is not charging, and the check-engine light means an engine or emissions fault.\nStop somewhere safe soon and get the car checked - a charging fault can make it stop running.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 49,
+     "bytes": 4715,
+     "views": 3,
+     "inquiry": "101"
+    },
+    {
+     "answer": "They are the check-engine light and the red battery / charging-system light. The first means an engine or emissions fault, the second means the battery is not charging.\nGet it checked soon - a charging fault can make the car stall.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 44,
+     "bytes": 3991,
+     "views": 7,
+     "inquiry": "103"
+    }
+   ],
+   "right": 5,
+   "guessed": 0,
+   "bytes": 3895,
+   "texts": 41,
+   "views": [
+    {
+     "image": "dashboard/muzip_0.png",
+     "label": "128 px, grey"
+    },
+    {
+     "image": "dashboard/muzip_1.png",
+     "label": "closer look 1",
+     "box": [
+      1.5,
+      16.140625,
+      54.0,
+      53.71875
+     ],
+     "full": false
+    },
+    {
+     "image": "dashboard/muzip_2.png",
+     "label": "closer look 2, colour",
+     "box": [
+      32.484375,
+      40.5,
+      6.03125,
+      6.0
+     ],
+     "full": true
+    },
+    {
+     "image": "dashboard/muzip_3.png",
+     "label": "closer look 3, colour",
+     "box": [
+      38.375,
+      39.40625,
+      7.234375,
+      7.203125
+     ],
+     "full": true
+    }
+   ],
+   "answer": "They are the red battery / charging-system light and the amber check-engine light. The battery light means the battery is not charging, and the check-engine light means an engine or emissions fault is detected.\nPull over safely soon and get the car checked, as loss of charging can stall the car."
+  }
+ },
+ {
   "name": "bus_timetable",
   "sample": "real/bus_timetable",
   "question": "It's Saturday, 9 am. When's the next bus from this stop?",

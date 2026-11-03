@@ -52,8 +52,10 @@ bottom] fractions of that image's width and height, which image it is in, whethe
 what you need to see on it, in a few plain words the person will read. Ask for colour when the question names a
 colour or colour would help find or identify the thing (in grey an amber bottle looks like any other). Keep the box
 tight: the detail and a little margin (a box much bigger than the detail costs texts and shows it no sharper). Don't
-ask for a closer look inside an image that already shows its part at full resolution. Closer looks come back at 128
-pixels; to read small text or tell many small things apart (a timetable, price tags, a shelf of labels), ask for high
+ask for a closer look inside an image that already shows its part at full resolution. To identify a few separate
+small symbols (two or three warning lights or icons), look at each one by itself: a tight box around just that one
+symbol, nothing else in it, one per closer look. Closer looks come back at up to 128 pixels (a small thing at the photo's full
+resolution, as many pixels as it has there); to read small text or tell many small things apart (a timetable, price tags, a shelf of labels), ask for high
 detail: 256 pixels, about 3 to 4 times the texts. Each image says how much closer it is than the whole photo: asking
 again for about the same part at the same detail shows nothing new, so draw a smaller box or ask for high detail.
 {budget}
@@ -83,11 +85,12 @@ def _views(inq):
             enlarged(store.image(inq)))]
     for i, v in enumerate(got(rec), 2):
         x, y, bw, bh = v["got_box"]
-        label = ("Image %d is a closer look at the part of the photo from %d%% to %d%% across and %d%% to %d%% down, "
+        px = max(store.image(v["zoom"]).size)  # 128 or HIGH, or fewer for a small part at full resolution
+        label =("Image %d is a closer look at the part of the photo from %d%% to %d%% across and %d%% to %d%% down, "
                  "%s, %s (%d pixels, about %d times closer than image 1), sent back by their phone (%d texts)." % (
                      i, 100 * x / w, 100 * (x + bw) / w, 100 * y / h, 100 * (y + bh) / h, "in colour" if v["colour"] else "in grey",
-                     "in high detail" if v.get("high") else "in normal detail", codes.HIGH if v.get("high") else 128,
-                     max(1, round(max(w / bw, h / bh) * (2 if v.get("high") else 1))), v.get("texts", 0)))
+                     "in high detail" if v.get("high") else "in normal detail", px,
+                     max(1, round(max(w / bw, h / bh) * px / 128)), v.get("texts", 0)))
         if v.get("full"):
             label += " It shows that part at the photo's full resolution: a closer look inside it would show nothing new."
         if v.get("sam"):  # where a segmentation model outlined the thing, in the whole photo's terms
@@ -273,8 +276,9 @@ def receive(who, parent, box, data):
     views = rec["meta"]["views"]
     z = store.new("zoom", image=Image.open(io.BytesIO(data)), parent=rec["id"], box=box, who=who,
                   meta={"bytes": len(data), "colour": views[-1]["colour"]})
-    asked, side = views[-1]["box"], max(box[2], box[3])  # a crop never goes under 128 of the original's pixels
-    views[-1].update(zoom=z, got_box=box, bytes=len(data), got=time.time(), full=side > FULL * 1.2 * max(asked[2], asked[3]),
+    asked, side = views[-1]["box"], max(box[2], box[3])
+    small = max(store.image(z).size) < (codes.HIGH if views[-1].get("high") else 128)  # sent at its own size: full resolution
+    views[-1].update(zoom=z, got_box=box, bytes=len(data), got=time.time(), full=small or side > FULL * 1.2 * max(asked[2], asked[3]),
                      texts=codes.sms_parts(codes.text(codes.parts("Z", codes.zoom_head(parent, box) + data, parent[0] + "z"))))
     views[-1]["sam"] = _outline(store.image(z), views[-1].get("object"), box, rec["meta"]["pic"]["size"])
     views[-1]["sam_tried"] = bool(views[-1].get("object") and sam.available())

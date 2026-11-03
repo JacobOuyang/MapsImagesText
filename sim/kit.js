@@ -438,7 +438,7 @@ var KIT = (function () {
   async function cropBox(id, box, colour, side = 128) {
     const own = OWN[id], img = await loaded(Object.assign(new Image(), {src: own.src}));
     const W = img.naturalWidth, H = img.naturalHeight, sx = W / own.w, sy = H / own.h, [bx, by, bw, bh] = box;
-    const cx = (bx + bw / 2) * sx, cy = (by + bh / 2) * sy, half = Math.max(Math.max(bw * sx, bh * sy) * 0.6, side / 2);
+    const cx = (bx + bw / 2) * sx, cy = (by + bh / 2) * sy, half = Math.max(Math.max(bw * sx, bh * sy) * 0.6, 48 / 2);  // codes.MIN_CROP
     const x0 = Math.max(0, cx - half), y0 = Math.max(0, cy - half), x1 = Math.min(W, cx + half), y1 = Math.min(H, cy + half);
     const k = Math.min(1, side / Math.max(x1 - x0, y1 - y0)), c = document.createElement("canvas");
     c.width = Math.round((x1 - x0) * k); c.height = Math.round((y1 - y0) * k);

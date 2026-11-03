@@ -149,6 +149,7 @@ def picture(img, tones=True, parts=None, ident=None):
 # "ZOOM 3f 40 22 30 30" or "ZOOM 3f 2", then flags: " C" for colour, " H" for high detail (HIGH px, not 128).
 ZOOM = re.compile(r"\bZOOM\s+([0-9a-z]{2,4})((?:\s+\d+){1,4})((?:\s+[CH]\b)*)", re.I)
 HIGH = 256
+MIN_CROP = 48  # the smallest crop, in the original's pixels: one warning light on a dashboard photo
 
 
 def zoom_options(m):
@@ -199,8 +200,10 @@ def zoom(message):
 def crop_zoom(img, region, size, box, colour=False, side=None):
     """A closer look at `box` (x, y, w, h in the pixels of a picture that showed `region` of `img` at `size`) ->
     (WebP bytes, the crop's region in img, the crop as a box in the picture's pixels, the size it is sent at). The
-    crop has a little margin, is square-ish, and is never smaller than the picture it is sent as (past the original's
-    resolution a zoom shows nothing new). The server crops its kept originals this way; a phone, its own photos.
+    crop has a little margin, is square-ish, and is never smaller than MIN_CROP of the original's pixels; a crop
+    smaller than the picture it is sent as goes at its own size, never enlarged (past the original's resolution a zoom
+    shows nothing new), so one small icon can be looked at by itself. The server crops its kept originals this way; a
+    phone, its own photos.
     colour=True sends the crop in colour (when colour decides the answer); side=HIGH sends it at 256 px instead of
     128 (grey at quality 20, not 5), for small text or many small things (about 3-4x the texts)."""
     from . import smsimage
@@ -208,7 +211,7 @@ def crop_zoom(img, region, size, box, colour=False, side=None):
     (x0, y0, x1, y1), (w, h), (bx, by, bw, bh) = region, size, box
     sx, sy = (x1 - x0) / w, (y1 - y0) / h
     cx, cy = x0 + (bx + bw / 2) * sx, y0 + (by + bh / 2) * sy
-    half = max(max(bw * sx, bh * sy) * 0.6, side / 2)
+    half = max(max(bw * sx, bh * sy) * 0.6, MIN_CROP / 2)
     rx0, ry0 = max(0, cx - half), max(0, cy - half)
     rx1, ry1 = min(img.width, cx + half), min(img.height, cy + half)
     crop = img.crop((round(rx0), round(ry0), round(rx1), round(ry1)))

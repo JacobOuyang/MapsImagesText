@@ -46,6 +46,8 @@ PHOTOS = [  # name, sample, question, the reference answer
      "Loratadine (LORATADINE ALLERGY RELIEF), on the middle shelf of the cabinet."),
     ("tick", "hard/tick", "What's that on my leg?", "A tick: a small black tick on the lower leg, just above the sock."),
     ("extinguisher", "hard/extinguisher", "Can I use this fire extinguisher?", "No: it is marked EMPTY / RECHARGE, so it isn't ready to use."),
+    ("dashboard", "hard/dashboard", "Two warning lights came on on my dashboard. Which ones are they, and what do they mean?",
+     "The red battery (charging system) warning light and the amber check engine light."),
     # Real photos (sim/samples/real/, Wikimedia Commons, 2,600-4,000 px; CREDITS.md). Two more failed the screen
     # because their detail is big enough for a 5 KB WebP: a handwritten label on a box, and street parking signs.
     ("bus_timetable", "real/bus_timetable", "It's Saturday, 9 am. When's the next bus from this stop?", "10:06 am (the Saturday timetable has a 10:06)."),

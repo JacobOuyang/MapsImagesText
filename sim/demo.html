@@ -40,26 +40,27 @@
 // loads it (go), shows another photo in /compare (photo), or steps /group (group).
 const $ = id => document.getElementById(id);
 const Q = s => encodeURIComponent(s);
-const HEADACHE = 'I have a headache. Which of these can I take, and where is it?';
+const LIGHTS = 'Two warning lights came on on my dashboard. Which ones are they, and what do they mean?';
 const SIGN = 'There are people on a roof. What does the sign next to them say?';
 const SCENES = [
-  {name: 'Three ways', src: '/compare?photo=medicine_headache', steps: [
-    {say: 'A cabinet of thirty look-alike bottles. Which one is for a headache? The photo itself is 412 KB: thousands of texts.',
+  {name: 'Three ways', src: '/compare?photo=dashboard', steps: [
+    {say: 'Two warning lights came on. Which ones, and what do they mean? Sent the normal way, the photo is 214 KB.',
      note: 'Every answer on this page is Muse Spark\'s, judged against the truth, five runs each.'},
-    {say: 'Squeezed into the same texts with classical compression, Muse can\'t read a single label.',
+    {say: 'Squeezed under 4 KB with classical compression, Muse can\'t even tell which lights they are.',
      note: 'WebP got its best shot: every size and quality that fits, in colour and grey.'},
-    {say: 'With MuZip, the same texts: the ibuprofen, bottom shelf. Five times out of five.',
+    {say: 'MuZip sends the same 4 KB, 55 times smaller: the battery light and the check-engine light. Five times out of five.',
      note: 'Classical compression keeps what you\'d notice. MuZip keeps what the question needs.'},
+    {photo: 'medicine_headache', say: 'A cabinet of look-alike bottles: which one is for a headache? Classical compression says take the Tylenol. There is no Tylenol.'},
     {photo: 'almond_milk', say: 'On a real photo of a supermarket aisle: is there almond milk? Which brand?'},
     {photo: 'extinguisher', say: 'And on a corridor: can I use this fire extinguisher? Classical compression says yes. It\'s empty.'}]},
   {name: 'Look closer', src: '', steps: [
-    {go: '/closer?sample=hard/medicine_cabinet&auto=1&q=' + Q(HEADACHE),
+    {go: '/closer?sample=hard/dashboard&auto=1&q=' + Q(LIGHTS),
      say: 'How it works. The phone sends the question and a 128-pixel grey sketch: about ten texts.',
      note: 'Muse Spark sees only the sketch. The full photo stays on the phone.'},
-    {say: 'Muse asks for a closer look at the shelves, in high detail. The phone crops its own photo and sends it back by itself.',
+    {say: 'Muse asks for the instrument cluster, in colour: red and amber matter here. Then each light on its own. The phone crops its own photo and sends it back by itself.',
      note: 'SAM 3.1 outlines the thing Muse asked about in each close-up; Muse is told where it is in the whole photo.'},
-    {say: 'One look was enough: the ibuprofen, bottom shelf on the right. The photo never left the phone.',
-     note: 'When it isn\'t enough, Muse zooms inside its own close-ups, until it is sure.'}]},
+    {say: 'Each light comes back at the photo\'s own pixels, by itself: the battery light and the check-engine light. The photo never left the phone.',
+     note: 'Each close-up is only the part Muse asked for.'}]},
   {name: 'Group chat', src: '/group', steps: [
     {say: 'A neighbourhood group chat on a stormy night. Ana shares a photo of her street: the group gets MuZip\'s sketch.',
      note: 'Simulated WhatsApp; the loop, Muse Spark and SAM 3.1 are real.'},

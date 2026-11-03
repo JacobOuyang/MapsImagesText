@@ -5,33 +5,37 @@ said "mew zip"; spell it `Mew-zip` if the voice gets it wrong). The `<break>` ta
 Flash; Eleven v3 ignores them (drop them and keep the punctuation). Every number is measured: the three-way comparison
 is `evals/kit/three_ways.py` (`evals/kit/THREE_WAYS.md`), the scenes are live runs of `/demo` on this branch.
 
-| # | Time | Section | On screen | Words |
+| # | Time | Section | On screen | Status |
 |---|---|---|---|---|
-| 1 | 0:00–0:30 | What MuZip is, and the proof | `/demo` scene 1 (three ways), steps 1–3: the medicine cabinet | ~75 |
-| 2 | 0:30–1:10 | How it works | the real WhatsApp run (MuZip on the Mac), cut with `/demo` scene 2 (the cabinet, live) | ~95 |
-| 3 | 1:10–1:30 | Not one lucky photo | `/demo` scene 1, steps 4–5: the milk aisle (real), the extinguisher | ~45 |
-| 4 | 1:30–2:15 | A group chat on a flood night | `/demo` scene 3 (group chat, live) | ~100 |
-| 5 | 2:15–2:45 | Beyond phones | `/demo` scene 4 (drone, live) | ~60 |
-| 6 | 2:45–3:00 | Close | a title card | ~30 |
+| 1 | 0:00–0:10 | Intro | `/title.html`: μ and a zipper, "agentic image compression" | agreed |
+| 2 | 0:10–0:50 | The side-by-side | `/demo` scene 1 (three ways), steps 1–4: the dashboard | draft |
+| 3 | 0:50–1:25 | How it works, on the same photo | `/demo` scene 2 (look closer, live): the dashboard round by round | to write |
+| 4 | 1:20–1:25 | Tagline (a play on "a picture is worth a thousand words") | title card | to write |
+| 5 | 1:25–2:10 | Real world: an emergency, and a group chat | `/demo` scenes 4 (drone) and 3 (group chat) | to write |
+| 6 | 2:10–2:40 | Decisions per byte, when bytes are the limit | a chart: bytes sent against right answers | to write |
+| 7 | 2:40–3:00 | Try it yourself | the live modes and the one command | to write |
 
-## 1. What MuZip is, and the proof (0:00–0:30)
+The sections below the agreed ones are drafts from the earlier outline, kept for their wording.
 
-On screen: the cabinet's three columns: the photo (412 KB, about 4,200 texts), classical compression (66 texts: "You
-can take Tylenol", there is no Tylenol), MuZip (69 texts: the ibuprofen, bottom shelf). Measured over five runs each:
-the photo 5/5, WebP 0/5, MuZip 5/5.
+## 1. Intro (0:00–0:10)
+
+On screen: `/title.html` (click or R replays it).
 
 ```text
-This is MuZip: agentic compression. <break time="0.4s" /> It sends only the information that matters, at under a hundredth of the size. <break time="0.4s" /> Meta's Muse Spark looks at a tiny sketch of your photo, and asks for just the parts it needs. <break time="0.6s" /> Which of these can I take for a headache? <break time="0.3s" /> Squeezed the classical way into the same few texts, Muse can't read a single label, and guesses. <break time="0.3s" /> With MuZip: the ibuprofen, bottom shelf. Five times out of five.
+This is MuZip: agentic image compression. <break time="0.4s" /> MuZip uses Muse to figure out which parts of your image actually matter, <break time="0.2s" /> and compresses it by up to a hundred times.
 ```
 
-## 2. How it works (0:30–1:10)
+## 2. The side-by-side (0:10–0:50)
 
-On screen: MuZip on the Mac sending from WhatsApp (record this from your account: drop the cabinet photo, ask the
-question), cut with `/demo` scene 2, which shows Muse's rounds: the sketch, the box it asked for, the close-up, SAM's
-outline, the answer.
+On screen: the title card dissolves into the dashboard photo, the question appears as a text bubble; then `/demo`
+scene 1 (`/compare?photo=dashboard`): the photo itself (214 KB), classical compression (WebP, 3.9 KB: "The photo is
+too dark and blurry to tell which warning lights are on."), MuZip (3.9 KB, 55× smaller than the photo), then MuZip's
+views one by one: the grey sketch, the cluster in colour, the red light alone, the amber light alone. Under each
+column its size and its five runs as dots: the photo 5/5, WebP 0/5, MuZip 5/5. To end, a two-by-two: data sent
+across, right answers up; MuZip alone in the top left.
 
 ```text
-Here's a real run, over my own WhatsApp. <break time="0.3s" /> My phone sends the question and the whole photo, a hundred and twenty-eight pixels wide, in grey. About ten texts. <break time="0.4s" /> Muse finds the shelves, and asks for a closer look, in high detail. My phone crops its own full-size photo and sends back only that piece, by itself. SAM three point one outlines what Muse asked about, and tells it where that sits in the whole picture. <break time="0.4s" /> If one look isn't enough, Muse zooms in again, inside its own close-up, until it's sure. <break time="0.5s" /> And the photo never leaves my phone.
+Say you're on a dark road with one bar of signal. <break time="0.3s" /> Two warning lights come on: which ones are they, and what do they mean? <break time="0.6s" /> Sent the normal way, this photo is over two hundred kilobytes: a lot to push through one bar. <break time="0.5s" /> Squeeze it under four kilobytes with classical compression, and it gets through, but Muse can't tell which lights they are. <break time="0.6s" /> MuZip sends the same four kilobytes. Muse looks at a tiny sketch, asks for the dashboard in colour, then for each light on its own. <break time="0.4s" /> The battery light, and the check-engine light. <break time="0.6s" /> Classical compression makes you choose: the right answer, or a small message. <break time="0.3s" /> MuZip gets you both: as accurate as the full photo, at a fiftieth of the size.
 ```
 
 ## 3. Not one lucky photo (1:10–1:30)
