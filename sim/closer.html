@@ -54,7 +54,7 @@
 </head>
 <body>
 <header>
-  <h1>Look closer</h1><span class="sub">A question about a photo that stays on the phone, answered over text.</span>
+  <h1>Look closer</h1><span class="sub" id="sub">A question about a photo that stays on the phone, answered over text.</span>
   <div class="grow"></div>
   <select id="sample" aria-label="Photo"></select>
   <input id="question" value="Is this a black widow?" aria-label="Question">
@@ -62,7 +62,7 @@
 </header>
 <main>
   <section>
-    <h2>The phone · texts only</h2>
+    <h2 id="h1">The phone · texts only</h2>
     <div class="device"><div class="screen">
       <div class="status"><span>9:41</span><span>●○○○ SMS only</span></div>
       <div class="who"><div class="av">M</div><b>Ask Muse</b><small>by text message · photos stay on this phone</small></div>
@@ -70,7 +70,7 @@
     </div></div>
   </section>
   <section>
-    <h2>Only on the phone · never sent whole</h2>
+    <h2 id="h2">Only on the phone · never sent whole</h2>
     <div class="card"><div class="orig" id="orig"><div class="empty">The full photo appears here.</div></div>
       <div class="quiet" id="origNote" style="margin-top:8px"></div></div>
     <h2>What crossed the network</h2>
@@ -95,6 +95,13 @@ function pictureOf(text) {  // the picture a message carries (a photo or a close
   return {url: 'data:' + type + ';base64,' + KIT.bytesb64(b), kind: c.kind, bytes: b.length};
 }
 
+// ?device=drone (or camera): the same loop, when what keeps the original is a drone or a remote camera on a thin link
+const DEVICE = (new URLSearchParams(location.search).get('device') || 'phone').toLowerCase();
+if (DEVICE !== 'phone') {
+  const D = DEVICE[0].toUpperCase() + DEVICE.slice(1);
+  $('sub').textContent = `A question about a photo that stays on the ${DEVICE}, answered over a thin link.`;
+  $('h1').textContent = `The ${DEVICE}'s link · texts only`; $('h2').textContent = `Only on the ${DEVICE} · never sent whole`;
+}
 function drawThread() {
   const th = $('thread'); th.innerHTML = '';
   for (const t of S.texts) {
@@ -120,7 +127,7 @@ function drawOriginal() {
     Object.assign(d.style, {left: x / w * 100 + '%', top: y / h * 100 + '%', width: bw / w * 100 + '%', height: bh / h * 100 + '%'});
     d.innerHTML = `<span>closer look ${i + 1}${v.colour ? ' · colour' : ''}</span>`; o.appendChild(d);
   }
-  $('origNote').textContent = `The phone's photo: ${kb(S.original_bytes)} (a real phone photo is 2–4 MB). Only the pieces Muse asked for leave the phone.`;
+  $('origNote').textContent = `The ${DEVICE}'s photo: ${kb(S.original_bytes)} (a real phone photo is 2–4 MB). Only the pieces Muse asked for leave the ${DEVICE}.`;
 }
 
 function drawLedger() {
@@ -180,7 +187,7 @@ async function tick() {
 async function ask() {
   const r = await fetch('/api/closer/start', {method: 'POST', headers: {'Content-Type': 'application/json'},
     body: JSON.stringify({sample: $('sample').value, question: $('question').value})}).then(r => r.json());
-  conv = r.conv; history.replaceState(null, '', '?conv=' + conv); clearInterval(timer); timer = setInterval(tick, 800); tick();
+  conv = r.conv; history.replaceState(null, '', '?conv=' + conv + (DEVICE !== 'phone' ? '&device=' + DEVICE : '')); clearInterval(timer); timer = setInterval(tick, 800); tick();
 }
 $('ask').onclick = ask;
 fetch('/api/closer/samples').then(r => r.json()).then(d => {

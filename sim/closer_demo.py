@@ -15,7 +15,7 @@ from phones import Phone
 
 ROOT = os.path.dirname(__file__)
 SAMPLES = os.path.join(ROOT, "samples")
-FOLDERS = ("real", "hard", "spiders")  # photos where a small detail decides the answer; the spiders came first
+FOLDERS = ("real", "hard", "field", "spiders")  # photos where a small detail decides the answer; the spiders came first
 HERE = (40.6776, -74.0086)   # where the phone is (it only matters for local advice)
 PAUSE = 1.0                  # seconds the kit takes to crop and send a closer look
 CONVS = {}                   # conversation id -> {"texts": [...], "inquiry", "sample", "question", "done"}

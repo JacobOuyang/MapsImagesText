@@ -143,6 +143,24 @@ The baseline: generated 12/12, real 6/12, easy 6/6, each easy one in a single cl
 240 texts instead of 160 got the timetable to 2/3 but cost 45 more texts and didn't help the price tag, so it wasn't
 kept.
 
+## Beyond phones: the field questions (demo branch)
+
+The device that keeps the original can be anything on a thin link. `evals/loop/dataset.json` on this branch adds two
+"field" questions on Muse Image photos (`sim/samples/field/`):
+
+- **A drone over a flood:** "There are people on a roof. What does the sign next to them say?" 3/3, two high-detail
+  close-ups (116 texts): NEED INSULIN 2 PEOPLE. The sheet shows as a white patch in the sketch, so Muse knows where to
+  look.
+- **A security camera in a pump station:** "Which pump station and line is this camera watching?" 1/3: one run read the
+  cabinet's "LINE 3" as "Line 1" and was sure. A confident misread, the failure the "only when sure" rule can't catch.
+
+**Where it stops working: search.** Two earlier field photos asked Muse to find a target of a few pixels anywhere in a
+wide shot: two people on one roof among twenty (from a drone at 80 m), and a wolf by a distant fence (a trail camera).
+0/6 each: the sketch gives no hint where to look, and close-ups of whole quadrants still show the target as a speck.
+Sending the sketch in colour (WebP q5 colour costs about the same as grey) didn't help either (0/6; the red cloth the
+person waved didn't survive). These photos were dropped from the set; the limit stays: MuZip needs the sketch to show
+*something* worth a closer look.
+
 ## On WhatsApp
 
 WhatsApp is the text channel (`evac/whatsapp.py`, `sim/whatsapp_server.py`): a person messages the Muse number

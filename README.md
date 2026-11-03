@@ -134,6 +134,10 @@ your number and prints the replies.
 
 [HOW_IT_WORKS.md](HOW_IT_WORKS.md) has the details with real runs; `CLAUDE.md` describes how the pieces connect.
 
+**The demo (this branch):** `.venv/bin/python sim/server.py`, then http://127.0.0.1:8765/demo: four scenes (three
+ways, look closer, a simulated WhatsApp group with Muse in it, a drone), live with the models. See
+[demo/README.md](demo/README.md) and the voice-over in [demo/SCRIPT.md](demo/SCRIPT.md).
+
 **Branches:** `main` is MuZip. `demo` adds the demo environment (a simulated WhatsApp group with Muse in it, the
 video's stage and script). `full-prototype` keeps everything this started as: text maps for emergency alerts, walking
 directions, weather radar, photo drawings, an offline kit page and a neighbourhood hub.

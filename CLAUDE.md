@@ -85,6 +85,12 @@ tests call `store.use(tmpdir)`.
 
 **SAM 3.1 (`evac/sam.py`):** model `sam-3.1` is served on `/v1/responses` (chat completions refuses it). Send one user message with `input_text` (a noun phrase) and `input_image`, `metadata` `mask_encoding: one_bit`, `include_confidence: "true"` (strings). Output text: `<0f>` then records `id<|box;x1;y1;x2;y2;w;h;c|><|mask;x=0;y=0;c;data=H,W,<enc><payload>|>`; boxes are in the sent image's pixels, corners inclusive; the mask is box-sized. The payload is compressed and the SAM License forbids reverse-engineering it: parse and decode only with Meta's `meta-sam-parser` (`image_segmentation_format().create_parser()`, `push(text)`, `finish(CompletedOutcome()).result.records`: box and mask records by `object_id`; `decode_mask_to_raster(record.mask)` gives row-major 0/1 bytes for the record's half-open `bounds`). Responses are cached in `cache/sam/` by image and prompt.
 
+**The demo branch** adds `sim/demo.html` (`/demo` and `/`: four scenes in frames, stepped with →; captions from
+`demo/SCRIPT.md`), `sim/group.html` + `sim/group_demo.py` (`/group`: a simulated WhatsApp group; Ana's simulated phone
+answers ZOOMs, `closer.start` runs on the group's sketch with `texts=0`; `?auto=1` plays it), `?device=drone` on
+`/closer`, `sim/samples/field/` and two "field" questions in the loop eval, and `demo/three_ways/` (the comparison's
+data, used by `/compare` when `out/eval/three_ways/` is missing).
+
 **Simulator (`sim/server.py`).** `/closer` (`closer.html` + `closer_demo.py`: a simulated phone, `sim/phones.py`, asks
 about a sample photo through the real router; samples from `sim/samples/real|hard|spiders`), `/compare`
 (`compare.html`: `out/eval/three_ways/results.json`), `/kit.js`, `/store/<id>.jpg`.
