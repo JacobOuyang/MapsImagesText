@@ -5,7 +5,7 @@
 POST /whatsapp            Twilio's webhook for incoming messages (checked against X-Twilio-Signature)
 GET  /                    "ok", to check the tunnel reaches it
 
-Everything else (the simulator, its dashboard, the store) stays on 127.0.0.1:8765. See evac/whatsapp.py for what the
+Everything else (the simulator, the store) stays on 127.0.0.1:8765. See evac/whatsapp.py for what the
 bridge does and the .env settings it needs.
 """
 import os

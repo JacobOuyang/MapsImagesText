@@ -54,9 +54,9 @@ def me():
     n = os.environ.get("MY_WHATSAPP", "").strip()
     if n:
         return n if n.startswith("whatsapp:") else "whatsapp:+" + n.lstrip("+")
-    users = store.find("wa_user", limit=1)
-    if users:
-        return users[0]["who"]
+    heard = next((m for m in store.find("wa_msg", limit=50) if m["meta"]["dir"] == "in"), None)
+    if heard:
+        return heard["who"]
     raise RuntimeError("Set MY_WHATSAPP in .env (your WhatsApp number), or message the bridge once from your phone.")
 
 

@@ -1,5 +1,5 @@
-"""Compact codes inside ordinary text messages, for a small offline kit on the phone (sim/kit.html) to turn into
-pictures, maps and forms, and back.
+"""Compact codes inside ordinary text messages: how a photo, its close-ups and a few other things travel as plain
+text (an SMS, a WhatsApp message), read by MuZip on the phone or the kit's reader (sim/kit.js).
 
 Every code looks like  #P3f.1/2:iVBORw0KGgo...:9c1e#  : a type letter, an id, part i of n, a chunk of base64, and a
 CRC-16 of the chunk. Only characters of the basic SMS alphabet are used (base64, # . / :), so an SMS carries 160 of
@@ -19,10 +19,6 @@ Types (payloads before base64):
                   (a box in that picture's pixels) or "ZOOM <id> <n>" (a numbered part from its key)
   K picture key   JSON {"i": picture id, "k": [[name, x, y, w, h]]}: the named parts of a picture (SAM 3.1 boxes),
                   which the kit outlines and numbers so a tap asks for that part
-  M map           deflated JSON: you, the danger zone, closed stretches, the route, a few named streets, the goal and
-                  landmarks, in metres from you (rounded); the kit draws it as a real map
-  G route         deflated "destination\nencoded polyline" (Google's polyline format, 1e-5 degrees): the kit rebuilds
-                  a GPX file that an offline map app (Organic Maps, OsmAnd) opens for turn-by-turn navigation
   T text          deflated UTF-8 text. One accented letter outside the GSM alphabet (á, ã, ç, ...) makes a whole SMS
                   UCS-2 (70 characters, codes included); compressed and base64'd it stays in the basic alphabet
   L location      JSON: GPS, accuracy, status (ok / help / hurt), people, battery, time (phone -> server)
@@ -232,94 +228,6 @@ def read_zoom(data):
     n = data[0]
     box = [int.from_bytes(data[1 + n + 2 * i:3 + n + 2 * i], "big") / 64 for i in range(4)]
     return data[1:1 + n].decode(), box, data[9 + n:]
-
-
-# ---------- maps ----------
-
-def map_scene(scene, max_roads=8, step_m=5):
-    """A Scene (an alert or a walking step) -> map code parts. Everything in metres from you, rounded to step_m."""
-    from . import geo, osm
-    proj = geo.LocalProjection(scene.you)
-    q = lambda p: [int(round(v / step_m)) for v in proj.to_xy(p)]
-    simplify = lambda pts, k=24: pts if len(pts) <= k else [pts[round(i * (len(pts) - 1) / (k - 1))] for i in range(k)]
-    m = {"v": 1, "s": step_m, "h": int(scene.half_m)}
-    if scene.zone:
-        (c, r), m["k"] = scene.zone, scene.hazard or "danger"
-        m["z"] = q(c) + [int(round(r / step_m))]
-    if scene.route:
-        m["r"] = [q(p) for p in simplify(scene.route)]
-    if scene.goal:
-        m["g"] = [str(scene.goal[0])[:40]] + q(scene.goal[1])
-    roads = []
-    for road in (scene.shown or [])[:60]:
-        if road.get("name") and len(road["pts"]) >= 2:
-            roads.append([road["name"][:30], [q(p) for p in simplify(road["pts"], 12)]])
-    named, seen = [], set()
-    for name, pts in roads:  # one line per street name, the longest in view first
-        if name not in seen:
-            seen.add(name)
-            named.append([name, pts])
-    m["n"] = named[:max_roads]
-    closed = []
-    for seg in getattr(scene, "closures", []) or []:
-        ends = [osm.find_intersection(scene.roads, seg["road"], x) for x in (seg.get("from"), seg.get("to")) if x]
-        if len(ends) == 2 and all(ends):
-            closed.append([seg["road"][:30], q(ends[0]), q(ends[1])])
-    if closed:
-        m["c"] = closed
-    if scene.landmarks:
-        m["l"] = [[str(n)[:24]] + q(p) for n, p in scene.landmarks[:4]]
-    raw = json.dumps(m, separators=(",", ":"), ensure_ascii=False).encode()
-    return encode("M", zlib.compress(raw, 9)[2:-4])  # raw deflate: the browser's DecompressionStream("deflate-raw")
-
-
-# ---------- routes (GPX for offline map apps) ----------
-
-def _simplify(pts, tol_m=4.0):
-    """Douglas-Peucker in local metres: drops points within tol_m of the line through their neighbours."""
-    from . import geo
-    if len(pts) < 3:
-        return list(pts)
-    proj = geo.LocalProjection(pts[0])
-    xy = [proj.to_xy(p) for p in pts]
-    keep = [False] * len(pts)
-    keep[0] = keep[-1] = True
-    stack = [(0, len(pts) - 1)]
-    while stack:
-        a, b = stack.pop()
-        (ax, ay), (bx, by) = xy[a], xy[b]
-        L = max(1e-9, ((bx - ax) ** 2 + (by - ay) ** 2) ** 0.5)
-        far, d = None, tol_m
-        for i in range(a + 1, b):
-            px, py = xy[i]
-            dist = abs((bx - ax) * (ay - py) - (ax - px) * (by - ay)) / L
-            if dist > d:
-                far, d = i, dist
-        if far is not None:
-            keep[far] = True
-            stack += [(a, far), (far, b)]
-    return [p for p, k in zip(pts, keep) if k]
-
-
-def polyline(pts):
-    """Google's encoded polyline (precision 5)."""
-    out, last = [], (0, 0)
-    for lat, lon in pts:
-        cur = (round(lat * 1e5), round(lon * 1e5))
-        for d in (cur[0] - last[0], cur[1] - last[1]):
-            v = ~(d << 1) if d < 0 else d << 1
-            while v >= 0x20:
-                out.append(chr((0x20 | (v & 0x1f)) + 63))
-                v >>= 5
-            out.append(chr(v + 63))
-        last = cur
-    return "".join(out)
-
-
-def route(pts, name):
-    """A walking route -> code parts the kit turns into a GPX file (and draws)."""
-    raw = ("%s\n%s" % (str(name)[:60], polyline(_simplify(pts)))).encode()
-    return encode("G", zlib.compress(raw, 9)[2:-4])
 
 
 # ---------- text ----------

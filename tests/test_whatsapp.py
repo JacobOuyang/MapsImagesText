@@ -48,8 +48,8 @@ class Bridge(unittest.TestCase):
     def script(self, *replies):
         replies = list(replies)
 
-        def handle(text, at, image=None, who=None):
-            self.got.append((text, at, who))
+        def handle(text, you=None, image=None, who=None):
+            self.got.append((text, who))
             r = replies.pop(0)
             return r(text) if callable(r) else r
         router.handle = handle
@@ -60,16 +60,13 @@ class Bridge(unittest.TestCase):
     def test_help(self):
         whatsapp.reply({"From": ME, "Body": "help"})
         self.assertIn("Send a photo with a question", self.said()[0])
+        self.assertNotIn("location", self.said()[0].lower())
 
-    def test_the_reply_is_the_sms_version(self):
-        self.script({"text": "plain words", "sms": "plain words\n\nMAP (north is up):\n==🔴=="}, {"text": "x", "sms": "y"})
-        whatsapp.reply({"From": ME, "Body": "Fire near me?"})
-        self.assertIn("Share your location", self.said()[-1])  # asked once
-        whatsapp.reply({"From": ME, "Body": "", "Latitude": "40.6776", "Longitude": "-74.0086"})
-        self.assertEqual(self.said()[-1], "plain words\n\nMAP (north is up):\n==🔴==")
-        self.assertEqual(self.got[0], ("Fire near me?", (40.6776, -74.0086), ME))
-        whatsapp.reply({"From": ME, "Body": "And now?"})  # the location is remembered
-        self.assertEqual(self.got[1][1], (40.6776, -74.0086))
+    def test_a_question_gets_muse_s_answer(self):
+        self.script({"text": "Paris."})
+        whatsapp.reply({"From": ME, "Body": "What's the capital of France?"})
+        self.assertEqual(self.got, [("What's the capital of France?", ME)])
+        self.assertEqual(self.said()[-1], "Paris.")
 
     def test_photo_runs_the_look_closer_loop_with_the_bridge_as_the_phone(self):
         def ask_closer(text):  # Muse can't tell: it asks for the part of the photo with the blob, in colour
@@ -96,12 +93,12 @@ class Bridge(unittest.TestCase):
 
 
 class KitCodes(Bridge):
-    def test_codes_go_straight_to_the_router_without_a_location(self):
+    def test_codes_go_straight_to_the_router(self):
         reply = "Not sure yet: I need a closer look at the dark spot.\nZOOM ab 80 20 10 10 C"
         self.script({"text": reply, "sms": reply})
         msg = "Is this a black widow?\n" + codes.text(codes.parts("P", b"fake", "ab"))
         whatsapp.reply({"From": ME, "Body": msg})
-        self.assertEqual(self.got, [(msg, (0.0, 0.0), ME)])
+        self.assertEqual(self.got, [(msg, ME)])
         self.assertTrue(self.said()[-1].endswith("ZOOM ab 80 20 10 10 C"))  # the kit on the computer needs the request line
 
 

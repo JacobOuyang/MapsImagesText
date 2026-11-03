@@ -1,5 +1,5 @@
-// The offline kit: turns #codes inside text messages into pictures, maps and forms, and makes codes to send back.
-// Shared by sim/kit.html (the page a person saves on their phone) and the simulator. Everything runs locally; the
+// The kit's reader: turns #codes inside text messages into pictures (and the older maps and forms), and makes codes to
+// send back. The simulator's pages use it (sim/closer.html). Everything runs locally; the
 // server injects KIT_PACK (checked how-to entries) and KIT_PUBKEY (the alert issuer's Ed25519 key) above this file.
 // Code format (evac/codes.py): #<type><id>.<i>/<n>:<base64 chunk>:<crc16>#  types P picture, Z zoom on a picture,
 // K a picture's named parts, M map, G route (-> GPX), T compressed text, L location, S phrasebook entry, A signature.

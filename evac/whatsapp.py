@@ -1,13 +1,11 @@
-"""WhatsApp as the text channel (Twilio): a person messages the WhatsApp number and gets exactly what they would get
-by SMS, so a demo needs only WhatsApp.
+"""WhatsApp as the text channel (Twilio): a person messages the Muse number.
 
-    a message                  -> Muse and its tools (router.handle); the reply is the SMS version, as it is
     a photo (with a question)  -> the look-closer loop (evac/closer.py): Muse sees only the 128 px grey picture and
                                   asks for closer looks; this bridge plays the phone's kit, cropping each one from the
-                                  original, and shows the person every step
-    a text with kit codes      -> straight to the router, as by SMS: what the kit on the person's computer sends
-                                  (a photo as a 128 px code with a question, a close-up Muse asked for, a check-in)
-    a shared location          -> remembered, for alerts and directions ("where are you?" is asked once)
+                                  original, and shows the person every step and what it cost
+    a text with codes          -> straight to the router: what MuZip on the person's computer sends (the photo as a
+                                  128 px code with the question, then each close-up Muse asks for)
+    any other message          -> a plain answer from Muse Spark (router.handle)
     "help"                     -> what it can do
 
 Twilio posts every incoming message to POST /whatsapp (sim/whatsapp_server.py, a small server of its own; only it
@@ -30,7 +28,7 @@ from concurrent.futures import ThreadPoolExecutor
 import requests
 from PIL import Image
 
-from . import codes, router, smsimage, store
+from . import closer, codes, router, smsimage, store
 
 FROM = os.environ.get("WHATSAPP_FROM", "whatsapp:+14155238886")
 MAX_BODY = 1500          # Twilio refuses WhatsApp bodies over 1600 characters
@@ -39,10 +37,9 @@ ORIGINALS = {}           # (who, picture id) -> the full photo: what the phone's
 _pool = ThreadPoolExecutor(4)
 
 HELP = ("Hi! I'm Muse, by text message.\n"
-        "- Ask anything: alerts near you, the weather, walking directions, how to do something.\n"
-        "- Send a photo with a question (\"is this a black widow?\"). I only get a tiny version, so I'll ask for a closer "
-        "look at the part that matters.\n"
-        "- Share your location (📎 > Location) so answers fit where you are.")
+        "- Send a photo with a question (\"which of these is for a headache?\"). I only get a tiny version, so I'll ask "
+        "for a closer look at the parts that matter; your photo stays on your phone.\n"
+        "- Or just ask me something.")
 
 
 def _env(name):
@@ -118,56 +115,30 @@ def _safe(params):
         send(params.get("From", ""), "Sorry, something went wrong on my side (%s). Please try again." % type(ex).__name__)
 
 
-def _user(who):
-    found = next((r for r in store.find("wa_user") if r["who"] == who), None)
-    return found or store.get(store.new("wa_user", who=who, meta={"first": time.time()}))
-
-
 def reply(params):
     """Work out the answer to one message and send it."""
     who, body = params.get("From", ""), (params.get("Body") or "").strip()
-    log(who, "in", body or ("[location]" if params.get("Latitude") else "[photo]" if params.get("NumMedia", "0") != "0" else ""))
-    user = _user(who)
-    if params.get("Latitude") and params.get("Longitude"):  # a shared location
-        at = (float(params["Latitude"]), float(params["Longitude"]))
-        store.update(user["id"], where=at, meta={"pending": None})
-        if user["meta"].get("pending"):
-            return ask(who, user["meta"]["pending"], at)
-        return send(who, "Got your location. Ask about alerts, the weather or walking directions.")
     has_photo = int(params.get("NumMedia") or 0) and (params.get("MediaContentType0") or "").startswith("image/")
+    log(who, "in", body or ("[photo]" if has_photo else ""))
     if body.lower() in ("help", "hi", "hello", "start", "?") and not has_photo:
         return send(who, HELP)
     if has_photo:
-        return look_closer(who, _download(params["MediaUrl0"], who), body or "What is this?", user["where"])
-    if codes.CODE.search(body):  # the kit sent codes (the photo never left the person's computer): as by SMS
-        out = router.handle(body, user["where"] or (0.0, 0.0), who=who)
-        return send(who, out.get("kit") or out.get("sms") or out.get("text") or "I couldn't read those codes.")
-    if not user["where"]:  # most answers depend on where the person is: ask once, then answer
-        store.update(user["id"], meta={"pending": body})
-        return send(who, "Where are you? Share your location (📎 > Location) and I'll answer.")
-    return ask(who, body, user["where"])
-
-
-def ask(who, text, at):
-    """Muse and its tools, exactly as by SMS: the reply is the SMS version."""
-    out = router.handle(text, at, who=who)
-    send(who, out.get("sms") or out.get("text") or "I couldn't work that out.")
-    for f in out.get("followups") or []:  # steps for a how-to, close-ups of a detail
-        if f.get("sms") or f.get("text"):
-            send(who, f.get("sms") or f["text"])
+        return look_closer(who, _download(params["MediaUrl0"], who), body or "What is this?")
+    out = router.handle(body, who=who)
+    send(who, out.get("text") or "I couldn't work that out.")
 
 
 # ---------- a photo: the look-closer loop, with this bridge as the phone's kit ----------
 
-def look_closer(who, img, question, at):
+def look_closer(who, img, question):
     """What a phone with the kit does: send the photo at 128 px in grey with the question, keep the original, and
     answer each request for a closer look by cropping it. The person sees every step and what it cost."""
     pic = random.choice("abcdefghjkmnpqrstuvwxyz") + random.choice("23456789abcdefghjkmnpqrstuvwxyz")
     ORIGINALS[(who, pic)] = img
     message = question + "\n" + codes.text(codes.parts("P", smsimage.webp(img), pic))
     send(who, "Sending your photo as a %d px grey picture: %d texts. Muse only sees that." % (smsimage.SIDE, codes.sms_parts(message)))
-    for _ in range(8):  # closer.MAX_VIEWS bounds it; this only guards against a loop
-        out = router.handle(message, at or (0.0, 0.0), who=who)
+    for _ in range(closer.MAX_VIEWS + 1):  # the loop ends by then; this only guards against a runaway
+        out = router.handle(message, who=who)
         text = out.get("text") or ""
         m = codes.ZOOM.search(text)
         if not m or m.group(1) != pic:

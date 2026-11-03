@@ -89,16 +89,18 @@ class Kit(unittest.TestCase):
         store.use(self.dir)
         self.assertEqual(codes.resend("RESEND %s 1" % ident), parts[:1])
 
-    def test_router_answers_resend_zoom_and_checkins(self):
-        pid = codes.CODE.match(codes.picture(photo(), parts=[("square", (300, 200, 420, 300))])[0]).group(2)
-        out = router.handle("ZOOM %s 1" % pid, (40.75, -73.98))
-        self.assertTrue(out["text"].startswith("Closer look at square"))
-        loc = codes.text(codes.encode("L", b'{"la":40.7531,"lo":-73.9822,"ac":12,"st":"help","p":2,"b":41,"n":"3rd floor"}'))
-        out = router.handle(loc, (40.75, -73.98), who="+15550100")
-        self.assertIn("needs help, 2 people", out["text"])
-        rep = store.get(out["report"])
-        self.assertEqual((rep["kind"], rep["who"], rep["meta"]["status"], rep["where"]), ("report", "+15550100", "help", (40.7531, -73.9822)))
-
+    def test_router_resends_and_refuses_a_stray_close_up(self):
+        parts = codes.encode("P", os.urandom(400))
+        ident = codes.CODE.match(parts[0]).group(2)
+        self.assertEqual(router.handle("RESEND %s 1" % ident)["text"], codes.text(parts[:1]))
+        stray = codes.text(codes.parts("Z", codes.zoom_head("zz", (0, 0, 10, 10)) + b"webp", "zq"))
+        self.assertIn("doesn't answer any open question", router.handle(stray, who="+15550100")["text"])
+        saved = router.llm.available
+        router.llm.available = lambda: False
+        try:
+            self.assertEqual(router.handle("hello")["text"], "Send a photo with your question.")
+        finally:
+            router.llm.available = saved
 
 if __name__ == "__main__":
     unittest.main()

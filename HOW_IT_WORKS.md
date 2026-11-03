@@ -1,307 +1,45 @@
 # How it works
 
-The details behind [README.md](README.md): each mode with real example inputs and outputs, how pictures are
-compressed, the offline kit, the look-closer loop, WhatsApp, the community hub and why the text maps line up.
+The details behind [README.md](README.md): the loop, how a photo travels as text, real runs, the evidence and how it
+was measured, and the WhatsApp channel.
 
-## The big picture
+## The loop: a question about a photo that stays on the phone
 
-```mermaid
-flowchart LR
-  M["Message + GPS<br/>(+ photo)"] --> MU["Muse Spark<br/>picks tools"]
-  MU --> T["Tools run in parallel<br/>(evac/tools.py)"]
-  T -- "short JSON" --> MU
-  T -- "bulky results" --> SC["Scene<br/>(evac/scene.py)"]
-  MU -- "reply text" --> SC
-  SC --> R["evac/render.py"]
-  R --> O1["SMS"] & O2["WhatsApp text"] & O3["Small picture"] & O4["Picture"] & O5["Kit codes"]
-```
-
-Three ideas hold it together:
-
-1. **Tools return two things.** A short summary goes to the model ("1479 m, 20 min, no rain in the next 2 hours"). The bulky result (a street network, a route, a radar grid) is kept for drawing, so the model never reads thousands of road points.
-2. **One Scene, every drawing.** Each result becomes a `Scene`: you, the roads, closures, the danger zone, the goal and the route. Every version is drawn from that same Scene, so the SMS map, the WhatsApp map and the pictures always show the same route.
-3. **The model plans and words; code computes and draws.** Distances, routes, closures, maps and legends are code. Muse copies numbers and street names exactly as written, and code converts them (letting the model convert made the zone's radius change from run to run). Emergency alerts always go through one fixed pipeline, whose text is used as it is.
-
-Everything slow or flaky is cached or has a fallback. With no model key the router uses keyword rules, regex parsing and template text. A failing tool comes back to the model as an error it can work around. With no road data, routing uses aerial imagery only.
-
-## Emergency alerts
-
-The alert is parsed (Muse, with a regex fallback). The incident is located where its two streets cross in OpenStreetMap; the geocoder alone was 600 m off. If you're close, the server routes you out on a grid: roads are cheap, closed stretches cost 60×, and cost rises toward the hazard. It then draws the map. Someone far away gets one line. Someone inside the zone gets a first line to act on, e.g. `GO EAST NOW toward Westwood Recreation Center.`
-
-```bash
-python3 main.py samples/nyc_fire.txt --at 40.75491,-73.97441 --laptop 58
-```
-
-Low data, 12 SMS (the NYC samples are fictional drills):
-
-```
-FDNY responding to 5-alarm fire at 5 Av and W 47 St.
-Fire incident 400 m from you.
-Avoid 5 Av (W 42 St to W 50 St).
-Expect road closures and smoke.
-
-MAP (uptown is up):
-=================== 51 St
-  |     |     |     |     |  
-=====×============= 50 St
-  |    ×    |     |     |  
-=====×============= 49 St
-  |    ×    |     |     |  
-=====×============= 48 St
-  |    ×    |     |     |  
-=====#========= 🔴 == 47 St
-  |    ×    |     |     |  
-=====×============= 46 St
-  |    ×    |     |     |  
-=====×============= 45 St
-  |    ×    |     |     |  
-=====×============= 44 St
-  |    ×    |     |     |  
-=====×============= 43 St
-
-# fire: AVOID
-× road closed: AVOID
-= open road
-🔴 you
-Avenues left to right: 6 Av, 5 Av, Madison, Park, Lex
-```
-
-The WhatsApp version draws the avenues, your street, the closure and the zone (edge `░`, worst part `▓`) in 58 columns. The pictures draw side streets as faint grey context:
-
-![Small picture map of the NYC fire](docs/alert_small_nyc_fire.webp) ![Picture map of the NYC fire](docs/alert_picture_nyc_fire.jpg)
-
-## Walking directions abroad
-
-This is for someone roaming on a capped plan. Asked directly, Muse gives directions from memory, and some of its turns were wrong. Here the route comes from street data and Muse only rewords it. Each message carries the minimum:
-- the current step, as far as the next intersection;
-- which way to turn there;
-- a landmark to look for;
-- a map of just that stretch.
-
-The streets are downloaded once, and each new GPS fix re-routes in about a second. On the same street with more than 80 m to go, the update is a single line.
-
-```
-Castelo de São Jorge: 0.7 km, about 9 min.
-Now: head E on Calçada do Carmo for 120 m, to the next corner.
-Then turn left onto the path ahead at Bebedouro dos Anjinhos (fountain).
-
-MAP (north is up):
-              
-=             
- 🔴         === 
-=> v  =>>>>>>>Λ 
- =>>>Λ   =¤   
-              
-              
-
-= open road
-< > Λ v route
-🔴 you
-¤ Bebedouro dos Anjinhos
-```
-
-## Photos that won't load
-
-Muse Spark describes the photo and names its main object. SAM 3.1 finds that object and gives its exact mask. The outline is traced with marching squares in `─ │ ╭ ╮ ╯ ╰` (58 columns for WhatsApp); SMS gets a 24-column silhouette, but only when Muse can still recognise it. For WhatsApp, Muse lists up to five things and SAM outlines them all. Before sending, a fresh Muse call sees only the drawing and has to recognise what's in it. If it doesn't, the server redraws up to three times. A higher-detail version shades every part by tone and lets you zoom into one.
-
-A teapot on a cluttered counter: the lid knob, the spout and the handle with its hole, and none of the counter:
-
-```
-                           ╭───╮
-                           │   ╰╮
-                      ╭────╯    ╰───╮
-                  ╭───╯             ╰───╮
-  ╭──────╮       ╭╯                     ╰╮ ╭─────────╮
-  ╰─╮    ╰╮    ╭─╯                       ╰─╯  ╭────╮ ╰╮
-    ╰─╮   ╰─╮╭─╯                             ╭╯    ╰╮ ╰╮
-      │     ╰╯                               ╰╮     │  │
-      ╰╮                                      │     │  │
-       │                                      ╰╮   ╭╯ ╭╯
-       │                                       │ ╭─╯ ╭╯
-       ╰╮                                      ╰─╯ ╭─╯
-        ╰─╮                                     ╭──╯
-          ╰─╮                                 ╭─╯
-            ╰─╮                             ╭─╯
-              ╰─╮                          ╭╯
-                ╰─╮                      ╭─╯
-                  ╰───╮              ╭───╯
-                      ╰──────────────╯
-(outline of teapot, found by SAM 3.1)
-```
-
-## How picture compression works
-
-A photo has to reach a phone that can't download it. We tried three ways of carrying it, in this order.
-
-**1. Draw it in characters.** The server draws the photo as text that any messaging app can carry:
-- **Low detail:** the main object's outline (above).
-- **High detail:** every part, from SAM masks, shaded by tone (`evac/tonal.py`). The subject stays dark and the background light.
-- **Zooms:** a part redrawn from its own crop of the full-size photo.
-
-The high-detail drawing of the dog, before and after making the subject stand out (over 36 photos the subject is now darker than its background in 34, up from 16):
-
-![The dog drawn in text, before and after emphasis](docs/eval_emphasis_dog.jpg)
-
-The drawing carries *where things are and how light or dark they are*; the words carry *what it is and its colours*. Each drawing ships its own tone legend, so the receiver can rebuild the photo in two ways (`evals/photo_eval.py`, `evals/RESULTS.md`):
-- **Decoding the text to grey, with no model.** One drawing gets 19% of the way from flat grey to the photo; with every zoom, 54%.
-- **Asking Muse Image to recreate it.** Given the raw characters, it copies the glyph texture, so it is given the decoded grey instead. With the caption, its recreation matches the photo's layout at r 0.52; with every zoom, r 0.75 (the caption alone: 0.37).
-
-Below, each row shows: the photo; every zoom decoded; Muse Image from the caption only, the drawing only, the drawing with its key, and the zooms' rebuild with the key. The dog, the eagle and Mt Fuji land in the right place; the teapot's clutter doesn't:
-
-![Photos rebuilt from text: dog, eagle, Mt Fuji, teapot](docs/eval_recompose_examples.jpg)
-
-**2. Measure it as a codec.** `evals/compress_compare.py` sends the whole text payload for each of 36 photos (base drawing, every zoom in greedy order, the key) and scores the rebuilt picture against the greyscale photo with pixel measures only (SSIM, PSNR). Medians:
-
-| What is sent | Size | SSIM (256 px) |
-| --- | --- | --- |
-| All zooms + key, decoded back to grey | 48 KB of text, 2.9 KB gzipped | 0.76 |
-| The same text, recreated by Muse Image | same | 0.45 |
-| A greyscale picture of about 300 bytes | 286 B | 0.72 |
-| A greyscale picture the size of the gzipped text | 2.3 KB | 0.94 |
-
-![Text drawing vs a tiny picture](docs/eval_compress_examples.jpg)
-
-**As compression, text loses to a picture by one to three orders of magnitude.** A picture of about 300 bytes matches everything the text carries. The image model makes things worse, not better: it invents texture that isn't in the photo. So the text drawings are worth it only for the channel (they need no app and no decoder). Wherever a few hundred bytes of picture can get through, the picture wins.
-
-**3. Send the picture itself, as text.** That is what the [offline kit](#the-offline-kit) does. The picture is 128 px, base64 inside an ordinary SMS, decoded by the browser:
-- **Photos:** greyscale WebP at quality 5, contrast stretched: 284 to 1,400 bytes (3 to 14 SMS) for the six samples.
-- **Line drawings:** 1-bit PNG (the step pictures), which the kit can compare pixel by pixel.
-- **Zooms:** cropped from the full-size original the server keeps. A zoom shows detail the 128 px picture never had, at the cost of one more picture.
-
-Why greyscale WebP and not black and white, on the six samples at 128 px: 1-bit PNG at a fixed threshold, 1-bit at Otsu's threshold, then WebP at quality 20, 10 and 5. They cost about the same, but in black and white the bicycle turns to noise against the brick wall and the white sneaker disappears:
-
-![1-bit PNG vs greyscale WebP at 128 px](docs/kit_picture_formats.png)
-
-## How-to answers and pictures (experimental)
-
-"How do I shut off the gas at my meter?" gets numbered steps at once, written by Muse Spark from the Meta Model API's built-in web search. A step is marked confirmed when a cited source covers it, the sites are named, and the local emergency number is filled in. Pictures follow later, and only where they help:
-- **What's drawn:** before and after pictures of the object a step changes. Muse Image draws them in black and white, with no hands, bodies or arrows.
-- **Checks:** Muse Wonder (a different model) checks that the device looks the same everywhere and that the change is clear. This check agreed with hand labels on 15 of 19 pairs.
-- **Dropped:** web image search, pictograms, drawn hands and bodies, and arrows were all tried and dropped.
-
-## Weather radar
-
-The server reads RainViewer's latest radar frame, mapping its colours back to rain strength. The frame from 40 minutes earlier gives the rain's direction and speed, and Open-Meteo gives the next 2 hours at your spot. It answers: is it raining on you, where is the nearest rain, which way is it moving, and will it rain later. The reply comes as an 18-column SMS grid, a 58-column shaded map with a 2-hour sparkline, and a radar picture.
-
-![Radar picture](docs/radar_picture.jpg)
-
-## The offline kit
-
-A text map is limited to what characters can show. The **kit** is a single web page (`sim/kit.html`, 27.5 KB gzipped) that a person saves on their phone once, before they need it. After that it works with no connection. The server puts short codes inside an ordinary SMS, and the kit turns them back into what text can't show. Decoding uses only what the browser already has (PNG and WebP, deflate, Ed25519 signatures).
-
-```
-#P7k.2/14:3DQwdsDX9WFdO8yf…:df2e#     type P (picture), id 7k, part 2 of 14, base64, CRC-16
-```
-
-- **Maps** that the kit draws properly: streets, the zone, closures, the route.
-- **Signed alerts:** the kit says *Genuine* or *NOT genuine*, so a changed word is caught.
-- **Photos you can zoom into.** A photo arrives as a 128 px greyscale WebP (see [how picture compression works](#how-picture-compression-works)). Drag a box or tap a numbered part (SAM names them), and the kit writes a one-SMS reply such as `ZOOM 7k 2`. The server crops its full-size original, and the kit pastes the close-up over the picture.
-- **Routes that open in a map app:** the whole walk as an encoded polyline, which the kit turns into a GPX file for Organic Maps or OsmAnd to navigate offline.
-- **Words with accents.** One character outside the basic SMS alphabet (ã, ç, ê) cuts every SMS from 153 to 67 characters; packing the words keeps them at 153.
-- **A phrasebook** of checked how-to pictures already inside the kit, so only an id travels.
-- **From the phone:** photo codes, check-ins with GPS, `RESEND` for lost parts, and a QR code to pass a message to a phone with no signal.
-- **Everything is kept** (`evac/store.py`): each photo, zoom, trip, message and check-in is a record with a short id in a SQLite file, so `ZOOM 10d 1` or `RESEND 108 2` still works after the server restarts, a zoom remembers which picture it came from, and every check-in is kept as a report for responders.
-
-### Examples
-
-**A photo, then a closer look.** The Photo tab's bicycle, as the kit message (Muse described it; SAM 3.1 boxed and named its parts):
-
-```
-Photo: A black bicycle with a front basket is parked on a sidewalk leaning against a red brick wall.
-- The bicycle has a wire front basket holding a dark blue bag and a tan cloth
-- It is parked on a concrete sidewalk next to a curb on a street
-- The wall is made of weathered red bricks
-#Pna.1/14:UklGRmYFAABXRUJQVlA4…AoN0:ca7e#     ← "UklGR…" is "RIFF": a WebP
-   … 12 more parts …
-#Pna.14/14:grGXKoDEyW5yeDCeCll…AA==:10c0#
-#K0n.1/2:eyJpIjoibmEiLCJrIjpbW…YW4i:3280#      ← the named parts
-#K0n.2/2:LDE2LDQxLDksMThdXX0=:4585#
-                                                 17 SMS
-```
-
-The person taps part 2 in the kit, which writes the one-SMS reply `ZOOM na 2`. The answer is `Closer look at bicycle basket (part 2) in picture na:` and 14 parts of `#Z2z…`, a 1,368-byte WebP cropped from the original. The kit draws the picture with its numbered parts (left) and the close-up (right), and pastes the close-up over the picture:
-
-![The kit: a photo with numbered parts, and a zoom on the basket](docs/kit_zoom.jpg)
-
-**A walking route.** Rossio to Castelo de São Jorge. The words travel as a `T` code (the "ã" would make the plain SMS UCS-2), then the step's map and the whole route:
-
-```
-#Tue.1/2:LY4xCsJAEEX7nOKXCrJEG…uGoS:8ea1#    ← "Castelo de São Jorge: 0.7 km, about 9 min. Head E on Calçada do Carmo…"
-#Tue.2/2:Tq665CQYuLMi//cnWQCF3…Cw==:7c1b#
-#Mac.1/3:VZG/TsMwEIdfxbr5ItlOm…MXNm:b1ba#    ← the step's map
-#Mac.2/3:yawiNc9rduiMlDuELrSAt…600o:3ca6#
-#Mac.3/3:JTZuEFvbeiduHuk5nSHlc…P34B:79de#
-#G7c.1/1:c04sLknNyVdISVUIPrw4X…AA==:2888#    ← the route: walk-to-Castelo-de-Sao-Jorge.gpx, 28 points
-                                               6 SMS (the plain reply with its text map: 6)
-```
-
-**Words with accents.** "Comment couper l'eau en cas de fuite ?" from Paris: Muse's French answer is 5 SMS as plain text (UCS-2) and 2 SMS as a `T` code.
-
-**Measured** (`evals/kit/measure.py`, full table in [`evals/kit/RESULTS.md`](evals/kit/RESULTS.md)):
-- **Overall:** alerts, a walk and three answers take 44 SMS plain and 33 with the kit.
-- **Biggest wins:** the Manhattan fire alert (12 → 6 SMS) and a French answer (5 → 2).
-- **Against pictures over data:** a kit reply is 13–20× smaller than the small picture.
-- **Zoom:** a close-up of a quarter of a photo takes 3–19 SMS, against 14–146 SMS for the whole photo at that detail.
-- **Payback:** the page pays for itself after about 200 SMS saved.
-
-## Look closer: a question about a photo that stays on the phone
-
-The kit sends a photo at 128 px in grey. That is often enough, but sometimes the detail that decides the answer is a
-few pixels, or it's a colour. So the server doesn't guess: it asks the phone for just that part.
+The phone sends a photo as a 128 px grey sketch. That is often enough, but sometimes the detail that decides the
+answer is a few pixels, or it's a colour. So the server doesn't guess: it asks the phone for just that part
+(`evac/closer.py`).
 
 1. **The phone sends the question and the cheapest useful view:** the whole photo at 128 px, grey (about 10 texts).
-2. **Muse looks** (enlarged) and either answers, saying how sure it is, or asks for **one closer look**: a tight box
-   around the detail, drawn on any view so far (the whole photo, or an earlier close-up to zoom in further), whether
-   it needs colour, and what it wants to see there.
-3. **The phone's kit crops that box from the original**, in colour if asked, and sends it back by itself.
-4. **Again, with every view so far,** each labelled with where it sits in the photo, what it cost in texts and whether
-   it already shows that part at the photo's full resolution (a crop is never under 128 of the original's pixels, so
-   zooming further would show nothing new). It ends when Muse answers, or when the phone has sent 160 texts or eight
-   closer looks; then Muse must answer with what it has. The full photo never leaves the phone.
-5. **Detail, not only place.** A close-up normally comes back at 128 px; for small text or many small things (a
-   timetable, a shelf of labels) Muse asks for high detail (`H` on the ZOOM line): 256 px, grey at quality 20 instead
-   of 5 (a 6 blurred into an 8 at 5), about 3–4× the texts. A box that overlaps a view Muse already has (IoU 0.6) at
-   no more detail is refused and Muse is told why: on the bus timetable runs had asked eight times for the same 128 px
-   view of the whole table, which never got sharper.
+2. **Muse Spark looks** (every view enlarged to 512 px) and either answers, saying how sure it is, or asks for **one
+   closer look**: a tight box around the detail, drawn on any view so far (the whole photo, or an earlier close-up to
+   zoom in further), whether it needs colour, at what detail, and what it wants to see there.
+3. **The phone crops that box from its original**, in colour if asked, and sends it back by itself.
+4. **SAM 3.1 outlines the thing** Muse named ("spider", "fire extinguisher") on the close-up, and Muse gets its exact
+   place in the whole photo before deciding again.
+5. **Again, with every view so far,** each labelled with where it sits in the photo, its colour and detail, how many
+   times closer it is than the whole photo, what it cost in texts, and whether it already shows that part at the
+   photo's full resolution (a crop is never smaller than the picture it is sent as, so zooming further would show
+   nothing new). It ends when Muse answers, or when the phone has sent 160 texts or eight close-ups; then Muse must
+   answer with what it has. The full photo never leaves the phone.
 
-Boxes go out as `ZOOM <picture> x y w h` in the 128 px picture's pixels whichever view Muse drew them on: even the
-deepest useful zoom is several of those pixels wide, so the message format didn't need to change.
+**Rules that made it work,** each added after a failure in the evals:
 
-The same loop works for anything the phone holds and the server can't see in full: a page of a document, a label, a
-gauge. Here the test case is a spider that might be a black widow. At 128 px in grey it is a dark blob, and the red
-hourglass under its body, which decides the answer, shows only close up and in colour. A real run (`/closer` in the
-simulator; the photos were made with Muse Image):
+- **Answer only when sure.** While it can still look, Muse may not answer "can't tell" or "fairly sure". If it does,
+  it is asked once more and told how many looks it has left. Before this, runs gave up a shelf too early or hedged
+  after reading "EMPTY / RECHARGE".
+- **Colour when colour helps find the thing.** In grey an amber bottle looks like any other; runs zoomed in grey onto
+  the wrong bottle.
+- **Detail, not only place.** A close-up normally comes back at 128 px; for small text or many small things (a
+  timetable, a shelf of labels) Muse asks for high detail: 256 px, grey at WebP quality 20 instead of 5 (at 5 a 6
+  blurred into an 8), about 3–4× the texts. On the medicine cabinet one high-detail close-up of the shelves now reads
+  every label.
+- **No repeats.** A box that overlaps a view Muse already has (IoU ≥ 0.6) at no more detail is refused, and Muse is
+  told why. On a bus timetable runs had asked eight times for the same 128 px view of the whole table, which never got
+  sharper.
+- **Tight boxes.** A box much bigger than the detail costs texts and shows it no sharper.
 
-```
-You (11 SMS)   Is this a black widow?  + the photo at 128 px, grey
-Muse (2 SMS)   Not sure yet: I need a closer look at the dark spot under the shelf to see the shape and markings of
-               spider, in colour. Your kit will crop it from your photo; just tap Send.
-               ZOOM hw 77 13 38 32 C
-You (13 SMS)   the closer look, in colour, cropped by the kit from the original (1.3 KB)
-               [SAM 3.1 outlines "spider" in it, confidence 0.82]
-Muse (1 SMS)   Yes, this is a black widow - shiny black with the red hourglass mark underneath.
-               Do not touch it - black widow bites are venomous, keep people and pets away.
-```
-
-![Look closer: the phone, the original that stays on it, and what Muse saw each round](docs/closer_black_widow.jpg)
-
-**The cost:** 27 SMS, 3.8 KB in all, for a 254 KB photo (a real phone photo is 2–4 MB).
-
-**Where SAM 3.1 fits.** SAM outlines things by name, but it needs enough pixels. In the 128 px picture the spider
-is about 14 pixels, and no enlarging (4×, 8× sharpened, tiled) made SAM find it. Neither did asking Muse Image to
-restore the picture, which erased the spider altogether. It found things from about 25 px up (`evals/closer/RESULTS.md`).
-So Muse aims the first close-up from context ("the dark spot under the shelf"), and SAM works on the close-up, where the
-spider fills the frame: it outlines what Muse thinks the thing is (0.82–0.89 for the black widow, its box within 1% of SAM's
-on the full original) and Muse gets that exact place before deciding again.
-
-**The answers so far:** every live run answered correctly: the black widow 6 times out of 6, the look-alike (a
-glossy brown spider with no red mark) "not a black widow" 3 times out of 3. Most runs took one closer look. One took
-two: first a grey one to find out whether the dark shape was a spider, then a colour one at its belly. That is a
-handful of generated photos, not an evaluation. (That run was recorded when the reply still asked the person to tap
-Send; the kit now sends a close-up back by itself.)
-
-**Zooming in step by step.** A close-up can be drawn inside an earlier one, so Muse can find a thing first and then
-read it. A real run on an office corridor (`/closer`, `hard/extinguisher`, a 1600 px photo made with Muse Image):
+**A real run** on an office corridor (`/closer`, `hard/extinguisher`, a 1600 px photo made with Muse Image), zooming in
+three times, each close-up inside the last:
 
 ```
 You (12 SMS)   Is the fire extinguisher in this corridor ready to use?  + the photo at 128 px, grey
@@ -319,25 +57,63 @@ Muse (1 SMS)   No, it is not ready to use. It is marked EMPTY / RECHARGE.
                Do not use it - report it for recharge or replacement.
 ```
 
-59 texts both ways, for a 476 KB photo. The prompt makes Muse answer only when it is sure: while it can still ask,
-it may not answer "can't tell" or "fairly sure", and it asks for colour when the question names a colour or colour
-helps find the thing. Before that rule, runs on these photos gave up early, hedged after reading "EMPTY / RECHARGE",
-or zoomed in grey onto the wrong bottle (in grey an amber bottle looks like any other).
+59 texts both ways, for a 476 KB photo.
 
-**The same texts, three ways** (`evals/kit/three_ways.py`, report in `evals/kit/THREE_WAYS.md`, shown by `/compare`).
-Muse Spark answers one open question about one photo three ways, five times each: from the photo itself (a JPEG of
-at most 2,048 px: phone originals are too big to send whole); from the whole photo as WebP squeezed into the loop's
-median texts (WebP's best shot: 128, 256 and 384 px, the highest quality that fits, colour and grey; 192 and 512 px
-were never best); and through the loop with a simulated phone. A separate text-only call judges each answer against a
-reference (right, wrong, not sure), and an answer counts only when it is right and Muse said it was sure. The photos
-each hide the detail that decides the answer, and each passed a screen first (sure and right from the full photo,
-never from a 3–5 KB WebP). Four were made with Muse Image (`sim/samples/hard/`, prompts in `prompts.json`), four are
-real (`sim/samples/real/`, Wikimedia Commons). Dropped by the screen: the spiders (from the full black widow Muse said
-"a fake plastic toy spider"; a 3 KB colour WebP shows its red mark), Muse Image's snakes and brown recluse (band order
-and the violin mark weren't drawn clearly enough to be ground truth), and two real photos whose detail is big (street
-parking signs, a handwritten label on a box): a 5 KB WebP reads those, and the loop answers them in one close-up.
+**Where SAM 3.1 fits.** SAM outlines things by name, but it needs enough pixels. In the 128 px sketch a spider is
+about 14 pixels, and no enlarging (4×, 8× sharpened, tiled) made SAM find it. Neither did asking Muse Image to restore
+the picture, which erased the spider altogether. It found things from about 25 px up (`evals/closer/RESULTS.md`). So
+Muse aims the first close-up from context ("the dark spot under the shelf"), and SAM works on the close-ups, where the
+thing fills the frame: on the black widow it scored 0.82–0.89, its box within 1% of SAM's on the full original. A
+match counts from confidence 0.5 and when it is at least 15% of the close-up's side.
 
-| Photo | Question (answer) | The photo itself | WebP, same texts | Look closer |
+## A photo as text
+
+A code is `#<type><id>.<part>/<parts>:<base64>:<crc16>#` (`evac/codes.py`): at most 153 characters per part, in the
+basic SMS alphabet, so a part fits one SMS and any text channel carries it. Parts can arrive in any order; a damaged or
+missing part is named, and `RESEND <id> <part>` gets just that part again (the server keeps what it sent in its store).
+
+```
+#P7k.2/14:3DQwdsDX9WFdO8yf…:df2e#     type P (picture), id 7k, part 2 of 14, base64, CRC-16
+```
+
+- **`P`, the sketch:** a 128 px greyscale WebP at quality 5, contrast-stretched (`evac/smsimage.py`). A photo takes
+  700 B–1.4 KB, 8–15 texts. The phone picks a two-character id for it.
+- **`ZOOM <id> x y w h [C] [H]`, Muse's request:** a box in the sketch's pixels, whichever view Muse drew it on (even
+  the deepest useful zoom is several of those pixels wide, so the format didn't need to change); `C` for colour (WebP
+  quality 30), `H` for high detail (256 px).
+- **`Z`, a close-up:** the parent's id, the box it covers in the parent's pixels (4 × uint16 in 1/64 px), then the WebP.
+  `codes.answer_zoom` is what every phone runs: crop the original around the box with a little margin, square, never
+  smaller than the size it is sent at, and encode it.
+
+Sizes against sending a photo the normal way are in [evals/kit/WEBP_VS_NORMAL.md](evals/kit/WEBP_VS_NORMAL.md)
+(`evals/kit/webp_vs_normal.py`): a 3–6 MB phone photo becomes an 8–15 text sketch, and one colour close-up 11–22 texts.
+
+## The evidence: the same texts, three ways
+
+`evals/kit/three_ways.py` (report in [evals/kit/THREE_WAYS.md](evals/kit/THREE_WAYS.md), shown by `/compare`). Muse
+Spark answers one open question about one photo three ways, five times each:
+
+- **The photo itself,** a JPEG of at most 2,048 px (phone originals are too big to send whole).
+- **The whole photo as WebP squeezed into MuZip's median texts:** WebP's best shot, 128, 256 and 384 px at the highest
+  quality that fits, colour and grey (192 and 512 px were never best), the candidate with the most right answers
+  reported.
+- **MuZip,** through the router with a simulated phone that keeps the original (`sim/phones.py`).
+
+A separate text-only Muse call judges each answer against a reference (right, wrong, not sure), and an answer counts
+only when it is right and Muse said it was sure.
+
+**The photos.** Each hides the detail that decides the answer, and each passed a screen first: sure and right from the
+full photo, never from a 3–5 KB WebP. Four were made with Muse Image at 1600 px (`sim/samples/hard/`, prompts in
+`prompts.json`), four are real (`sim/samples/real/`, Wikimedia Commons, 2,600–4,000 px). Dropped by the screen:
+
+- **The spiders:** from the full black widow Muse said "a fake plastic toy spider", and a 3 KB colour WebP shows its
+  red mark.
+- **Muse Image's snakes and brown recluse:** the band order and the violin mark weren't drawn clearly enough to be
+  ground truth.
+- **Two real photos whose detail is big** (street parking signs, a handwritten label on a box): a 5 KB WebP reads
+  them, and MuZip answers them in one close-up. They stay in the loop's eval as controls.
+
+| Photo | Question (answer) | The photo itself | WebP, same texts | MuZip |
 |---|---|---|---|---|
 | Medicine cabinet (generated) | I have a headache. Which of these can I take, and where? (the ibuprofen, bottom shelf) | 412 KB: 5/5 | 66 texts: 0/5 | 69 texts: **5/5** |
 | Medicine cabinet (generated) | Anything here for allergies? Which, and where? (loratadine, middle shelf) | 412 KB: 5/5 | 102 texts: 0/5 | 103 texts: **5/5** |
@@ -348,33 +124,41 @@ parking signs, a handwritten label on a box): a 5 KB WebP reads those, and the l
 | Milk aisle (real) | Any almond milk? Which brand? (Almond Breeze) | 3.3 MB: 5/5 | 91 texts: 0/5 (5 hedged) | 93 texts: **5/5** |
 | Old pharmacy (real) | Anything with cinnamon? What does its label say? (SIR. CINNAMOMI) | 5.8 MB: 5/5 | 86 texts: 0/5 | 87 texts: **4/5** |
 
-The report also sets the loop against how a photo is normally sent. An iPhone photo sent on WhatsApp arrived at the
-bridge as a 2160×3840 JPEG of 543 KB and 811 KB (Twilio keeps the media; measured, not estimated); the report's own
-estimates (a 1,600 px JPEG for WhatsApp, `sips` HEIC for the iPhone's file) are lower than that.
+MuZip 30/40, WebP 0/40, the photo itself 36/40. From WebP Muse made answers up: "take the aspirin", "there's
+Benadryl", "Paracetamol 500 mg" (it was propranolol), "no almond milk visible". Before high detail and the no-repeat
+rule, MuZip scored 17/20 on the generated photos and 7/20 on the real ones; after, 20/20 and 10/20.
 
-**The loop's own eval** (`evals/loop/run.py`, `dataset.json`): the eight questions plus the two easy ones, three runs
-each, all at once, in about 80 s; results are kept by a hash of the loop's code, and `--save` makes a run the baseline
-(`BASELINE.json`, `RESULTS.md`) that later runs are compared with. The baseline: generated 12/12, real 6/12, easy 6/6
-in one close-up each (median 36 texts). A budget of 240 texts instead of 160 got the timetable to 2/3 but cost 45
-more texts and didn't help the price tag, so it wasn't kept.
+**How a photo is normally sent.** An iPhone photo sent on WhatsApp arrived at the bridge as a 2160×3840 JPEG of 543 KB
+and 811 KB (Twilio keeps the media; measured, not estimated). The report's own estimates (a 1,600 px JPEG for WhatsApp,
+`sips` HEIC for the iPhone's file) are lower than that, so its "MuZip vs WhatsApp" column is conservative.
+
+## The loop's own eval
+
+`evals/loop/run.py` runs only MuZip on `evals/loop/dataset.json` (the eight questions plus the two easy controls),
+three runs each, all at once, in about 80 s, and prints right-and-sure, hedged and wrong per question with the median
+texts, close-ups and seconds, against `BASELINE.json`. Results are kept by a hash of the loop's code (`out/eval/loop/`),
+so an unchanged loop isn't re-run; `--save` makes a run the baseline and writes `RESULTS.md`.
+
+The baseline: generated 12/12, real 6/12, easy 6/6, each easy one in a single close-up (median 36 texts). A budget of
+240 texts instead of 160 got the timetable to 2/3 but cost 45 more texts and didn't help the price tag, so it wasn't
+kept.
 
 ## On WhatsApp
 
-For a demo without an SMS number, WhatsApp stands in for the text channel: a person messages the WhatsApp number
-(Twilio's sandbox) and gets exactly what they would get by SMS.
+WhatsApp is the text channel (`evac/whatsapp.py`, `sim/whatsapp_server.py`): a person messages the Muse number
+(Twilio's sandbox).
 
-- **A message** goes to Muse and its tools; the reply is the SMS version, map included.
-- **A photo with a question** runs the look-closer loop. Muse sees only the 128 px grey version and asks for closer
-  looks, and the bridge plays the phone's kit, cropping each one from the original. The person sees every step.
-- **A shared location** is remembered for alerts and directions. Muse asks for it once, then answers the question
-  it was waiting on.
-- **A photo that never leaves the computer.** With WhatsApp on a laptop, the offline kit (`/kit.html`) stands in for
-  the phone: pick a photo and a question in its Send tab and press **Send in WhatsApp**. WhatsApp opens with the
-  photo already turned into text codes (128 px, ~10–20 texts) in the chat; press Enter. When Muse asks for a closer
-  look, paste its reply into the kit's Read tab: the kit crops the original and **Send in WhatsApp** fills in the
-  close-up. The kit only fills in the chat; it never sends anything by itself.
+- **A photo with a question** runs the loop. Muse sees only the 128 px sketch, and the bridge plays the phone's part,
+  cropping each close-up from the photo it received. The person sees every step and what it cost.
+- **A message with codes** goes straight to the router: what MuZip on a Mac sends, so the photo never leaves the
+  computer (below).
+- **Any other message** gets a plain answer from Muse Spark.
 
-A real run (no Twilio, replies collected):
+The bridge answers Twilio at once (Twilio waits at most 15 s; Muse can take longer) and replies through Twilio's REST
+API, split at 1,500 characters. It checks Twilio's signature against `PUBLIC_URL/whatsapp`, records every message in
+and out (`wa_msg` records), and records the size of every photo WhatsApp delivers (`wa_media`).
+
+A real run (no Twilio, replies collected; recorded before high detail existed):
 
 ```
 You            [photo] Is this a black widow?
@@ -388,29 +172,11 @@ Muse           Yes, this is a black widow. The red hourglass mark on its black b
                Do not touch it and keep people and pets away.
 ```
 
-To set it up (Twilio, the bridge, a tunnel, MuZip and the test phone), see [README.md](README.md#on-whatsapp).
+**MuZip on a Mac** (`sim/muzip.py`, page on port 8780) sends from your own WhatsApp account: drop a photo, ask, and it
+sends the question with the sketch as codes, reads Muse's replies from the bridge's log, and answers every ZOOM by
+cropping the photo on the Mac. WhatsApp Desktop is filled in with `whatsapp://send?…` and `out/MuZip.app`
+(`sim/make_muzip_app.sh`) presses Return: a small helper that holds the Accessibility permission and takes requests
+through files in `/tmp/muzip-<uid>/`, so it never touches ~/Documents (macOS's per-app Documents check stalled an
+earlier version). A real exchange from a WhatsApp account took about 34 s for a spider photo with two close-ups.
 
-## A community hub (demo)
-
-Professional responders have their own radios and dispatch. For the first hours of a disaster, though, it's
-neighbours who check on each other, and their group chats die with mobile data. The hub is the coordinator's side:
-one laptop with the only working connection, and a dashboard for a neighbourhood whose phones can only text.
-
-![The Neighbors Hub dashboard during the Red Hook drill](docs/hub_dashboard.jpg)
-
-- **One signed alert for everyone.** The city's warning goes back out as kit messages: the words, a map and a signature. Neighbours inside the zone get their own way out, and a forged copy shows as *NOT genuine*.
-- **Check-ins become a map.** One tap in the kit sends status, people, battery and GPS. Muse suggests who to help first.
-- **Photos are triaged.** Muse rates a photo report and SAM finds the part worth a closer look. The hub asks *that phone* for a zoom, and the phone crops its own full-size original.
-- **Volunteers get walks that avoid the danger.** Walks go around the flood and around anything marked on the map. Marking a downed line re-routes every volunteer and warns the neighbours nearby.
-- **Everyone in their own language.** A neighbour who writes in Portuguese gets answers in Portuguese, packed so the accents don't cost double.
-- **The night's data bill.** In the drill, everything the hub sent and received came to 187 texts (498 SMS), 69.7 KB, under 3% of one phone photo. That covers an alert to 42 phones, 39 check-ins, two photo reports, a close-up, the warnings and two volunteer walks.
-
-[`demo/README.md`](demo/README.md) has the story (a fictional drill in Red Hook, Brooklyn), the cast, the beats with a voice-over line each, what's real and what's simulated, and how to make the video.
-
-## Why the text maps line up
-
-- **SMS:** iPhone Messages uses SF Pro, a proportional font. The SMS maps use only characters measured to be exactly one digit wide (`= # + < > 0 $ ¤ £ ¥ ×`, figure spaces for blanks). Each row's width error is logged as `worst row drift`, which must stay under about 0.07 cells.
-- **WhatsApp:** it shows monospace text but can't colour it, so its maps use box drawing (`━ ┃ ╋`) and shading (`░▒▓█`), all one cell wide in Menlo.
-- **"You":** the 🔴 dot is the only colour.
-
-![SMS replies in SF Pro](docs/preview_replies.jpg)
+To set it up (Twilio, the bridge, a tunnel, MuZip and the test phone), see [README.md](README.md#over-whatsapp).
