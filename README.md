@@ -27,7 +27,13 @@ close-ups the red hourglass settles it.
 ![Look closer: the phone's thread, the crops on the original, and what Muse saw](docs/closer_black_widow.jpg)
 
 In a real run, the whole exchange was 43 texts (6 KB) against a 254 KB photo. The same loop ran from a real WhatsApp
-account in 34 s. Muse may ask for at most three close-ups before it has to answer.
+account in 34 s.
+
+Muse can zoom in step by step: a close-up can be drawn inside an earlier close-up, and it is told what each one cost
+and when a close-up already shows the photo at full resolution. It answers only when it is sure, or when the phone
+has sent 80 texts or six close-ups. On a corridor photo (*"Is the fire extinguisher ready to use?"*) a real run asked
+for the extinguisher in colour, then its gauge and label inside that close-up, then the gauge alone, and answered
+"No, it is not ready to use. It is marked EMPTY / RECHARGE." (59 texts both ways, for a 476 KB photo).
 
 ### 2. One signed alert for everyone, with a map
 
@@ -77,6 +83,36 @@ column is one colour close-up of a quarter of the picture. The whole black-widow
 and three replies) was 43 SMS, 6 KB, against 254 KB for the file. A real phone photo is 2–4 MB, about ten times these
 samples, so the saving against a real photo is larger.
 
+### The same texts, three ways
+
+Shrinking a photo isn't the trick: classical compression can squeeze a whole photo into a few kilobytes too. The
+difference is what gets thrown away. Classical compression keeps what your eye would notice, for any question; the
+kit keeps what this question needs, and Muse decides what that is. `evals/kit/three_ways.py` asks Muse Spark the same
+open question three ways, five times each: from the photo itself (at most 2,048 px), from the whole photo as WebP
+squeezed into the texts the loop used (its best shot: 128, 256 and 384 px at the highest quality that fits, colour
+and grey), and through the look-closer loop. A separate Muse call judges each answer against a reference, and an
+answer counts only when it is right and Muse says it is sure. Four photos were made with Muse Image (1600 px), four
+are real photos from Wikimedia Commons (2,600–4,000 px, `sim/samples/real/CREDITS.md`); each hides a small detail that
+decides the answer and passed a screen first (sure and right from the full photo, never from a 3–5 KB WebP).
+
+| Photo | Question (answer) | The photo itself | WebP, same texts | Look closer |
+|---|---|---|---|---|
+| Medicine cabinet (generated) | I have a headache. Which of these can I take, and where? (the ibuprofen, bottom shelf) | 412 KB: 5/5 | 66 texts: 0/5 | 69 texts: **5/5** |
+| Medicine cabinet (generated) | Anything here for allergies? Which, and where? (loratadine, middle shelf) | 412 KB: 5/5 | 102 texts: 0/5 | 103 texts: **5/5** |
+| Leg after a hike (generated) | What's that on my leg? (a tick) | 581 KB: 0/5 (5 hedged) | 83 texts: 0/5 (5 hedged) | 85 texts: **5/5** |
+| Office corridor (generated) | Can I use this fire extinguisher? (no: EMPTY / RECHARGE) | 476 KB: 5/5 | 52 texts: 0/5 | 53 texts: **5/5** |
+| Bus stop timetable (real) | Saturday, 9 am: when's the next bus? (10:06) | 4.7 MB: 1/5 | 181 texts: 0/5 | 183 texts: 1/5 |
+| Milk aisle (real) | How much is a gallon of whole milk? ($3.69) | 1.0 MB: 5/5 | 166 texts: 0/5 | 169 texts: 0/5 |
+| Milk aisle (real) | Any almond milk? Which brand? (Almond Breeze) | 3.3 MB: 5/5 | 91 texts: 0/5 (5 hedged) | 93 texts: **5/5** |
+| Old pharmacy (real) | Anything with cinnamon? What does its label say? (SIR. CINNAMOMI) | 5.8 MB: 5/5 | 86 texts: 0/5 | 87 texts: **4/5** |
+
+In all: the loop 30/40, WebP at the same size 0/40 (from WebP Muse also made answers up: "take the aspirin", "there's
+Benadryl", "Paracetamol 500 mg"), the photo itself 36/40. The loop's weak spot is dense small text in a big real photo
+(a timetable, a price tag across an aisle): it runs out of texts. A photo sent from an iPhone on WhatsApp arrived as a
+2160×3840 JPEG of 543–811 KB (measured through the bridge), so even the timetable's 183 texts (18 KB) are 30× less.
+`/compare` in the simulator shows each question three ways; the full results are in
+[`evals/kit/THREE_WAYS.md`](evals/kit/THREE_WAYS.md). Eight photos are a demonstration, not a benchmark.
+
 ## How Meta's models are used
 
 | Model | What it does here |
@@ -120,19 +156,22 @@ has examples of every code.
 .venv/bin/python sim/server.py
 ```
 
-Open http://127.0.0.1:8765/demo in a 1920 × 1080 window. It plays the three use cases step by step with a caption
-for each step, on the real server and with the real kit. Only the neighbours' phones are simulated.
+Open http://127.0.0.1:8765/demo in a 1920 × 1080 window. It plays the demo step by step with a caption for each
+step, on the real server and with the real kit. Only the phones are simulated. The voice-over script is
+[`demo/SCRIPT.md`](demo/SCRIPT.md).
 
 | Key | What it does |
 | --- | --- |
 | → or space | Next step |
-| 1, 2, 3 | Jump to a scene: look closer, the signed alert, check-in and a photo |
+| 1–4 | Jump to a scene: three ways, look closer, the signed alert, check-in and a photo |
 | R | Show what actually arrives on the phone (the plain texts) instead of what the kit shows |
 | C | Hide the captions, to record clean and add a voice-over later |
 
-Scene 1 runs the look-closer loop (about 30 s, live with Muse and SAM). Scenes 2 and 3 run the Red Hook drill: the
-Okafors' phone, read by the kit, beside the hub's dashboard. Each scene can also be opened on its own:
+Scene 1 shows the three-way comparison (`/compare`, from the last run of `evals/kit/three_ways.py`). Scene 2 runs the
+look-closer loop on the extinguisher (about a minute, live with Muse and SAM). Scenes 3 and 4 run the Red Hook drill:
+the Okafors' phone, read by the kit, beside the hub's dashboard. Each scene can also be opened on its own:
 
+- `/compare`: one photo and question, three ways.
 - `/closer`: look closer.
 - `/phone?who=+15550113`: one neighbour's phone.
 - `/dashboard`: the hub.
@@ -212,11 +251,11 @@ The same server answers more than the kit's three use cases. These modes are not
 | The kit | `sim/kit.js`, `sim/kit.html`, `evac/codes.py` (codes, signatures, zoom crops), `evac/smsimage.py` (the 128 px picture) |
 | Look closer | `evac/closer.py` (the loop), `evac/sam.py`, `sim/closer.html`, `sim/closer_demo.py`, `sim/phones.py` (phones that keep their originals) |
 | Hub | `evac/hub.py`, `sim/dashboard.html`, `sim/redhook.py` (the drill), `sim/phone.html` (a neighbour's phone) |
-| Demo | `sim/demo.html` (the three scenes), `demo/` (story and video tooling) |
+| Demo | `sim/demo.html` (the four scenes), `sim/compare.html` (three ways), `demo/` (story, script, video tooling) |
 | Router and store | `evac/router.py` (codes first, then Muse and its tools), `evac/store.py` (every photo, zoom, message and report, in SQLite) |
 | WhatsApp | `evac/whatsapp.py`, `sim/whatsapp_server.py`, `sim/wa_phone.py`, `sim/muzip.py` |
 | Other modes | `evac/pipeline.py`, `evac/directions.py`, `evac/radar.py`, `evac/photo.py`, `evac/howto.py`, the map renderers |
-| Tests and evals | `tests/` (offline), `evals/` (kit sizes, SAM on small pictures, drawings) |
+| Tests and evals | `tests/` (offline), `evals/` (kit sizes, three ways to send a photo, SAM on small pictures, drawings) |
 
 `CLAUDE.md` describes how the pieces connect.
 

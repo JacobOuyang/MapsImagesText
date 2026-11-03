@@ -21,7 +21,7 @@
   .stage { position:absolute; inset:0; display:none; }
   .stage.on { display:flex; }
   iframe { border:0; background:var(--bg); }
-  #s1 iframe { width:100%; height:100%; }
+  #s0 iframe, #s1 iframe { width:100%; height:100%; }
   #hubStage { gap:0; }
   #hubStage .phone { width:420px; flex:none; height:100%; }
   #hubStage .hubwrap { flex:1; position:relative; overflow:hidden; border-left:1px solid var(--line); }
@@ -34,13 +34,14 @@
 </head>
 <body>
 <header>
-  <h1>Pictures in a text message</h1><span class="sub">The kit: a page saved on the phone that turns plain SMS into photos, maps and signed alerts.</span>
+  <h1>MuZip</h1><span class="sub">Muse asks for the part of the photo it needs; the photo stays on the phone. Over plain texts.</span>
   <div class="grow"></div>
   <div class="scenes" id="scenes"></div>
   <button id="raw" title="R">Plain texts</button>
   <span id="step"></span><button id="next" title="→ or space">Next ▸</button>
 </header>
 <main>
+  <div class="stage" id="s0"><iframe id="compare" title="Three ways" src="/compare?photo=extinguisher"></iframe></div>
   <div class="stage" id="s1"><iframe id="closer" title="Look closer"></iframe></div>
   <div class="stage" id="hubStage">
     <iframe class="phone" id="phone" title="A neighbour's phone" src="/phone?who=%2B15550113&hide=rumour"></iframe>
@@ -49,19 +50,29 @@
 </main>
 <div class="caption" id="caption"></div>
 <script>
-// The demo, scene by scene, for recording the video. → / space: next step; 1-3: jump to a scene; R: the phone's plain
+// The demo, scene by scene, for recording the video. → / space: next step; 1-4: jump to a scene; R: the phone's plain
 // texts instead of what the kit shows; C: hide the captions (record clean, add voice-over later).
-// Scene 1 drives sim/closer.html; scenes 2 and 3 drive the Red Hook drill (sim/redhook.py) through /api/demo/beat and
-// show one neighbour's phone (sim/phone.html: the Okafors) beside the hub's dashboard.
+// Scene 1 shows sim/compare.html (evals/kit/three_ways.py's measured runs); scene 2 drives sim/closer.html; scenes 3
+// and 4 drive the Red Hook drill (sim/redhook.py) through /api/demo/beat and show one neighbour's phone
+// (sim/phone.html: the Okafors) beside the hub's dashboard.
 const $ = id => document.getElementById(id);
 const SCENES = [
+  {name: 'Three ways', stage: 's0', steps: [
+    {photo: 'extinguisher', say: 'Is this fire extinguisher ready to use? The photo itself is half a megabyte: thousands of texts.',
+     note: 'Every answer on this page is Muse Spark\'s, measured over five runs.'},
+    {say: 'Squeeze the whole photo into the same few kilobytes with classical compression, and Muse says it looks ready. It isn\'t.',
+     note: 'WebP got its best shot: every size and quality that fits, colour and grey.'},
+    {say: 'MuZip spends the same texts only where the question needs them. EMPTY, RECHARGE: not ready to use.',
+     note: 'Classical compression keeps what you\'d notice. MuZip keeps what you need to know.'},
+    {photo: 'medicine_headache', say: 'The same in a cabinet of thirty look-alike bottles: which one is for a headache?'},
+    {photo: 'tick', say: 'And on a tick a few pixels wide.'}]},
   {name: 'Look closer', stage: 's1', steps: [
-    {go: 'closer', say: 'A photo of a spider, and no data, only SMS. The kit sends it as about ten texts: 128 pixels, grey.',
+    {go: 'closer', say: 'How it works. The phone sends the question and the whole photo at 128 pixels, in grey: about ten texts.',
      note: 'Muse Spark sees only that tiny picture. The full photo stays on the phone.'},
-    {say: 'Not sure, Muse asks for a closer look at one part. The kit crops it from the original and sends it back as text.',
-     note: 'SAM 3.1 outlines the spider in each close-up; Muse is told where it is in the whole photo.'},
-    {say: 'In colour, the red hourglass decides it: a black widow. About 40 texts (6 KB) in all; the photo never left the phone.',
-     note: 'Each close-up is chosen by Muse Spark, cropped on the phone, and checked by SAM 3.1.'}]},
+    {say: 'Muse asks for a closer look at one part, in colour. The phone crops it from its own photo and sends it back by itself.',
+     note: 'SAM 3.1 outlines the thing in each close-up; Muse is told where it is in the whole photo.'},
+    {say: 'Then a closer look inside that one, until Muse is sure. EMPTY, RECHARGE: not ready to use.',
+     note: 'Muse zooms in step by step and answers only when it is sure.'}]},
   {name: 'Signed alert', stage: 'hubStage', steps: [
     {beat: 'setup', say: 'Red Hook, Brooklyn, a flood drill at night. Forty neighbours whose phones can only text; one hub with a connection.',
      note: 'Every neighbour has the kit: one page saved on the phone before the storm.'},
@@ -97,7 +108,8 @@ function show() {
 }
 function setRaw(r) { raw = r; $('raw').classList.toggle('on', r); $('phone').contentWindow.postMessage({raw: r}, '*'); }
 async function run(st) {
-  if (st.go === 'closer') $('closer').src = '/closer?sample=black_widow&q=' + encodeURIComponent('Is this a black widow?') + '&auto=1';
+  if (st.go === 'closer') $('closer').src = '/closer?sample=hard/extinguisher&q=' + encodeURIComponent('Is the fire extinguisher in this corridor ready to use?') + '&auto=1';
+  if (st.photo) $('compare').contentWindow.postMessage({photo: st.photo}, '*');
   if ('raw' in st) setRaw(st.raw);
   if (st.rumour) $('phone').contentWindow.postMessage({hide: []}, '*');
   if (st.beat) {
@@ -122,7 +134,7 @@ $('next').onclick = next; $('raw').onclick = () => setRaw(!raw);
 addEventListener('resize', fit);
 addEventListener('keydown', e => {
   if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
-  else if ('123'.includes(e.key) && e.key) enter(+e.key - 1);
+  else if (/^[1-9]$/.test(e.key) && +e.key <= SCENES.length) enter(+e.key - 1);
   else if (e.key === 'r' || e.key === 'R') setRaw(!raw);
   else if (e.key === 'c' || e.key === 'C') document.body.classList.toggle('clean');
 });

@@ -91,11 +91,16 @@ def _split(body):
     return [c[i:i + MAX_BODY] for c in out + [cur] for i in range(0, max(1, len(c)), MAX_BODY)]
 
 
-def _download(url):
+def _download(url, who=""):
+    """The photo exactly as WhatsApp delivered it. Its size is kept (a `wa_media` record) to set MuZip against how
+    WhatsApp itself sends a photo."""
     auth = (_env("TWILIO_ACCOUNT_SID"), _env("TWILIO_AUTH_TOKEN")) if _env("TWILIO_AUTH_TOKEN") else None
     r = requests.get(url, auth=auth, timeout=60)
     r.raise_for_status()
-    return Image.open(io.BytesIO(r.content)).convert("RGB")
+    img = Image.open(io.BytesIO(r.content))
+    store.new("wa_media", who=who, meta={"bytes": len(r.content), "type": r.headers.get("Content-Type", ""), "size": list(img.size),
+                                         "format": img.format, "at": time.time()})
+    return img.convert("RGB")
 
 
 # ---------- one incoming message ----------
@@ -133,7 +138,7 @@ def reply(params):
     if body.lower() in ("help", "hi", "hello", "start", "?") and not has_photo:
         return send(who, HELP)
     if has_photo:
-        return look_closer(who, _download(params["MediaUrl0"]), body or "What is this?", user["where"])
+        return look_closer(who, _download(params["MediaUrl0"], who), body or "What is this?", user["where"])
     if codes.CODE.search(body):  # the kit sent codes (the photo never left the person's computer): as by SMS
         out = router.handle(body, user["where"] or (0.0, 0.0), who=who)
         return send(who, out.get("kit") or out.get("sms") or out.get("text") or "I couldn't read those codes.")
@@ -167,9 +172,9 @@ def look_closer(who, img, question, at):
         m = codes.ZOOM.search(text)
         if not m or m.group(1) != pic:
             return send(who, text or "I couldn't work that out.")
-        nums = [int(x) for x in m.group(2).split()]
-        words = text[:m.start()].replace("Your kit will crop it from your photo; just tap Send.", "").strip()
-        data, region, box, size = codes.crop_zoom(img, (0, 0, img.width, img.height), smsimage.fit(img).size, nums, colour=bool(m.group(3)))
-        message = codes.text(codes.parts("Z", codes.zoom_head(pic, box) + data, pic[0] + "z"))
-        send(who, "%s\n(Your phone sends that part of the photo%s: %d texts.)" % (words, " in colour" if m.group(3) else "", codes.sms_parts(message)))
+        words = text[:m.start()].replace("Your kit crops it from your photo and sends it back.", "").strip()
+        message = codes.answer_zoom(img, m, pic)[0]
+        o = codes.zoom_options(m)
+        send(who, "%s\n(Your phone sends that part of the photo%s%s: %d texts.)" % (words, " in colour" if o["colour"] else "",
+                                                                                 " in high detail" if o["side"] else "", codes.sms_parts(message)))
     send(who, "I couldn't work that out.")

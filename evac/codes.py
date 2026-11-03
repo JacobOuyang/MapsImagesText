@@ -150,8 +150,24 @@ def picture(img, tones=True, parts=None, ident=None):
     return out
 
 
-# "ZOOM 3f 40 22 30 30" or "ZOOM 3f 2", and " C" at the end for colour.
-ZOOM = re.compile(r"\bZOOM\s+([0-9a-z]{2,4})((?:\s+\d+){1,4})(\s+C)?\b", re.I)
+# "ZOOM 3f 40 22 30 30" or "ZOOM 3f 2", then flags: " C" for colour, " H" for high detail (HIGH px, not 128).
+ZOOM = re.compile(r"\bZOOM\s+([0-9a-z]{2,4})((?:\s+\d+){1,4})((?:\s+[CH]\b)*)", re.I)
+HIGH = 256
+
+
+def zoom_options(m):
+    """A ZOOM match's flags -> crop_zoom's keyword arguments."""
+    flags = (m.group(3) or "").upper().split()
+    return {"colour": "C" in flags, "side": HIGH if "H" in flags else None}
+
+
+def answer_zoom(img, m, ident):
+    """What a phone's kit does with a ZOOM for its own photo `img` (sent as the 128 px picture `ident`): crop the
+    original and make the Z code. -> (the message to send back, the WebP bytes)."""
+    nums = [int(x) for x in m.group(2).split()]
+    from . import smsimage
+    data, region, box, size = crop_zoom(img, (0, 0, img.width, img.height), smsimage.fit(img).size, nums, **zoom_options(m))
+    return text(parts("Z", zoom_head(ident, box) + data, ident[0] + "z")), data
 
 
 def zoom(message):
@@ -178,28 +194,32 @@ def zoom(message):
         what = "the area you marked"
     else:
         return "Send ZOOM, the picture's id, then a part number or a box: x y width height.", []
-    data, region, box, size = crop_zoom(img, (x0, y0, x1, y1), (w, h), (bx, by, bw, bh), colour=bool(m.group(3)))
+    data, region, box, size = crop_zoom(img, (x0, y0, x1, y1), (w, h), (bx, by, bw, bh), **zoom_options(m))
     child = store.new("zoom", file=rec["file"], parent=ident, box=box, meta={"region": region, "size": size, "parts": []})
     out = encode("Z", zoom_head(ident, box) + data, child)
     return "Closer look at %s in picture %s:" % (what, ident), out
 
 
-def crop_zoom(img, region, size, box, colour=False):
+def crop_zoom(img, region, size, box, colour=False, side=None):
     """A closer look at `box` (x, y, w, h in the pixels of a picture that showed `region` of `img` at `size`) ->
     (WebP bytes, the crop's region in img, the crop as a box in the picture's pixels, the size it is sent at). The
-    crop has a little margin, is square-ish, and is never smaller than a picture's own 128 px (past the original's
+    crop has a little margin, is square-ish, and is never smaller than the picture it is sent as (past the original's
     resolution a zoom shows nothing new). The server crops its kept originals this way; a phone, its own photos.
-    colour=True sends the crop in colour (when colour decides the answer)."""
+    colour=True sends the crop in colour (when colour decides the answer); side=HIGH sends it at 256 px instead of
+    128 (grey at quality 20, not 5), for small text or many small things (about 3-4x the texts)."""
     from . import smsimage
+    side = side or smsimage.SIDE
     (x0, y0, x1, y1), (w, h), (bx, by, bw, bh) = region, size, box
     sx, sy = (x1 - x0) / w, (y1 - y0) / h
     cx, cy = x0 + (bx + bw / 2) * sx, y0 + (by + bh / 2) * sy
-    half = max(max(bw * sx, bh * sy) * 0.6, smsimage.SIDE / 2)
+    half = max(max(bw * sx, bh * sy) * 0.6, side / 2)
     rx0, ry0 = max(0, cx - half), max(0, cy - half)
     rx1, ry1 = min(img.width, cx + half), min(img.height, cy + half)
     crop = img.crop((round(rx0), round(ry0), round(rx1), round(ry1)))
     box = [(rx0 - x0) / sx, (ry0 - y0) / sy, (rx1 - rx0) / sx, (ry1 - ry0) / sy]
-    return smsimage.webp(crop, colour=colour), [rx0, ry0, rx1, ry1], box, list(smsimage.fit(crop).size)
+    quality = 20 if side > smsimage.SIDE else 5  # high detail is asked for to read small text: q5 blurs a 6 into an 8
+    return (smsimage.webp(crop, side=side, quality=quality, colour=colour), [rx0, ry0, rx1, ry1], box,
+            list(smsimage.fit(crop, side).size))
 
 
 def zoom_head(parent, box):

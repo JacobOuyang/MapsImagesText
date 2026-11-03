@@ -78,9 +78,9 @@ a session takes about 30 s (six personal routes); the rest take seconds. Streets
 ## The video
 
 To record it by hand (screen recording plus a voice-over), open http://127.0.0.1:8765/demo in a 1920 × 1080
-window. It plays the kit's three use cases, look closer, the signed alert, and check-in with a photo, one step per
-→ key, with a caption for each step (C hides them). Scenes 2 and 3 are this drill, seen from the Okafors' phone beside
-the dashboard.
+window. It plays four scenes, the three-way comparison, look closer, the signed alert, and check-in with a photo, one
+step per → key, with a caption for each step (C hides them). Scenes 3 and 4 are this drill, seen from the Okafors'
+phone beside the dashboard. The voice-over, section by section with what is on screen, is [`SCRIPT.md`](SCRIPT.md).
 
 To render the drill from screenshots instead, with the simulator running:
 

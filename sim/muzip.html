@@ -85,7 +85,7 @@ $('send').onclick = async () => {
 };
 
 function bubble(t) {
-  const n = (t.text.match(CODE) || []).length, words = t.text.replace(CODE, '').replace(/\s*ZOOM\s+\S+(\s+\d+){4}(\s+C)?/i, '').trim();
+  const n = (t.text.match(CODE) || []).length, words = t.text.replace(CODE, '').replace(/\s*ZOOM\s+\S+(\s+\d+){4}(\s+[CH]\b)*/i, '').trim();
   const body = esc(words) + (n ? `${words ? '<br>' : ''}<span class="codes">＋ ${n} code part${n > 1 ? 's' : ''} (${t.from === 'you' ? 'made by the kit' : 'for the kit'})</span>` : '');
   return `<div class="b ${t.from}">${body}${t.from !== 'note' ? `<span class="meta">${t.from === 'you' ? 'you' : 'Muse'} · ${t.parts} text${t.parts > 1 ? 's' : ''}</span>` : ''}</div>`;
 }

@@ -48,7 +48,7 @@
 const $ = id => document.getElementById(id), Q = new URLSearchParams(location.search);
 const WHO = Q.get('who') || '+15550113';
 let raw = Q.get('raw') === '1', hide = (Q.get('hide') || '').split(',').filter(Boolean), shown = '', busy = false;
-const ZOOM_LINE = /\s*ZOOM\s+\S+(\s+\d+){4}(\s+C)?/i;
+const ZOOM_LINE = /\s*ZOOM\s+\S+(\s+\d+){4}(\s+[CH]\b)*/i;
 
 async function draw(d) {
   const key = raw + '|' + hide + '|' + d.texts.length; if (key === shown || busy) return; busy = true;
@@ -66,7 +66,7 @@ async function draw(d) {
     const kitted = out.childNodes.length > 0;
     if (words && !(mine && kitted)) { b.textContent = words; frag.appendChild(b); }
     if (t.dir !== 'in' && ZOOM_LINE.test(t.text))
-      b.insertAdjacentHTML('beforeend', '<div class="ask">↩ The kit crops that part of your photo, which never left this phone. Tap Send.</div>');
+      b.insertAdjacentHTML('beforeend', '<div class="ask">↩ The kit crops that part of your photo, which never left this phone, and sends it back by itself.</div>');
     if (kitted) {
       const k = document.createElement('div'); k.className = 'kit' + (mine ? ' r' : '');
       k.appendChild(Object.assign(document.createElement('div'), {className: 'tag', textContent: mine ? 'Made by the kit' : 'Read by the kit'}));

@@ -98,12 +98,12 @@ function pictureOf(text) {  // the picture a message carries (a photo or a close
 function drawThread() {
   const th = $('thread'); th.innerHTML = '';
   for (const t of S.texts) {
-    const pic = pictureOf(t.text), words = KIT.plain(t.text).replace(/\s*ZOOM\s+\S+(\s+\d+){4}(\s+C)?/i, '').trim();
+    const pic = pictureOf(t.text), words = KIT.plain(t.text).replace(/\s*ZOOM\s+\S+(\s+\d+){4}(\s+[CH]\b)*/i, '').trim();
     th.insertAdjacentHTML('beforeend', `<div class="meta ${t.from === 'phone' ? 'r' : ''}">${t.from === 'phone' ? 'You' : 'Muse'} · ${t.parts} SMS</div>`);
     const b = document.createElement('div'); b.className = 'b ' + t.from;
     if (pic && pic.kind === 'Z') b.innerHTML = 'Closer look' + (/ C\b/.test(S.texts[S.texts.indexOf(t) - 1]?.text || '') ? ', in colour' : '') + ` <span style="opacity:.75">(cropped by your kit)</span><img src="${pic.url}" alt="closer look">`;
     else { b.textContent = words; if (pic) b.insertAdjacentHTML('beforeend', `<img src="${pic.url}" alt="photo sent at 128 px">`); }
-    if (t.from === 'service' && /\bZOOM\b/.test(t.text)) b.insertAdjacentHTML('beforeend', '<div class="kit">↩ Your kit is cropping this from your photo. Tap Send.</div>');
+    if (t.from === 'service' && /\bZOOM\b/.test(t.text)) b.insertAdjacentHTML('beforeend', '<div class="kit">↩ Your kit crops this from your photo and sends it back by itself.</div>');
     th.appendChild(b);
   }
   if (!S.done) th.insertAdjacentHTML('beforeend', '<div class="meta">…</div>');
@@ -113,7 +113,7 @@ function drawThread() {
 
 function drawOriginal() {
   const o = $('orig'), inq = S.inquiry;
-  o.innerHTML = `<img src="/samples/spiders/${encodeURIComponent(S.sample)}.jpg" alt="the full photo on the phone">`;
+  o.innerHTML = `<img src="/samples/${S.sample.includes('/') ? S.sample : 'spiders/' + S.sample}.jpg" alt="the full photo on the phone">`;
   if (inq) for (const [i, v] of inq.views.entries()) {
     if (!v.got_box) continue;
     const [w, h] = inq.pic.size, [x, y, bw, bh] = v.got_box, d = document.createElement('div'); d.className = 'box';
@@ -145,12 +145,14 @@ function drawRounds() {
     const card = document.createElement('div'); card.className = 'card round';
     const seen = document.createElement('div'); seen.className = 'seen';
     seen.innerHTML = `<img src="${imgs[i]}" alt="what Muse saw in round ${i + 1}"><div class="quiet" style="margin-top:6px">${i === 0 ? `Round 1: the whole photo, ${inq.pic.size.join('×')} px, grey (enlarged for Muse)` : `Round ${i + 1}: the closer look, ${inq.views[i - 1].colour ? 'in colour' : 'grey'}, ${kb(inq.views[i - 1].bytes || 0)}`}</div>`;
-    if (d.need) {  // the box it asked for, drawn on what it was looking at (round 1: the whole photo)
-      if (i === 0) { const [l, t, rr, b] = d.need.box, x = document.createElement('div'); x.className = 'box';
-        Object.assign(x.style, {left: l * 100 + '%', top: t * 100 + '%', width: (rr - l) * 100 + '%', height: (b - t) * 100 + '%'});
-        seen.appendChild(x); }
-    }
     const view = i > 0 && inq.views[i - 1];
+    if (d.need) {  // the box it asked for (fractions of the whole photo), drawn on what this round showed
+      const [W, H] = inq.pic.size, [vx, vy, vw, vh] = view ? view.got_box : [0, 0, W, H];
+      const [l, t, rr, b] = d.need.box.map((f, k) => k % 2 ? (f * H - vy) / vh : (f * W - vx) / vw), x = document.createElement('div');
+      x.className = 'box';
+      Object.assign(x.style, {left: l * 100 + '%', top: t * 100 + '%', width: (rr - l) * 100 + '%', height: (b - t) * 100 + '%'});
+      seen.appendChild(x);
+    }
     if (view && view.sam) {  // SAM's outline of the thing on this close-up
       const [l, t, rr, b] = view.sam.box, x = document.createElement('div'); x.className = 'box sam';
       Object.assign(x.style, {left: l * 100 + '%', top: t * 100 + '%', width: (rr - l) * 100 + '%', height: (b - t) * 100 + '%'});

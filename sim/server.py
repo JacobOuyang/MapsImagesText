@@ -4,7 +4,8 @@
 
 Pages: / (the modes, every reply in its versions), /kit.html (the offline kit, as one file), /dashboard (the community
 hub; the Red Hook drill), /closer (look closer: a question about a photo that stays on the phone), /demo (the kit's three use cases, step by
-step, for recording the video), /phone?who= (one drill neighbour's texts, read by the kit).
+step, for recording the video), /phone?who= (one drill neighbour's texts, read by the kit), /compare (one photo and question
+sent three ways: the full photo, WebP at MuZip's size, MuZip; from evals/kit/three_ways.py).
 
 POST /api/message {"text", "lat", "lon", "image"?, "from"?} -> the router: Muse picks tools; the versions + "tools"
 POST /api/alert {"text", "lat", "lon"} -> {"message" (SMS), "text", "laptop" (WhatsApp map), "small", "image", "kit"}
@@ -38,10 +39,11 @@ sys.path.insert(0, os.path.dirname(ROOT))
 from evac import codes, howto, directions, hub, photo, pipeline, radar, router, store, tonal  # noqa: E402
 import redhook  # noqa: E402  (the Red Hook drill: simulated neighbours' phones around the hub)
 import closer_demo  # noqa: E402  (look closer: a phone asks about a photo it keeps)
+import group_demo  # noqa: E402  (a group chat with Muse in it, simulated)
 
 PORT = int(os.environ.get("PORT", 8765))
 WHATSAPP_COLS = 58  # widest monospace map that fits the simulated WhatsApp Desktop bubble (65% of the chat pane) unwrapped
-PAGES = {"/dashboard": "dashboard.html", "/closer": "closer.html", "/demo": "demo.html", "/phone": "phone.html"}
+PAGES = {"/dashboard": "dashboard.html", "/closer": "closer.html", "/demo": "demo.html", "/phone": "phone.html", "/compare": "compare.html", "/group": "group.html"}
 sms_parts = codes.sms_parts
 
 SAMPLE_DIR = "/Library/Desktop Pictures"  # macOS ships photos here; used as sample "photos a friend sent"
@@ -104,6 +106,12 @@ def kit_js():
             open(os.path.join(ROOT, "kit.js")).read())
 
 
+def compare_rows():
+    """The last run of evals/kit/three_ways.py, for /compare."""
+    p = os.path.join(ROOT, "..", "out", "eval", "three_ways", "results.json")
+    return {"rows": json.load(open(p)) if os.path.exists(p) else []}
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *a, **kw):
         super().__init__(*a, directory=ROOT, **kw)
@@ -133,6 +141,11 @@ class Handler(SimpleHTTPRequestHandler):
         if path.startswith("/store/") and path.endswith(".jpg"):  # a record's original (a report's photo, a zoom)
             img = store.image(path[len("/store/"):-4])
             return self.send_bytes(jpeg(img, 640, 88), "image/jpeg") if img else self.send_error(404)
+        if path.startswith("/eval/three_ways/") and path.endswith(".png") and ".." not in path:  # evals/kit/three_ways.py's pictures
+            p = os.path.join(ROOT, "..", "out", "eval", path[len("/eval/"):])
+            return self.send_bytes(open(p, "rb").read(), "image/png") if os.path.exists(p) else self.send_error(404)
+        if path == "/api/group/sketch":  # the 128 px sketch the group got
+            return self.send_bytes(group_demo.sketch_png(arg), "image/png")
         if path == "/api/sample":
             p = sample_path(arg)
             return self.send_bytes(jpeg(Image.open(p), 1600, 85), "image/jpeg") if p else self.send_error(404)
@@ -144,6 +157,8 @@ class Handler(SimpleHTTPRequestHandler):
             "/api/hub/thread": lambda: hub.thread(arg),
             "/api/closer/samples": lambda: {"samples": closer_demo.samples()},
             "/api/closer/state": lambda: closer_demo.state(arg),
+            "/api/compare": compare_rows,
+            "/api/group/state": lambda: group_demo.state(arg),
         }
         if path in api:
             return self.send_json(api[path]())
@@ -235,6 +250,10 @@ class Handler(SimpleHTTPRequestHandler):
                 out = redhook.beat(body["name"], **({"pace": float(body["pace"])} if "pace" in body else {})) or {}
             elif self.path == "/api/closer/start":  # a simulated phone asks about one of the sample photos
                 out = {"conv": closer_demo.start(body["sample"], body.get("question") or "What is this?")}
+            elif self.path == "/api/group/start":  # a group member shares a sample photo
+                out = {"conv": group_demo.start(body["sample"])}
+            elif self.path == "/api/group/ask":
+                out = {"error": group_demo.ask(body["conv"], body["who"], body["question"])}
             else:
                 return self.send_error(404)
         except Exception as e:  # show the failure in the page rather than hanging it

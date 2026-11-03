@@ -421,7 +421,7 @@ var KIT = (function () {
 
   // ---------- the phone's own photos: kept, so the service can ask for a closer look ----------
   // The service only ever gets the 128 px picture. When that isn't enough it asks "ZOOM <id> x y w h" (a box in the
-  // picture's pixels; " C" at the end: in colour), and the kit crops that box from the original kept here, with the same
+  // picture's pixels; " C" at the end: in colour; " H": high detail, 256 px), and the kit crops that box from the original kept here, with the same
   // arithmetic as the server (evac/codes.py:crop_zoom), and makes the Z code to send back.
   const OWN = {};  // picture id -> {src: data URL of the original (at most 1600 px), w, h: the size sent}
   const ownStore = {get() { try { return JSON.parse(localStorage.getItem("kitOwn") || "{}"); } catch (e) { return {}; } },
@@ -435,12 +435,12 @@ var KIT = (function () {
     const keep = Object.keys(OWN).slice(-5);  // the last few photos: browser storage is small
     ownStore.set(Object.fromEntries(keep.map(k2 => [k2, OWN[k2]])));
   }
-  async function cropBox(id, box, colour) {
+  async function cropBox(id, box, colour, side = 128) {
     const own = OWN[id], img = await loaded(Object.assign(new Image(), {src: own.src}));
     const W = img.naturalWidth, H = img.naturalHeight, sx = W / own.w, sy = H / own.h, [bx, by, bw, bh] = box;
-    const cx = (bx + bw / 2) * sx, cy = (by + bh / 2) * sy, half = Math.max(Math.max(bw * sx, bh * sy) * 0.6, 64);
+    const cx = (bx + bw / 2) * sx, cy = (by + bh / 2) * sy, half = Math.max(Math.max(bw * sx, bh * sy) * 0.6, side / 2);
     const x0 = Math.max(0, cx - half), y0 = Math.max(0, cy - half), x1 = Math.min(W, cx + half), y1 = Math.min(H, cy + half);
-    const k = Math.min(1, 128 / Math.max(x1 - x0, y1 - y0)), c = document.createElement("canvas");
+    const k = Math.min(1, side / Math.max(x1 - x0, y1 - y0)), c = document.createElement("canvas");
     c.width = Math.round((x1 - x0) * k); c.height = Math.round((y1 - y0) * k);
     const g = c.getContext("2d"); g.drawImage(img, x0, y0, x1 - x0, y1 - y0, 0, 0, c.width, c.height);
     if (!colour) {  // grey, contrast stretched, like every other picture
@@ -454,13 +454,14 @@ var KIT = (function () {
     if (!blob || blob.type !== "image/webp") blob = await new Promise(ok => c.toBlob(ok, "image/jpeg", colour ? 0.5 : 0.3));  // Safari
     return {bytes: new Uint8Array(await blob.arrayBuffer()), box: [x0 / sx, y0 / sy, (x1 - x0) / sx, (y1 - y0) / sy], canvas: c};
   }
-  const ZOOM_ASK = /\bZOOM\s+([0-9a-z]{2,4})\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)(\s+C)?\b/gi;
+  const ZOOM_ASK = /\bZOOM\s+([0-9a-z]{2,4})\s+(\d+)\s+(\d+)\s+(\d+)\s+(\d+)((?:\s+[CH]\b)*)/gi;
   // A message asking for closer looks at this phone's photos -> [{id, colour, parts (the Z code to send), canvas}].
   async function answerZoom(text) {
     const out = [];
     for (const m of (text || "").matchAll(ZOOM_ASK)) {
       const id = m[1].toLowerCase(); if (!OWN[id]) continue;
-      const colour = !!m[6], got = await cropBox(id, [+m[2], +m[3], +m[4], +m[5]], colour);
+      const flags = (m[6] || "").toUpperCase(), colour = flags.includes("C");
+      const got = await cropBox(id, [+m[2], +m[3], +m[4], +m[5]], colour, flags.includes("H") ? 256 : 128);
       const head = new Uint8Array(1 + id.length + 8), dv = new DataView(head.buffer);
       head[0] = id.length; for (let i = 0; i < id.length; i++) head[1 + i] = id.charCodeAt(i);
       got.box.forEach((v, i) => dv.setUint16(1 + id.length + 2 * i, Math.max(0, Math.min(65535, Math.round(v * 64)))));
