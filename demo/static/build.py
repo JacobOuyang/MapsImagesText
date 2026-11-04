@@ -21,6 +21,7 @@ OUT = os.path.join(ROOT, "docs", "compare")
 # (made with Muse Image). Left out: the generated medicine cabinet (its labels look staged), and every question where
 # both ways do well or neither does (the milk price, the timetable, the poison ivy, the SUV, the closed paths, the
 # elevator, the door light).
+AS_VIDEO = ["dashboard"]  # shown exactly as in the video (compare.html: a row's "demo")
 SHOW = ["night_speed", "store_hours", "almond_milk", "street_pickup", "cinnamon", "dashboard"]
 NOTE = ('<div class="static-note">Selected examples, saved from <code>evals/kit/three_ways.py</code> (every question is '
         'in <a href="https://github.com/JacobOuyang/muzip/blob/main/evals/kit/THREE_WAYS.md">THREE_WAYS.md</a>); no live '
@@ -37,6 +38,8 @@ def main():
         src = os.path.join(ROOT, "demo", "three_ways")  # a fresh clone: the measured run kept with the demo
     rows = json.load(open(os.path.join(src, "results.json")))
     rows = sorted((r for r in rows if r["name"] in SHOW), key=lambda r: SHOW.index(r["name"]))
+    for r in rows:  # the dashboard as the video's slide: its chosen WebP try (Muse couldn't tell) and a badge per way
+        r["demo"] = r["name"] in AS_VIDEO
     shutil.rmtree(OUT, ignore_errors=True)
     os.makedirs(os.path.join(OUT, "photos"))
     for r in rows:
