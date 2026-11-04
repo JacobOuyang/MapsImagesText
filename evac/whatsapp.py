@@ -140,12 +140,14 @@ def look_closer(who, img, question):
     for _ in range(closer.MAX_VIEWS + 1):  # the loop ends by then; this only guards against a runaway
         out = router.handle(message, who=who)
         text = out.get("text") or ""
-        m = codes.ZOOM.search(text)
-        if not m or m.group(1) != pic:
+        ms = codes.zooms(text, pic)
+        if not ms:
             return send(who, text or "I couldn't work that out.")
-        words = text[:m.start()].replace("Your kit crops it from your photo and sends it back.", "").strip()
-        message = codes.answer_zoom(img, m, pic)[0]
-        o = codes.zoom_options(m)
-        send(who, "%s\n(Your phone sends that part of the photo%s%s: %d texts.)" % (words, " in colour" if o["colour"] else "",
-                                                                                 " in high detail" if o["side"] else "", codes.sms_parts(message)))
+        words = text[:ms[0].start()].replace("Your kit crops it from your photo and sends it back.", "").replace(
+            "Your kit crops them from your photo and sends them back.", "").strip()
+        message = codes.answer_zooms(img, text, pic)[0]
+        o = [codes.zoom_options(m) for m in ms]
+        send(who, "%s\n(Your phone sends %s%s%s: %d texts.)" % (words, "that part of the photo" if len(ms) == 1 else "those %d parts of the photo" % len(ms),
+                                                             " in colour" if any(x["colour"] for x in o) else "",
+                                                             " in high detail" if any(x["side"] for x in o) else "", codes.sms_parts(message)))
     send(who, "I couldn't work that out.")

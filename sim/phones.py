@@ -29,9 +29,9 @@ class Phone:
     def got(self, message):
         self.inbox.append(message)
         m = codes.ZOOM.search(message)
-        if m and m.group(1) in self.originals:  # the kit crops the original and sends it back
-            if len(m.group(2).split()) == 4:
-                reply = codes.answer_zoom(self.originals[m.group(1)], m, m.group(1))[0]
+        if m and m.group(1) in self.originals:  # the kit crops the original and sends it back (every ZOOM, in one message)
+            if codes.zooms(message, m.group(1)):
+                reply = codes.answer_zooms(self.originals[m.group(1)], message, m.group(1))[0]
                 if self.delay:
                     threading.Timer(self.delay, self.text, (reply,)).start()
                 else:
