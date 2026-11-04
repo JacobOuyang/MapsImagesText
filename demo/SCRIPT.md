@@ -12,7 +12,7 @@ is `evals/kit/three_ways.py` (`evals/kit/THREE_WAYS.md`), the scenes are live ru
 | 3 | 0:52–1:30 | How it works, on the same photo | `/demo` scene 2 (look closer, live): the dashboard round by round | to write |
 | 4 | 1:41–1:51 | Any photo, any question | the workflow chart as a recap | draft |
 | 5 | 1:58–2:40 | Real use cases: a tenant group chat, and a plane | title card, the tenant chat, then a friend's chat | draft |
-| 5b | about 2:17–2:27 | A hiker: is this poison ivy? | a phone on one bar, the photo, then what Mew-zip saw | draft |
+| 5b | about 2:17–2:27 | A hiker: is this poison ivy? | a phone on one bar, the photo, then what MuZip saw | draft |
 | 6 | about 2:27–2:52 | Try it yourself, and the end card | the repo, the one command, the simulator, WhatsApp; then μ and the tagline | draft |
 
 The sections below the agreed ones are drafts from the earlier outline, kept for their wording.
@@ -61,10 +61,10 @@ Built on existing image compression, the same loop works for any photo and any q
 
 ## 5. Real use cases: a tenant group chat after a hurricane (about 1:53–2:28)
 
-On screen (`/video/tenants.html`): a title card, "Real use cases", then a WhatsApp-style tenant group. Mew-zip is
-called the way @Meta AI is, by name, by anyone (nobody adds it): Maria shares a photo with just "@Mew-zip", no question: the group sees the blurry sketch, then Mew-zip's one sharp colour close-up
+On screen (`/video/tenants.html`): a title card, "Real use cases", then a WhatsApp-style tenant group. MuZip is
+called the way @Meta AI is, by name, by anyone (nobody adds it): Maria shares a photo with just "@MuZip", no question: the group sees the blurry sketch, then MuZip's one sharp colour close-up
 (a grey SUV under a fallen tree; recorded run `sim/video/tree`), and Dev: "omg that's mine!!". Then Maria's photo of the
-street; Ben and Chen each ask about their own car and each gets an answer with what Mew-zip saw (runs
+street; Ben and Chen each ask about their own car and each gets an answer with what MuZip saw (runs
 `sim/video/street_ben`, `street_chen`). To end: "The photos never left Maria's phone", and what the whole chat cost.
 Photos: "Damaged car with tree on top", Wil540 art, CC BY 4.0; "Sand Covers Cars and the Street", FEMA, public domain.
 
@@ -75,7 +75,7 @@ Let's walk through some real use cases of Mew-zip. <break time="0.5s" /> After a
 ## 5b. A hiker: is this poison ivy? (about 2:17–2:27)
 
 Its own clip after section 5, so section 5 keeps its voice and timing. On screen (`/video/ivy.html`): a chat
-on one bar of signal, texts only; the hiker's question with the sketch arriving as text; then what Mew-zip saw (the
+on one bar of signal, texts only; the hiker's question with the sketch arriving as text; then what MuZip saw (the
 sketch with its one high-detail close-up of the leaf group in place) and the answer, "Yes, that is poison ivy: three
 leaflets meeting at one point. Do not step through it." (recorded run `sim/video/ivy`, 5.3 KB from the phone; photo
 "Poison Ivy P6300102.JPG", Chris Light, CC BY-SA 4.0). The answer is a warning, never a go-ahead.
@@ -95,7 +95,7 @@ On screen (`/video/close.html`; voice `private/voice/06_close.mp3`, 22.2 s):
 2. **The one command**, typed into a terminal: `.venv/bin/python sim/server.py`. Then the simulator answering the
    dashboard question (`docs/screenshots/closer.png`, a real run): the phone that only sends texts on the left, the
    close-ups on the photo in the middle, what Muse saw on the right.
-3. **WhatsApp:** a phone sending the photo to Mew-zip in WhatsApp, and three small labels: Meta Model API key,
+3. **WhatsApp:** a phone sending the photo to MuZip in WhatsApp, and three small labels: Meta Model API key,
    Twilio sandbox, cloudflared. "Setup: README, step by step."
 4. **The end card:** μ and the zipper, the tagline written under it, the repo underneath.
 

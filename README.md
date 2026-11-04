@@ -30,7 +30,7 @@ inside the last, until it reads "EMPTY / RECHARGE".
 
 **A photo with no question** is a share: Muse picks the one part that matters, asks for it once in colour at high
 detail, and sends the sketch with that part sharp, plus a sentence ("A fallen tree is lying on top of a grey SUV":
-6.5 KB in all, where WhatsApp sent the photo as 659 KB). "@Mew-zip show me Alex's photo" is a share too. **A second question
+6.5 KB in all, where WhatsApp sent the photo as 659 KB). "@MuZip show me Alex's photo" is a share too. **A second question
 about the same photo** starts from the close-ups the phone already sent, at no cost, so in a group chat each person's
 question costs only what is new.
 

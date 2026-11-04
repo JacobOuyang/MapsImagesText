@@ -13,7 +13,7 @@ from PIL import Image
 
 from . import closer, codes, llm
 
-# "@Mew-zip show me Maria's photo", "what's in it?": no question of its own, so the photo is shared (closer.SHARE: the
+# "@MuZip show me Maria's photo", "what's in it?": no question of its own, so the photo is shared (closer.SHARE: the
 # one part that matters, sharp), the same as a photo sent with no text.
 SHOW = re.compile(r"^\s*(@\S+[\s,:]*)?((can|could) you |please )?(show( me)?|let me see|what'?s in)\b", re.I)
 

@@ -48,7 +48,7 @@ outline nearest Muse's, plus `SNAP_MARGIN` 30% (Muse's own boxes on the lights w
 box overlapping a view it has (IoU ≥ `SAME` 0.6) at no more detail, and an unsure answer while looks remain is sent back
 once. Budget: `BUDGET` (160) texts from the phone or `MAX_VIEWS` (8) close-ups; out of looks with no answer, it is asked once
 to say what it sees and how sure (it may say it can't tell: forcing an answer made misreads). An empty question is a
-share (`SHARE`: one close-up, forced colour + high, then one sentence); `router.SHOW` ("@Mew-zip show me …") counts as
+share (`SHARE`: one close-up, forced colour + high, then one sentence); `router.SHOW` ("@MuZip show me …") counts as
 empty. `start` carries close-ups this phone already sent of the same pic id into `views` as `known` (free, outside the
 budget), so a second question in a group pays only for what is new. `_reply` turns a
 `need` (or each of `needs`) into words + one `ZOOM <pic id> x y w h[ C][ H]` line each (box in the 128 px sketch's pixels). `receive(who, parent, box,

@@ -41,7 +41,7 @@
 </head>
 <body>
 <div class="chat" id="chat">
-  <div class="head"><div class="av">μ</div><div><b>Mew-zip</b><small>you: on a trail</small></div><div class="net">▂___ 1 bar · texts only</div></div>
+  <div class="head"><div class="av">μ</div><div><b>MuZip</b><small>you: on a trail</small></div><div class="net">▂___ 1 bar · texts only</div></div>
   <div class="msgs"><div class="stack" id="stack"></div></div>
 </div>
 <div class="side" id="side"></div>
@@ -74,13 +74,13 @@ async function whole(r) {
 async function load() {
   run = Object.assign(await (await fetch('ivy/run.json')).json(), {dir: 'ivy'});
   SEEN = await whole(run);
-  normal = (await (await fetch('normal_sizes.json')).json())[run.sample];  // WhatsApp's standard quality (evals/kit/three_ways.py: normally)  // what Mew-zip saw: the sketch with its close-up in place
+  normal = (await (await fetch('normal_sizes.json')).json())[run.sample];  // WhatsApp's standard quality (evals/kit/three_ways.py: normally)  // what MuZip saw: the sketch with its close-up in place
 }
 function msgs(t) {
   const out = [], m = run.messages, v = run.views[0];
   if (t >= T.ask) out.push(`<div class="b me"><img src="/samples/${run.sample}.jpg" style="image-rendering:auto">${esc(run.question)}<div class="meta">sent as ${m[0].texts} texts · the photo stays on your phone</div></div>`);
-  if (t >= T.look) out.push(`<div class="b auto">↩ Mew-zip asked for a closer look at the leaves; your phone sent it (${kb(v.bytes)})</div>`);
-  if (t >= T.ans) out.push(`<div class="b muzip"><div class="who" style="color:#1a8cff">Mew-zip</div><img src="${SEEN}" style="image-rendering:auto">${esc(m[m.length - 1].text.split('\n')[0])}<div class="meta">what Mew-zip saw · ${kb(run.phone_bytes)} from your phone</div></div>`);
+  if (t >= T.look) out.push(`<div class="b auto">↩ MuZip asked for a closer look at the leaves; your phone sent it (${kb(v.bytes)})</div>`);
+  if (t >= T.ans) out.push(`<div class="b muzip"><div class="who" style="color:#1a8cff">MuZip</div><img src="${SEEN}" style="image-rendering:auto">${esc(m[m.length - 1].text.split('\n')[0])}<div class="meta">what MuZip saw · ${kb(run.phone_bytes)} from your phone</div></div>`);
   return out.join('');
 }
 function render(t) {
@@ -91,7 +91,7 @@ function render(t) {
   $('stack').innerHTML = msgs(last - 0.001); const before = end(); $('stack').innerHTML = msgs(t);  // where it stood before the newest
   const k = Math.min(1, (t - last) / 0.7), e = 1 - (1 - k) ** 3;
   $('stack').style.transform = `translateY(${-(before + (now - before) * e)}px)`;
-  $('side').innerHTML = t >= T.ans ? `<div class="tal"><h3>The photo</h3><div class="row"><span>Mew-zip</span><b>${kb(run.phone_bytes)}</b></div>
+  $('side').innerHTML = t >= T.ans ? `<div class="tal"><h3>The photo</h3><div class="row"><span>MuZip</span><b>${kb(run.phone_bytes)}</b></div>
     <div class="row"><span>Normal photo</span><s>${kb(normal.whatsapp)}</s></div><div class="row" style="color:#f59f00"><span>won't send on one bar</span></div></div>` : '';
 }
 const q = new URLSearchParams(location.search);
