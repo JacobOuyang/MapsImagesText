@@ -15,7 +15,8 @@ offline kit page, a neighbourhood hub).
 
 ## Commands
 
-No build or lint step. Python 3.12 in `.venv` (`python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt`;
+No build or lint step; GitHub Actions (`.github/workflows/tests.yml`) runs the offline tests on every push. MIT
+(`LICENSE`); sample photos keep their own licences (`sim/samples/real/CREDITS.md`). Python 3.12 in `.venv` (`python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt`;
 git-ignored): `requests`, `pillow`, `numpy`, `meta-sam-parser` (Meta's SAM 3.1 parser, Python ≥ 3.10). Run everything
 with `.venv/bin/python`.
 
