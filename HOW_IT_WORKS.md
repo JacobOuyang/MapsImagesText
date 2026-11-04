@@ -79,7 +79,7 @@ Muse (1 SMS)   No, it is not ready to use. It is marked EMPTY / RECHARGE.
 59 texts both ways, for a 476 KB photo.
 
 **A second real run,** on a car at night (`hard/dashboard`, a 1600×980 photo made with Muse Image; recorded with
-`demo/video/record_run.py`, kept in `sim/video/dashboard/run.json` on the demo branch): the cluster, then both lights
+`demo/video/record_run.py`, kept in `sim/video/dashboard/run.json`): the cluster, then both lights
 in one request, each box placed by SAM:
 
 ```
@@ -110,7 +110,7 @@ a close-up of the whole cluster, about 11-14% of its width). Muse is told about 
 every match down to half that size (`sam.all`), for showing: on the dashboard's cluster SAM found both lights, the red
 one at 0.91 and the amber one at 0.89, but the amber one is 7.8% of the close-up's height.
 
-## Shares and group chats (demo branch)
+## Shares and group chats
 
 **A photo with no question is a share** (`closer.SHARE`, `share` in the inquiry): Muse asks for exactly one close-up,
 always in colour at high detail, of the part a group most needs to see, then says in one sentence what it shows. The
@@ -222,19 +222,19 @@ and 811 KB (Twilio keeps the media; measured, not estimated). The report's own e
 
 ## The loop's own eval
 
-`evals/loop/run.py` runs only MuZip on `evals/loop/dataset.json` (the comparison's questions except the dashboard, plus two easy controls and, on this branch, two field questions),
+`evals/loop/run.py` runs only MuZip on `evals/loop/dataset.json` (the comparison's questions except the dashboard, plus two easy controls and two field questions),
 three runs each, all at once, in about 80 s, and prints right-and-sure, hedged and wrong per question with the median
 texts, close-ups and seconds, against `BASELINE.json`. Results are kept by a hash of the loop's code (`out/eval/loop/`),
 so an unchanged loop isn't re-run; `--save` makes a run the baseline and writes `RESULTS.md`.
 
-The baseline: generated 12/12, real 5/12, easy 6/6 (median 48 texts), field 5/6 (on this branch). The real photos
+The baseline: generated 11/12, real 7/12, easy 6/6 (median 36 texts), field 5/6; the latest run, after keeping every SAM match: 11/12, 6/12, 5/6, 5/6. The real photos
 swing by about one per question between 3-run evals; check a change there with `--runs 5`. A budget of
 240 texts instead of 160 got the timetable to 2/3 but cost 45 more texts and didn't help the price tag, so it wasn't
 kept.
 
-## Beyond phones: the field questions (demo branch)
+## Beyond phones: the field questions
 
-The device that keeps the original can be anything on a thin link. `evals/loop/dataset.json` on this branch adds two
+The device that keeps the original can be anything on a thin link. `evals/loop/dataset.json` adds two
 "field" questions on Muse Image photos (`sim/samples/field/`):
 
 - **A drone over a flood:** "There are people on a roof. What does the sign next to them say?" 3/3, two high-detail
@@ -288,7 +288,7 @@ earlier version). A real exchange from a WhatsApp account took about 34 s for a 
 
 To set it up (Twilio, the bridge, a tunnel, MuZip and the test phone), see [README.md](README.md#over-whatsapp).
 
-## The demo video (demo branch)
+## The demo video
 
 Every section of the video is a page in `sim/video/` drawn as a function of time, so each frame is exact and the voice
 decides the timing: the times in each page are where its lines fall in the voice-over, found from the pauses in the

@@ -1,6 +1,6 @@
 # The demo
 
-The demo environment for MuZip (this branch only). Start the simulator and open the stage at 1920 × 1080:
+The demo environment for MuZip. Start the simulator and open the stage at 1920 × 1080:
 
 ```bash
 .venv/bin/python sim/server.py
