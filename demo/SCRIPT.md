@@ -100,17 +100,18 @@ On screen (`/video/close.html`, to build):
 4. **The end card:** μ and the zipper, the tagline written under it, the repo underneath.
 
 ```text
-Mew-zip is on GitHub, and you can try it in a few minutes. <break time="0.4s" /> One command starts the simulator: a phone that only sends texts, and every close-up Muse asks for. <break time="0.3s" /> Add a Twilio sandbox, and it runs from WhatsApp on your own phone. <break time="0.3s" /> All it needs is a Meta Model API key. <break time="0.8s" /> A picture may be worth a thousand words. <break time="0.4s" /> Mew-zip finds the thousand characters that matter.
+Mew-zip is on GitHub, and you can try it in a few minutes. <break time="0.4s" /> One command starts the simulator: a phone that only sends texts, and every close-up Muse asks for. <break time="0.3s" /> Add a Twilio sandbox, and it runs from WhatsApp on your own phone. <break time="0.3s" /> All it needs is a Meta Model API key. <break time="0.8s" /> A picture is worth a thousand words. <break time="0.4s" /> Mew-zip finds the ones that matter most.
 ```
 
 A shorter one (about 18 s), if the time runs short:
 
 ```text
-Try Mew-zip yourself: it's on GitHub. <break time="0.3s" /> One command runs the simulator, and with a Twilio sandbox it runs from your own WhatsApp. <break time="0.8s" /> A picture may be worth a thousand words. <break time="0.4s" /> Mew-zip finds the thousand characters that matter.
+Try Mew-zip yourself: it's on GitHub. <break time="0.3s" /> One command runs the simulator, and with a Twilio sandbox it runs from your own WhatsApp. <break time="0.8s" /> A picture is worth a thousand words. <break time="0.4s" /> Mew-zip finds the ones that matter most.
 ```
 
-The tagline is figurative, like the saying: the dashboard run sent about 5,000 characters, so no size is on screen
-while it is said.
+The tagline has no number in it: "the thousand characters that matter" was loose (the dashboard run sent about 5,000
+characters, the hiker about 7,000) and the video never dwells on characters. "Finds" is the agentic part: Muse looks
+and decides.
 
 ## Earlier drafts (kept for their wording)
 
