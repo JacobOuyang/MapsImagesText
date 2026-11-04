@@ -34,39 +34,6 @@ detail, and sends the sketch with that part sharp, plus a sentence ("A fallen tr
 about the same photo** starts from the close-ups the phone already sent, at no cost, so in a group chat each person's
 question costs only what is new.
 
-## The evidence: the same texts, three ways
-
-`evals/kit/three_ways.py` asks Muse Spark the same open question three ways, five times each: from **the photo
-itself** (at most 2,048 px), from **the whole photo as WebP squeezed into the texts MuZip used** (its best shot: 128,
-256 and 384 px at the highest quality that fits, colour and grey), and **through MuZip**. A separate Muse call judges
-each answer against a reference, and an answer counts only when it is right *and* Muse says it is sure.
-
-| Photo | Question (answer) | The photo itself | WebP, same texts | MuZip |
-|---|---|---|---|---|
-| Medicine cabinet (generated) | I have a headache. Which of these can I take, and where? (the ibuprofen, bottom shelf) | 412 KB: 5/5 | 66 texts: 0/5 | 69 texts: **5/5** |
-| Medicine cabinet (generated) | Anything here for allergies? Which, and where? (loratadine, middle shelf) | 412 KB: 5/5 | 102 texts: 0/5 | 103 texts: **5/5** |
-| Leg after a hike (generated) | What's that on my leg? (a tick) | 581 KB: 0/5 (5 hedged) | 83 texts: 0/5 (5 hedged) | 85 texts: **5/5** |
-| Office corridor (generated) | Can I use this fire extinguisher? (no: EMPTY / RECHARGE) | 476 KB: 5/5 | 52 texts: 0/5 | 53 texts: **5/5** |
-| Car at night (generated) | Two warning lights came on. Which ones, and what do they mean? (battery and check-engine) | 214 KB: 4/5 | 29 texts: 0/5 (5 hedged) | 31 texts: **5/5** |
-| Bus stop timetable (real) | Saturday, 9 am: when's the next bus? (10:06) | 4.7 MB: 1/5 | 181 texts: 0/5 | 183 texts: 1/5 |
-| Milk aisle (real) | How much is a gallon of whole milk? ($3.69) | 1.0 MB: 5/5 | 166 texts: 0/5 | 169 texts: 0/5 |
-| Milk aisle (real) | Any almond milk? Which brand? (Almond Breeze) | 3.3 MB: 5/5 | 91 texts: 0/5 (5 hedged) | 93 texts: **5/5** |
-| Old pharmacy (real) | Anything with cinnamon? What does its label say? (SIR. CINNAMOMI) | 5.8 MB: 5/5 | 86 texts: 0/5 | 87 texts: **4/5** |
-
-- **In all:** MuZip 35/45, WebP at the same size 0/45, the photo itself 35/45. From WebP Muse also made answers up
-  ("take the aspirin", "there's Benadryl", "Paracetamol 500 mg").
-- **Against how a photo is normally sent:** an iPhone photo sent on WhatsApp arrived as a 2160×3840 JPEG of 543–811 KB
-  (measured through the bridge). MuZip's answers took 5–18 KB: 30–100× less.
-- **The weak spot:** dense small text in a big real photo (a timetable, a price tag across an aisle). MuZip runs out of
-  texts before it can read it.
-- **When the detail is big** (street parking signs, a handwritten label), a 5 KB WebP is enough, and MuZip answers in
-  one close-up (32–40 texts).
-
-Five photos were made with Muse Image (`sim/samples/hard/`), four are real photos from Wikimedia Commons
-(`sim/samples/real/`, [credits](sim/samples/real/CREDITS.md)). Each passed a screen first: Muse is sure and right from
-the full photo, never from a 3–5 KB WebP. Nine photos are a demonstration, not a benchmark. Full results:
-[evals/kit/THREE_WAYS.md](evals/kit/THREE_WAYS.md).
-
 ## How Meta's models are used
 
 | Model | What it does here |
@@ -254,7 +221,7 @@ directions, weather radar, photo drawings, an offline kit page and a neighbourho
 
 ## Limits
 
-- **Dense small text in big photos** is the weak spot (above).
+- **Dense small text in big photos** is the weak spot: on a timetable or a price tag across an aisle, MuZip runs out of texts before it can read it.
 - **WhatsApp through Twilio's sandbox** is the live channel; plain SMS works the same way but wasn't set up.
 - **Muse aims the first close-up from context alone,** because SAM can't find small things in the sketch.
 - **The test set is small:** nine questions in the comparison, twelve in the loop's eval, half on generated photos.
