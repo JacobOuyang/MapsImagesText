@@ -115,7 +115,7 @@ messages on fds 3/4, NUL-terminated; the viewport set to exactly 1920x1080), eac
 frames (handed out in turn, the logo shimmered: Chromes antialias a few edge pixels differently); ~1 minute a section.
 `demo/video/encode.swift` (AVFoundation) encodes at a steady 30 fps, a keyframe a second (long held frames made
 players stall and drift from the voice), and adds the voice; `speed.swift` makes the 1.1× versions, `join.swift`
-joins sections. `ivy.html` is 5b (a hiker, run `sim/video/ivy`); `tenants.html` is section 5 (runs `sim/video/{tree,street_ben,street_chen,puppy}`, the street pair from
+joins sections. `close.html` is 6 (try it yourself, the end card); `ivy.html` is 5b (a hiker, run `sim/video/ivy`); `tenants.html` is section 5 (runs `sim/video/{tree,street_ben,street_chen,puppy}`, the street pair from
 `demo/video/record_group.py`). Times in each page are where the lines fall in its
 voice-over (found from the pauses). Scenes are their own 1920x1080 frame (`body { position:relative }`); full-screen
 pictures keep their own shape and are drawn at whole pixels (an `<img>` 5x enlarged shook by 2 px between frames).

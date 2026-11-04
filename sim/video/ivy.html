@@ -53,7 +53,7 @@ const T = {ask: 3.64, look: 5.44, ans: 7.52, end: 10.6};
 const $ = id => document.getElementById(id);
 const kb = b => b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB' : (b / 1000).toFixed(1) + ' KB';
 const esc = s => String(s).replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
-let run, SEEN;
+let run, SEEN, normal;
 const loadImg = src => new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.src = src; });
 // A shared photo as one image: the whole grey sketch, the sharp colour close-up blended in where it belongs.
 async function whole(r) {
@@ -73,7 +73,8 @@ async function whole(r) {
 }
 async function load() {
   run = Object.assign(await (await fetch('ivy/run.json')).json(), {dir: 'ivy'});
-  SEEN = await whole(run);  // what Mew-zip saw: the sketch with its close-up in place
+  SEEN = await whole(run);
+  normal = (await (await fetch('normal_sizes.json')).json())[run.sample];  // WhatsApp's standard quality (evals/kit/three_ways.py: normally)  // what Mew-zip saw: the sketch with its close-up in place
 }
 function msgs(t) {
   const out = [], m = run.messages, v = run.views[0];
@@ -91,7 +92,7 @@ function render(t) {
   const k = Math.min(1, (t - last) / 0.7), e = 1 - (1 - k) ** 3;
   $('stack').style.transform = `translateY(${-(before + (now - before) * e)}px)`;
   $('side').innerHTML = t >= T.ans ? `<div class="tal"><h3>The photo</h3><div class="row"><span>Mew-zip</span><b>${kb(run.phone_bytes)}</b></div>
-    <div class="row"><span>The photo itself</span><s>${kb(run.photo_bytes)}</s></div><div class="row" style="color:#f59f00"><span>won't send on one bar</span></div></div>` : '';
+    <div class="row"><span>Normal photo</span><s>${kb(normal.whatsapp)}</s></div><div class="row" style="color:#f59f00"><span>won't send on one bar</span></div></div>` : '';
 }
 const q = new URLSearchParams(location.search);
 load().then(async () => {

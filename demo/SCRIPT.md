@@ -89,7 +89,7 @@ Or you're on a trail, with one bar of signal. <break time="0.3s" /> Is that pois
 About 25 s at 1.1×; with the hiker, the video comes to about 2:52. No results screen: nine photos are a demonstration,
 not a benchmark. No "open source" either: the repo has no licence yet, so it says "on GitHub".
 
-On screen (`/video/close.html`, to build):
+On screen (`/video/close.html`; voice `private/voice/06_close.mp3`, 22.2 s):
 
 1. **"Try it yourself"** and the repo, `github.com/JacobOuyang/muzip`, large.
 2. **The one command**, typed into a terminal: `.venv/bin/python sim/server.py`. Then the simulator answering the
