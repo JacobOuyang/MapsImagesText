@@ -8,7 +8,9 @@ MuZip: agentic compression for photos, on the Meta Model API. A phone sends a qu
 photo as text codes; Muse Spark looks and either answers or asks the phone for one close-up (a box, colour or grey,
 normal or high detail); the phone crops its own original and sends it back; SAM 3.1 outlines the thing on each
 close-up; repeat until Muse is sure. The photo never leaves the phone. WhatsApp (Twilio's sandbox) is the live channel.
-Branches: `main` (this: the loop, the demo environment, the video's pages and tools), `full-prototype` (everything this started as: text maps for alerts, walking directions, radar, photo drawings, the
+Branches: `dev` (this: work here; it is `main` plus this file, which `main` doesn't track and ignores, so merge to
+`main` through a PR without CLAUDE.md), `main` (the loop, the demo environment, the video's pages and tools), `demo`
+(merged into `main`, no longer used), `full-prototype` (everything this started as: text maps for alerts, walking directions, radar, photo drawings, the
 offline kit page, a neighbourhood hub).
 
 ## Commands
