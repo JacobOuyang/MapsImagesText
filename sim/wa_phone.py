@@ -141,13 +141,13 @@ def photo(path, question, who, via, bridge):
     print("(the photo goes out as %d texts of code; the original stays here)" % codes.sms_parts(message))
     for _ in range(closer.MAX_VIEWS + 1):
         out = converse(message, who, via, bridge)
-        ask = next((codes.ZOOM.search(r) for r in reversed(out) if codes.ZOOM.search(r)), None)
-        if not ask or ask.group(1) != pic:
+        ask = next((r for r in reversed(out) if codes.zooms(r, pic)), None)  # one ZOOM, or a few at once
+        if not ask:
             return
-        message = codes.answer_zoom(img, ask, pic)[0]
-        o = codes.zoom_options(ask)
-        print("(the kit crops that part of the original%s%s: %d texts)" % (" in colour" if o["colour"] else "", " in high detail" if o["side"] else "",
-                                                                         codes.sms_parts(message)))
+        message, _, ms = codes.answer_zooms(img, ask, pic)
+        o = [codes.zoom_options(m) for m in ms]
+        print("(the kit crops %d part%s of the original%s%s: %d texts)" % (len(ms), "" if len(ms) == 1 else "s", " in colour" if any(x["colour"] for x in o) else "",
+                                                                           " in high detail" if any(x["side"] for x in o) else "", codes.sms_parts(message)))
 
 
 def main():

@@ -32,13 +32,17 @@ def handle(message, you=None, image=None, who=None):
         return _quick(codes.text(again) if again else "Nothing to resend: that message is no longer kept.")
     found = codes.decode(message)
     log = ["incomplete codes: %s" % found["missing"]] if found["missing"] else []
-    z = next((c for c in found["complete"] if c["kind"] == "Z"), None)
-    if z is not None:
-        parent, box, data = codes.read_zoom(z["data"])
-        went_on = closer.receive(who, parent, box, data)
+    zs = [c for c in found["complete"] if c["kind"] == "Z"]  # one per close-up asked for, in the order asked
+    if zs:
+        went_on, sizes = None, []
+        for z in zs:
+            parent, box, data = codes.read_zoom(z["data"])
+            got = closer.receive(who, parent, box, data)
+            if got:
+                went_on, sizes = got, sizes + [len(data)]
         if went_on:
-            return dict(_quick(went_on[1]), inquiry=went_on[0], log=log + ["close-up of %s for question %s (%d bytes)" % (parent, went_on[0], len(data))],
-                        seconds=round(time.time() - t, 1))
+            return dict(_quick(went_on[1]), inquiry=went_on[0], seconds=round(time.time() - t, 1),
+                        log=log + ["%d close-up%s for question %s (%s bytes)" % (len(sizes), "" if len(sizes) == 1 else "s", went_on[0], "+".join(map(str, sizes)))])
         return dict(_quick("That close-up doesn't answer any open question."), log=log)
     pic = next((c for c in found["complete"] if c["kind"] == "P"), None)
     if pic and not llm.available():

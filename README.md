@@ -10,13 +10,18 @@ the test photos.
 ## How it works
 
 1. **The phone sends the question and a 128 px grey sketch of the photo** (a WebP, about 10 texts).
-2. **Muse Spark looks and decides.** If it is sure, it answers. If not, it asks for one close-up: a box on any view
-   so far (the whole photo, or inside an earlier close-up), in colour or grey, at normal (128 px) or high (256 px)
-   detail, and says what it wants to see there.
-3. **The phone crops that part of its own full-size photo** and sends it back by itself, as text.
-4. **SAM 3.1 outlines the thing on the close-up,** and Muse is told exactly where it sits in the whole photo.
+2. **Muse Spark looks and decides.** If it is sure, it answers. If not, it asks for a close-up (or a few at once, for
+   two or three separate small things): a box on any view so far (the whole photo, or inside an earlier close-up), in
+   colour or grey, at normal (128 px) or high (256 px) detail, and says what it wants to see there.
+3. **The phone crops those parts of its own full-size photo,** each in its box's shape, and sends them back by itself,
+   as text, in one message.
+4. **SAM 3.1 outlines the thing on each close-up,** and Muse is told exactly where it sits in the whole photo. When
+   Muse asks for something small inside a close-up, SAM places the box: Muse decides what to look at, SAM finds
+   exactly where.
 5. **Again, until Muse is sure,** within a budget (160 texts or 8 close-ups). It may not answer "can't tell" or
    "fairly sure" while it can still look, and a box that repeats a view it already has is refused with the reason.
+   To tell two or three small symbols apart (dashboard warning lights), it closes in on each one by itself, at the
+   photo's own pixels, asking for all of them in one round trip.
 
 Classical compression keeps what your eye would notice, for anyone, for any question. MuZip keeps what this question
 needs. On a cabinet of thirty look-alike bottles ("which of these is for a headache?") one high-detail close-up of the
@@ -36,12 +41,13 @@ each answer against a reference, and an answer counts only when it is right *and
 | Medicine cabinet (generated) | Anything here for allergies? Which, and where? (loratadine, middle shelf) | 412 KB: 5/5 | 102 texts: 0/5 | 103 texts: **5/5** |
 | Leg after a hike (generated) | What's that on my leg? (a tick) | 581 KB: 0/5 (5 hedged) | 83 texts: 0/5 (5 hedged) | 85 texts: **5/5** |
 | Office corridor (generated) | Can I use this fire extinguisher? (no: EMPTY / RECHARGE) | 476 KB: 5/5 | 52 texts: 0/5 | 53 texts: **5/5** |
+| Car at night (generated) | Two warning lights came on. Which ones, and what do they mean? (battery and check-engine) | 214 KB: 4/5 | 29 texts: 0/5 (5 hedged) | 31 texts: **5/5** |
 | Bus stop timetable (real) | Saturday, 9 am: when's the next bus? (10:06) | 4.7 MB: 1/5 | 181 texts: 0/5 | 183 texts: 1/5 |
 | Milk aisle (real) | How much is a gallon of whole milk? ($3.69) | 1.0 MB: 5/5 | 166 texts: 0/5 | 169 texts: 0/5 |
 | Milk aisle (real) | Any almond milk? Which brand? (Almond Breeze) | 3.3 MB: 5/5 | 91 texts: 0/5 (5 hedged) | 93 texts: **5/5** |
 | Old pharmacy (real) | Anything with cinnamon? What does its label say? (SIR. CINNAMOMI) | 5.8 MB: 5/5 | 86 texts: 0/5 | 87 texts: **4/5** |
 
-- **In all:** MuZip 30/40, WebP at the same size 0/40, the photo itself 36/40. From WebP Muse also made answers up
+- **In all:** MuZip 35/45, WebP at the same size 0/45, the photo itself 35/45. From WebP Muse also made answers up
   ("take the aspirin", "there's Benadryl", "Paracetamol 500 mg").
 - **Against how a photo is normally sent:** an iPhone photo sent on WhatsApp arrived as a 2160×3840 JPEG of 543–811 KB
   (measured through the bridge). MuZip's answers took 5–18 KB: 30–100× less.
@@ -50,9 +56,9 @@ each answer against a reference, and an answer counts only when it is right *and
 - **When the detail is big** (street parking signs, a handwritten label), a 5 KB WebP is enough, and MuZip answers in
   one close-up (32–40 texts).
 
-Four photos were made with Muse Image (`sim/samples/hard/`), four are real photos from Wikimedia Commons
+Five photos were made with Muse Image (`sim/samples/hard/`), four are real photos from Wikimedia Commons
 (`sim/samples/real/`, [credits](sim/samples/real/CREDITS.md)). Each passed a screen first: Muse is sure and right from
-the full photo, never from a 3–5 KB WebP. Eight photos are a demonstration, not a benchmark. Full results:
+the full photo, never from a 3–5 KB WebP. Nine photos are a demonstration, not a benchmark. Full results:
 [evals/kit/THREE_WAYS.md](evals/kit/THREE_WAYS.md).
 
 ## How Meta's models are used
@@ -96,7 +102,8 @@ baseline:
 ```
 
 The simulator shows the loop with a simulated phone (`/closer`) and the three-way comparison (`/compare`, after
-`.venv/bin/python evals/kit/three_ways.py`):
+`.venv/bin/python evals/kit/three_ways.py`; its MuZip panel rebuilds what Muse saw: the blurry sketch with each
+close-up in its place):
 
 ```bash
 .venv/bin/python sim/server.py
@@ -143,4 +150,4 @@ directions, weather radar, photo drawings, an offline kit page and a neighbourho
 - **Dense small text in big photos** is the weak spot (above).
 - **WhatsApp through Twilio's sandbox** is the live channel; plain SMS works the same way but wasn't set up.
 - **Muse aims the first close-up from context alone,** because SAM can't find small things in the sketch.
-- **The test set is small:** ten questions, half of them on generated photos.
+- **The test set is small:** nine questions in the comparison, twelve in the loop's eval, half on generated photos.

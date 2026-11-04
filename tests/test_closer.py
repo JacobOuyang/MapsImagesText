@@ -109,6 +109,44 @@ class Loop(unittest.TestCase):
         x, y, w, h = view["got_box"]
         self.assertTrue(x / 128 <= l < r <= (x + w) / 128 and y / 128 <= t < b <= (y + h) / 128)
 
+    def test_asks_for_a_few_close_ups_at_once(self):
+        # Two warning lights: one request with two boxes, one message back with two Z codes, then one decision.
+        self.script({"answer": "", "sure": "no", "need": [
+                        {"box": [0.66, 0.17, 0.7, 0.21], "colour": True, "look_at": "the red light", "object": "warning light"},
+                        {"box": [0.7, 0.2, 0.72, 0.23], "colour": True, "look_at": "the mark", "object": "warning light"}]},
+                    {"answer": "Yes, a black widow.", "sure": "yes", "need": None})
+        texts = self.run_phone()
+        self.assertEqual(len(codes.zooms(texts[0])), 2)  # both asked for in one message
+        inq = store.find("inquiry")[0]
+        self.assertEqual(len(closer.got(inq)), 2)  # both came back
+        self.assertEqual(len(inq["meta"]["decisions"]), 2)  # and Muse decided once more, with both
+        self.assertEqual(self.seen, [1, 3])  # the second look had the photo and both close-ups
+        self.assertTrue(texts[-1].startswith("Yes, a black widow."))
+
+    def test_sam_places_a_small_box_inside_a_close_up(self):
+        # Muse asks for the spider by eye inside its first close-up, a little to the left; SAM finds it on that
+        # close-up, and the request is moved onto SAM's outline.
+        saved = (closer.sam.available, closer.sam.segment)
+        closer.sam.available = lambda: True
+        closer.sam.segment = lambda img, phrase: [{"box": (50, 58, 62, 70), "score": 0.9, "mask": None}] if phrase == "spider" else []
+        try:
+            self.script({"answer": "", "sure": "no", "need": {"box": [0.5, 0.0, 1.0, 0.5], "colour": True, "look_at": "the corner"}},
+                        {"answer": "", "sure": "no", "need": {"in": 2, "box": [0.3, 0.4, 0.4, 0.5], "colour": True, "look_at": "the spider",
+                                                             "object": "spider"}},
+                        {"answer": "Yes.", "sure": "yes", "need": None})
+            self.run_phone()
+        finally:
+            closer.sam.available, closer.sam.segment = saved
+        inq = store.find("inquiry")[0]
+        first, second = closer.got(inq)
+        self.assertEqual(inq["meta"]["decisions"][1]["need"]["snapped"], 0.9)
+        cw, ch = store.image(first["zoom"]).size
+        x, y, w, h = first["got_box"]  # where SAM's outline is in the sketch's pixels
+        sx, sy = x + (56 / cw) * w, y + (64 / ch) * h
+        bx, by, bw, bh = second["box"]  # the box the phone was asked for is centred on it, not where Muse drew it
+        self.assertAlmostEqual(bx + bw / 2, sx, delta=1.0)
+        self.assertAlmostEqual(by + bh / 2, sy, delta=1.0)
+
     def test_zooms_in_step_by_step_inside_a_closer_look(self):
         self.script({"answer": "", "sure": "no", "need": {"in": 1, "box": [0.6, 0.1, 0.8, 0.3], "colour": False, "look_at": "the blob"}},
                     {"answer": "", "sure": "no", "need": {"in": 2, "box": [0.25, 0.25, 0.75, 0.75], "colour": True, "look_at": "the blob"}},

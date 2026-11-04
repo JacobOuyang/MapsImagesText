@@ -98,7 +98,7 @@ function pictureOf(text) {  // the picture a message carries (a photo or a close
 function drawThread() {
   const th = $('thread'); th.innerHTML = '';
   for (const t of S.texts) {
-    const pic = pictureOf(t.text), words = KIT.plain(t.text).replace(/\s*ZOOM\s+\S+(\s+\d+){4}(\s+[CH]\b)*/i, '').trim();
+    const pic = pictureOf(t.text), words = KIT.plain(t.text).replace(/\s*ZOOM\s+\S+(\s+\d+){4}(\s+[CH]\b)*/gi, '').trim();
     th.insertAdjacentHTML('beforeend', `<div class="meta ${t.from === 'phone' ? 'r' : ''}">${t.from === 'phone' ? 'You' : 'Muse'} · ${t.parts} SMS</div>`);
     const b = document.createElement('div'); b.className = 'b ' + t.from;
     if (pic && pic.kind === 'Z') b.innerHTML = 'Closer look' + (/ C\b/.test(S.texts[S.texts.indexOf(t) - 1]?.text || '') ? ', in colour' : '') + ` <span style="opacity:.75">(cropped by your kit)</span><img src="${pic.url}" alt="closer look">`;
@@ -141,25 +141,28 @@ function drawRounds() {
   const r = $('rounds'), inq = S.inquiry; if (!inq) return;
   r.innerHTML = '';
   const imgs = [`/store/${inq.id}.jpg`].concat(inq.views.filter(v => v.zoom).map(v => `/store/${v.zoom}.jpg`));
+  let had = 0;  // close-ups received before this round: a round may have asked for a few at once
   inq.decisions.forEach((d, i) => {
     const card = document.createElement('div'); card.className = 'card round';
     const seen = document.createElement('div'); seen.className = 'seen';
-    seen.innerHTML = `<img src="${imgs[i]}" alt="what Muse saw in round ${i + 1}"><div class="quiet" style="margin-top:6px">${i === 0 ? `Round 1: the whole photo, ${inq.pic.size.join('×')} px, grey (enlarged for Muse)` : `Round ${i + 1}: the closer look, ${inq.views[i - 1].colour ? 'in colour' : 'grey'}, ${kb(inq.views[i - 1].bytes || 0)}`}</div>`;
-    const view = i > 0 && inq.views[i - 1];
-    if (d.need) {  // the box it asked for (fractions of the whole photo), drawn on what this round showed
+    const view = had > 0 && inq.views[had - 1], came = i > 0 ? (inq.decisions[i - 1].needs || [inq.decisions[i - 1].need]).filter(Boolean).length : 0;
+    seen.innerHTML = `<img src="${imgs[had]}" alt="what Muse saw in round ${i + 1}"><div class="quiet" style="margin-top:6px">${i === 0 ? `Round 1: the whole photo, ${inq.pic.size.join('×')} px, grey (enlarged for Muse)` : `Round ${i + 1}: the ${came > 1 ? `last of ${came} closer looks that came together` : 'closer look'}, ${view.colour ? 'in colour' : 'grey'}, ${kb(view.bytes || 0)}`}</div>`;
+    const needs = (d.needs || [d.need]).filter(Boolean);
+    for (const need of needs) {  // the boxes it asked for (fractions of the whole photo), drawn on what this round showed
       const [W, H] = inq.pic.size, [vx, vy, vw, vh] = view ? view.got_box : [0, 0, W, H];
-      const [l, t, rr, b] = d.need.box.map((f, k) => k % 2 ? (f * H - vy) / vh : (f * W - vx) / vw), x = document.createElement('div');
+      const [l, t, rr, b] = need.box.map((f, k) => k % 2 ? (f * H - vy) / vh : (f * W - vx) / vw), x = document.createElement('div');
       x.className = 'box';
       Object.assign(x.style, {left: l * 100 + '%', top: t * 100 + '%', width: (rr - l) * 100 + '%', height: (b - t) * 100 + '%'});
       seen.appendChild(x);
     }
+    had += needs.length;
     if (view && view.sam) {  // SAM's outline of the thing on this close-up
       const [l, t, rr, b] = view.sam.box, x = document.createElement('div'); x.className = 'box sam';
       Object.assign(x.style, {left: l * 100 + '%', top: t * 100 + '%', width: (rr - l) * 100 + '%', height: (b - t) * 100 + '%'});
       seen.appendChild(x);
     }
     const v = document.createElement('div'); v.className = 'verdict';
-    v.innerHTML = d.need ? `<div class="q ask">Not sure: asks for a closer look${d.need.colour ? ', in colour' : ''}</div><p>Look at ${esc(d.need.why)}.</p>`
+    v.innerHTML = d.need ? `<div class="q ask">Not sure: asks for ${needs.length > 1 ? needs.length + ' closer looks at once' : 'a closer look'}${d.need.colour ? ', in colour' : ''}</div>${needs.map(n => `<p>Look at ${esc(n.why)}.</p>`).join('')}`
                          : `<div class="q yes">Answers · ${d.sure === 'yes' ? 'sure' : d.sure === 'fairly' ? 'fairly sure' : 'not sure'}</div><p>${esc(d.answer)}</p>${d.safety ? `<p class="quiet">${esc(d.safety)}</p>` : ''}`;
     if (view && view.sam_tried) v.insertAdjacentHTML('afterbegin', `<p class="quiet" style="margin:0 0 8px">${view.sam
       ? `SAM 3.1 outlines ${esc(view.sam.phrase)} in this close-up (${view.sam.score.toFixed(2)}, green). Muse is told where it is.`
