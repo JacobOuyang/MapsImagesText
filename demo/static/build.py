@@ -5,8 +5,8 @@ and no bill), at https://jacobouyang.github.io/muzip/compare/.
 
 It copies sim/compare.html with its three requests pointed at files next to it (compare.json, img/, photos/), the
 close-ups and WebPs exactly as Muse got them, and each sample photo shrunk to at most 1600 px for display (the sizes
-on the page are the measured ones, not these copies'). The dashboard comes first; the page notes that these are saved
-runs and links to the repo for running it live.
+on the page are the measured ones, not these copies'). Only the examples in SHOW, in that order; the page says they
+are selected, links to the full results, and to the repo for running it live.
 """
 import json
 import os
@@ -16,9 +16,15 @@ from PIL import Image
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
 OUT = os.path.join(ROOT, "docs", "compare")
-FIRST = ["dashboard", "extinguisher", "tick", "almond_milk"]  # the lead examples first; the rest in the eval's order
-NOTE = ('<div class="static-note">Saved runs from <code>evals/kit/three_ways.py</code>, no live model calls. To run '
-        'MuZip yourself: <a href="https://github.com/JacobOuyang/muzip#try-it">github.com/JacobOuyang/muzip</a>. '
+# Hand-picked for the demo, in this order: real photos where MuZip is right and WebP at the same size isn't (the full
+# eval, every question and how each way did, is evals/kit/THREE_WAYS.md); last, the dashboard, the video's example
+# (made with Muse Image). Left out: the generated medicine cabinet (its labels look staged), and every question where
+# both ways do well or neither does (the milk price, the timetable, the poison ivy, the SUV, the closed paths, the
+# elevator, the door light).
+SHOW = ["night_speed", "store_hours", "almond_milk", "street_pickup", "cinnamon", "dashboard"]
+NOTE = ('<div class="static-note">Selected examples, saved from <code>evals/kit/three_ways.py</code> (every question is '
+        'in <a href="https://github.com/JacobOuyang/muzip/blob/main/evals/kit/THREE_WAYS.md">THREE_WAYS.md</a>); no live '
+        'model calls. To run MuZip yourself: <a href="https://github.com/JacobOuyang/muzip#try-it">github.com/JacobOuyang/muzip</a>. '
         '&larr; &rarr; or the buttons switch photos.</div>')
 STYLE = ('<style>.static-note{padding:8px 26px;font-size:14px;color:#8b98a5;background:#0b1015;border-bottom:1px solid #2a3540}'
          '.static-note a{color:#1a8cff}.static-note code{color:#9fc3e7}'
@@ -30,7 +36,7 @@ def main():
     if not os.path.exists(os.path.join(src, "results.json")):
         src = os.path.join(ROOT, "demo", "three_ways")  # a fresh clone: the measured run kept with the demo
     rows = json.load(open(os.path.join(src, "results.json")))
-    rows.sort(key=lambda r: (FIRST.index(r["name"]) if r["name"] in FIRST else len(FIRST)))
+    rows = sorted((r for r in rows if r["name"] in SHOW), key=lambda r: SHOW.index(r["name"]))
     shutil.rmtree(OUT, ignore_errors=True)
     os.makedirs(os.path.join(OUT, "photos"))
     for r in rows:
