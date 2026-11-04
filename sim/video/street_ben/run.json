@@ -1,0 +1,395 @@
+{
+ "sample": "real/storm_street",
+ "question": "My pickup's on the left side, right behind the first two cars. Is it buried, or can I drive it out?",
+ "size": [
+  4288,
+  2848
+ ],
+ "sketch": [
+  128,
+  85
+ ],
+ "views": [
+  {
+   "image": "1_closeup.png",
+   "box": [
+    0.0,
+    16.796875,
+    77.0,
+    50.40625
+   ],
+   "asked": [
+    0,
+    21,
+    70,
+    42
+   ],
+   "colour": false,
+   "high": false,
+   "full": false,
+   "bytes": 916,
+   "texts": 10,
+   "why": "the pickup behind the first two cars on the left to see how much snow is on and around it",
+   "object": "pickup",
+   "sam": null,
+   "known": false
+  },
+  {
+   "image": "2_closeup.png",
+   "box": [
+    0.0,
+    15.0,
+    63.796875,
+    24.0
+   ],
+   "asked": [
+    0,
+    17,
+    58,
+    20
+   ],
+   "colour": false,
+   "high": false,
+   "full": false,
+   "bytes": 570,
+   "texts": 6,
+   "why": "the vehicles behind the front cars on the left to see if the pickup is buried in snow",
+   "object": "pickup",
+   "sam": null,
+   "known": false
+  },
+  {
+   "image": "3_closeup.png",
+   "box": [
+    12.5,
+    17.59375,
+    42.0,
+    16.796875
+   ],
+   "asked": [
+    16,
+    19,
+    35,
+    14
+   ],
+   "colour": false,
+   "high": false,
+   "full": false,
+   "bytes": 584,
+   "texts": 6,
+   "why": "the dark vehicle behind the first cars to see how much snow is covering it",
+   "object": "pickup",
+   "sam": null,
+   "known": false
+  },
+  {
+   "image": "4_closeup.png",
+   "box": [
+    11.203125,
+    17.0,
+    45.59375,
+    12.0
+   ],
+   "asked": [
+    15,
+    18,
+    38,
+    10
+   ],
+   "colour": false,
+   "high": false,
+   "full": false,
+   "bytes": 460,
+   "texts": 5,
+   "why": "the dark pickup behind the cars to see how much snow is on and around it",
+   "object": "pickup",
+   "sam": null,
+   "known": false
+  },
+  {
+   "image": "5_closeup.png",
+   "box": [
+    22.0,
+    18.296875,
+    36.0,
+    8.40625
+   ],
+   "asked": [
+    25,
+    19,
+    30,
+    7
+   ],
+   "colour": false,
+   "high": true,
+   "full": false,
+   "bytes": 1486,
+   "texts": 15,
+   "why": "the dark pickup behind the cars to see how much snow is on and around it",
+   "object": "pickup",
+   "sam": null,
+   "known": false
+  }
+ ],
+ "decisions": [
+  {
+   "answer": "",
+   "sure": "no",
+   "safety": "",
+   "need": {
+    "box": [
+     0.0,
+     0.25,
+     0.55,
+     0.75
+    ],
+    "in": 1,
+    "colour": false,
+    "high": false,
+    "object": "pickup",
+    "why": "the pickup behind the first two cars on the left to see how much snow is on and around it"
+   },
+   "needs": [
+    {
+     "box": [
+      0.0,
+      0.25,
+      0.55,
+      0.75
+     ],
+     "in": 1,
+     "colour": false,
+     "high": false,
+     "object": "pickup",
+     "why": "the pickup behind the first two cars on the left to see how much snow is on and around it"
+    }
+   ],
+   "at": 1793765092.34704
+  },
+  {
+   "answer": "",
+   "sure": "no",
+   "safety": "",
+   "need": {
+    "box": [
+     0.0,
+     0.19761029411764705,
+     0.451171875,
+     0.43481617647058823
+    ],
+    "in": 2,
+    "colour": false,
+    "high": false,
+    "object": "pickup",
+    "why": "the vehicles behind the front cars on the left to see if the pickup is buried in snow"
+   },
+   "needs": [
+    {
+     "box": [
+      0.0,
+      0.19761029411764705,
+      0.451171875,
+      0.43481617647058823
+     ],
+     "in": 2,
+     "colour": false,
+     "high": false,
+     "object": "pickup",
+     "why": "the vehicles behind the front cars on the left to see if the pickup is buried in snow"
+    }
+   ],
+   "at": 1793765098.523287
+  },
+  {
+   "answer": "",
+   "sure": "no",
+   "safety": "",
+   "need": {
+    "box": [
+     0.124603271484375,
+     0.21882352941176472,
+     0.39873046875,
+     0.38823529411764707
+    ],
+    "in": 3,
+    "colour": false,
+    "high": false,
+    "object": "pickup",
+    "why": "the dark vehicle behind the first cars to see how much snow is covering it"
+   },
+   "needs": [
+    {
+     "box": [
+      0.124603271484375,
+      0.21882352941176472,
+      0.39873046875,
+      0.38823529411764707
+     ],
+     "in": 3,
+     "colour": false,
+     "high": false,
+     "object": "pickup",
+     "why": "the dark vehicle behind the first cars to see how much snow is covering it"
+    }
+   ],
+   "at": 1793765112.462712
+  },
+  {
+   "answer": "",
+   "sure": "no",
+   "safety": "",
+   "need": {
+    "box": [
+     0.1140625,
+     0.20698529411764705,
+     0.409375,
+     0.3255514705882353
+    ],
+    "in": 4,
+    "colour": false,
+    "high": false,
+    "object": "pickup",
+    "why": "the dark pickup behind the cars to see how much snow is on and around it"
+   },
+   "needs": [
+    {
+     "box": [
+      0.1140625,
+      0.20698529411764705,
+      0.409375,
+      0.3255514705882353
+     ],
+     "in": 4,
+     "colour": false,
+     "high": false,
+     "object": "pickup",
+     "why": "the dark pickup behind the cars to see how much snow is on and around it"
+    }
+   ],
+   "at": 1793765119.109907
+  },
+  {
+   "answer": "",
+   "sure": "no",
+   "safety": "",
+   "need": {
+    "box": [
+     0.194384765625,
+     0.2211764705882353,
+     0.42591552734375,
+     0.2988235294117647
+    ],
+    "in": 5,
+    "colour": false,
+    "high": true,
+    "object": "pickup",
+    "why": "the dark pickup behind the cars to see how much snow is on and around it"
+   },
+   "needs": [
+    {
+     "box": [
+      0.194384765625,
+      0.2211764705882353,
+      0.42591552734375,
+      0.2988235294117647
+     ],
+     "in": 5,
+     "colour": false,
+     "high": true,
+     "object": "pickup",
+     "why": "the dark pickup behind the cars to see how much snow is on and around it"
+    }
+   ],
+   "at": 1793765131.11159
+  },
+  {
+   "answer": "Your pickup is not buried. You can drive it out.",
+   "sure": "yes",
+   "safety": "",
+   "need": null,
+   "needs": [],
+   "at": 1793765136.9966238
+  }
+ ],
+ "messages": [
+  {
+   "from": "phone",
+   "text": "My pickup's on the left side, right behind the first two cars. Is it buried, or can I drive it out?\n#Pk4.1/9:UklGRkoDAABXRUJQVlA4ID4DAAAwGACdASqAAFUAP5m20F25Lymzr1sbMyAzCWkAFI2BcAAMfFOT9sB2DAFZrkZLqIHrNXYNfWAvG2Mkv9N+gCKN7jAsk1A9qK8Ftu//5G/3RXoN:84e6#\n#Pk4.2/9:Sjyz46YRU8Z9tBTQmEdIGqPPwIwXsVaC6OC9Di+jE5lgNI6WWnm/GFh8Nafc6wD/wiQGqTPvm9/4FHjnkB+zTFVBtu9A/5v+BA/ExCpII++pkN5IkG95GyNGC6nNHFlh/jN8dbni:e788#\n#Pk4.3/9:oz4ctPzpfBDB6SdwOqPnR6tAAM2BY3Un/IwLFCwwHWZm6yH9NwBFL6d6fsLuIEY0qgNV7wnh+dbEMYZ0eyYCkao+SG2F/NQsI6sTa/dOX9ntwwjsG7hi8xt+oI9wXWmN7tKJKO2s:daba#\n#Pk4.4/9:d6nj/IoaFpxcYuAwb/iflarN0bIrVVxmJPZXVBdL4SeRr0NMsNFdmIkn+2r3PFiHNjqoyUri2zZuvvBz3mybCtHbWQgVUCZu7uj2A+nvO9G+cD4xBNSgNJm9gsz7A5cL3DXjseV0:1c0c#\n#Pk4.5/9:gO6qfbzlxoZoe/rmImH6B+idh5UpQxm8yDq+sv73dbK2tw+7qShZOriClLwPIl34crXW8vBFEdPYuNrEo3ZOaBqg4hNLVtvEELAhzaq3r1nyeYBXhjeOwF8GUmmrJdepWQSfiHGP:826d#\n#Pk4.6/9:m2gWdVqq/XGvvkDZj/s6iJJemTyV8sAUgVmx/uEbai5b4pvvad88JglDq4kTiNec+UOa3lJ5Xr6B5iZTTdO43jFS2arIRND9VRNynwiaWa1ny8O324tFTTpolM1o4mnaO8Csfi3y:1aa6#\n#Pk4.7/9:cXW+1pi1AAmrRis4yWpqEZICHbter/eEikie8YJEnauhoHBET9Qr8QubS27PFOEcCJh9ESRU/Xl+RtjuOox78uQD6if/mAK/TE4gMX8BMyKbi3ii+1pINhUReIC8XlfV+pmDAhc9:e9a3#\n#Pk4.8/9:zScTTOSuZUsp0cnYPe4Ws8wtMG72U25INL5bbgZiVcoIqsOFp0iYek2cexgzZHLnEldnp7pDUjFn4vlgbvYdqIWf6mINR1bZmO79rIX0wmKpIV54RK9uq7Ptm3IyV8G/5/CGT9EP:c60e#\n#Pk4.9/9:NjxUEVkKvzWGCEeDjgoro1rsCh0phw+LzKXauIgJvAAAAA==:10a9#",
+   "texts": 10,
+   "bytes": 850
+  },
+  {
+   "from": "muse",
+   "text": "Not sure yet: I need a closer look at the pickup behind the first two cars on the left to see how much snow is on and around it. Your kit crops it from your photo and sends it back.\nZOOM k4 0 21 70 42",
+   "texts": 2
+  },
+  {
+   "from": "phone",
+   "text": "#Zkz.1/10:Ams0AAAEMxNADJpSSUZGjAMAAFdFQlBWUDgggAMAAHAXAJ0BKoAAVAA/ka7JXbgtKCax+zyTADIJaQAUiwDRCJkO4rd7CPEKh62qtUc9kD7eyp1q+LsMD4fm10ZWe+o+XjzX0mfx:dfb2#\n#Zkz.2/10:REgql5wUQrNwYU9EMAmtgFA1QSW4mfxOa23whVOflOCDOpbyN7mJGmqzK6XL30SZFnYN1Byxpsh8phnU7ef1hjDEBeKjF8XUfCQ+WYLs/s5vM+hrc7P+vkxJ6JX717aW2mURTQK1:315f#\n#Zkz.3/10:JXH1Nmo7ZswrwcnEPz4Av6MJdVQ3qwAA8+ecCc5pqIzaSdinJlD5cFhndBknRtt3JeR8XrnkXa1F5APJWioTx0dZMFDnQiMa9ReltJJhYsEMY+CMaGQ4BaL4m8INvlMXECjyU4I/:95f0#\n#Zkz.4/10:RJEIPLpkJ2jXIj5Ib8PjG7fxbCy7AeTRCfDypmbWg2XC5xn/e7a5/X+mF2wIrzxYDsTRByX041R8Z0m/ZnDrPGPU2rrrhA4pLD8R1W673HLsOwKQC1XPGwMP4d/ZTRGzQnuvne7N:7ee6#\n#Zkz.5/10:+I7sQJJUxMd/4/WOKO00RJpl6bmiykc9Q/J75V/kbDvFEr1rxXUeflkd6cX/VzkqcxeMLplRuoQgLJXH8HMl7pg24wYFDWyGYtPmRzxRoBe5oUBZoNgHBHYpN0xbNYeJsTjFDgqE:7892#\n#Zkz.6/10:VRbHPAbKgmgsxusV2QqahkBS1Uv4TaSC0UAnGC51adowuGnXJyB9syxPX1heJJz6JW/5bj7LBw4W0zvA/5iTsLHkk0jPoLhr5TimYEHeeiTGiOWMyRsnSlRVn2gKv/dORLyc1Kt5:3813#\n#Zkz.7/10:0IAddUwCconHbaM54o1z8DZXfd9/MamHHfbPMpI7y9t4uJTWNKtbAKq7tpM9PLiSybKWQUXNlk6qVgK901ixs6uignUoMnQ+n2JeGwEx2O5rjKsjyiZsHEHYwfX5RguZXuppesF8:cda9#\n#Zkz.8/10:p4CQsR/plNTlmdkFKCj0a8+JgXR+xZZzD6aBw8XHdHruAp7aYkKsDKxKnfdm3yNcbQQgHwIAKyQ+CWCnRx74EKPVfxuhxSJ/043DviHcPJSQzjCGE3FpcahR2QIv672VWlnLIOyT:2527#\n#Zkz.9/10:82KpUzv61Q/394esemhSoYOBwi8SUMUWbsim/0JY+1Agb9xPB585SZC1qcAyRSxwfK/fdN3NLJA6LzIDmYCLkEy3akwgGuWJU0/PrmeMhB09Vz+X89cCnBXUtkXG1kiLYrtFE0OD:c9d4#\n#Zkz.10/10:y1xfUAaIgAAA:097c#",
+   "texts": 10,
+   "bytes": 927
+  },
+  {
+   "from": "muse",
+   "text": "Not sure yet: I need a closer look at the vehicles behind the front cars on the left to see if the pickup is buried in snow. Your kit crops it from your photo and sends it back.\nZOOM k4 0 17 58 20",
+   "texts": 2
+  },
+  {
+   "from": "phone",
+   "text": "#Zkz.1/6:Ams0AAADwA/zBgBSSUZGMgIAAFdFQlBWUDggJgIAAHAOAJ0BKoAAMAA/lbjLXbivqKSwGqyrEDKJaQAUfoDywsaIjRG7QcI5rBpVXsCC2Wf/ux1IL/itveZaCWIVHyg6VVNnoMga:d145#\n#Zkz.2/6:hEbSkmWTee0tL5QKw5kZ5oOYoQqvUfdV8nzktBNuBUynOz0iE4slbXGvIa2wXWnzGwEowVgA/K/q4ZntrYiAauEiHDMU+QvFm7nEgeSzYFTcbDIRZ3RzR/l37Hw9L5mQ1GFPZjRC:c172#\n#Zkz.3/6:TJjK14+RZWK62bNnegt4psPOxv38w8yuV6HCTasSh7QuQ6VxP5c8PK9a/eti2FCO8xwJu0ABuF8Nd117XJT87aQnwRC0f/1ILje5mMa8s/brfFE6/ZTrHsS1D5LKWAB1D3X1ieb/:e30b#\n#Zkz.4/6:MNSkHpUMdwrlMnYxMfz1ykBwNyFYb3sL7hiP0FaGDCXGa16xER5t/k6BLf+Tv3S1ZrE4fNFq7js15PGsvfnXRTb0z+8wNSvBQbrDeT4mbP+laLJySfhM3NLHcgLx6f6sahu8umnP:4425#\n#Zkz.5/6:+1R+z4dIGyypCIiBsEzPY8T1EnIkhhDSeGk1unytyAN4F9FiHuGt1p37cWj8dhJ6bmOOe67+jZQmCUMr7yZ7T4nrSapJx4ymvV0Xm3i3kFoYkYuZzVZ8wDUc/kNlm5OuRbVfGS8b:6a6b#\n#Zkz.6/6:I1au2PRiaOEVG+r+yPMUUf42gqleUgu3wZapISgtMIcmYGr5L09L0kMc8lww/CFZ0KRt9OdmVXfCbREqyZPr50qzu0XIAAA=:dbd5#",
+   "texts": 6,
+   "bytes": 581
+  },
+  {
+   "from": "muse",
+   "text": "Not sure yet: I need a closer look at the dark vehicle behind the first cars to see how much snow is covering it. Your kit crops it from your photo and sends it back.\nZOOM k4 16 19 35 14",
+   "texts": 2
+  },
+  {
+   "from": "phone",
+   "text": "#Zkz.1/6:Ams0AyAEZgqABDNSSUZGQAIAAFdFQlBWUDggNAIAAFAQAJ0BKoAAMwA/mbjOXzkuqKcvGIvDIDMJaQAA5ZANtRhuw0qHTQVn+hVy0cMFGyrz+7qtyRv6PKB+aoJ8m6875hNXiU0B:4400#\n#Zkz.2/6:bb3JiVnqgM9v+0BRLj4gA4HPY54QOMQGvrPw6RaMR9C1hqjFE6I3r4AQAAqqvTx9ui67QUipDlZfYcR2nsNGW8daI2YA/r4D2oBnla7UhBYiNJoVgUNJx9a6TM9ikS5c9JSF82Sz:2677#\n#Zkz.3/6:cYhKAGZJYgVeeVMuhOxtyXtJV3UrPlfr5BQCPMrWcNP16yCC/pKQnDvYwF4AVqqLmu3fzoatouYdPwZ8YHpGZ2L2I5aSWzMUVJRVMBEk7rAyXDbWLRVOhjgflYPUmoAHbkZbRfRh:1177#\n#Zkz.4/6:3QSGiq+j96hy4gPo6wDGUOrIZHZE/K8OhFNQ08KzPH+gf6E3XPDie8CKsAVgkt3KypRPGx+D4LXsslStWciTDSGzsSsFcQtaZA5czJdI7Z272olKpbqCMcR9UW9hr4bVSPXQEOH3:92fb#\n#Zkz.5/6:j8ADOuWFVjuqcmFow3ZUZwynU0tLUvf/0zseEPHPoKpsCxECY5x4Km7ALH6WNA9FtMuIOSQKF0h2ytUr312shTklQXl+SFPaDLvoslXpTcQgX6/ej5ZiF5vxTi9zGEsitgW9kwD9:f0dd#\n#Zkz.6/6:SeegItjYx5Y0Aqm5xVTzYfHgGUr4HGkQMWI8F4WXCTsnjU+s0GjV4qllUOyXB/uRhhHuvKaitNpjl8lntr498r2K7BVrs8kCIg0oiZXPet96TgAAAA==:24c7#",
+   "texts": 6,
+   "bytes": 595
+  },
+  {
+   "from": "muse",
+   "text": "Not sure yet: I need a closer look at the dark pickup behind the cars to see how much snow is on and around it. Your kit crops it from your photo and sends it back.\nZOOM k4 15 18 38 10",
+   "texts": 2
+  },
+  {
+   "from": "phone",
+   "text": "#Zkz.1/5:Ams0As0EQAtmAwBSSUZGxAEAAFdFQlBWUDgguAEAABANAJ0BKoAAIgA/mcLSYjkxKaYquAuDIDMJaQAAsvBlSXNzgueKVbFYJsHNj1BKi5QMMTMmsWNBZTZsz0zd9HLWFxfWpkfN:ac04#\n#Zkz.2/5:FLZ5Nr3EujPKdqepLZCLJfPbHgcbw99+hGAQZJK23MNFI3Kze6J/t8GAAP6jX6VnVAz9lVGFThqSe9mrzuylXOIJTjL5omodSJDoga2+eO593kCwzUyG2o3MKMgMvVPNQQX+MaMN:d96c#\n#Zkz.3/5:OyALeOvsCRcTE198dJLCJFVik3JSxurSsfyr7pGj+7ORiH5K1/lZ0Odzl2bUTStyXZ2eRrO9RL74sU18XiZ8z6x1pFLwXR3tDoeMJUebI2pA3qIB+6Fc+gPC59VRUs+UnwytYO3j:6d24#\n#Zkz.4/5:Gj9hVTyCB0CNqMRhKiiv3RcxdUi+vcadVjpR5MWJjkvtXlQ9rL3xY6t8XsyvUPYYoRQL9MIISEF1GPn62QID+rHtSLYnbIKc3DJU/QCTUyh5iPEKuBcWKcnKIqLZ8HO6SQGW2tzy:86c0#\n#Zkz.5/5:8ZhDAvLlchcj0BjOsIPI06bEj3Dqlm4fYEMtf+jCnA2n1DSXl2644diJfwonkW7LYKWj+EJkPLAV3kNOAAAA:e678#",
+   "texts": 5,
+   "bytes": 471
+  },
+  {
+   "from": "muse",
+   "text": "Not sure yet: I need a closer look at the dark pickup behind the cars to see how much snow is on and around it, in high detail. Your kit crops it from your photo and sends it back.\nZOOM k4 25 19 30 7 H",
+   "texts": 2
+  },
+  {
+   "from": "phone",
+   "text": "#Zkz.1/15:Ams0BYAEkwkAAhpSSUZGxgUAAFdFQlBWUDggugUAAJAmAJ0BKgABPAA/OYi5VK8pJaMtFs1x4CcJaWtPCUW6i7NVv3BZ35+n8WrKVA1h7noUwpxCOaMVUTOwrTIPZ2vQeBfcy+QD:9549#\n#Zkz.2/15:f8WPrTxAr9RefrmEB3lpev5d2t61LXUnFe00QXIqxbS9QT/yKAfjxt0LAZJMlwxs+VH9+FTnWhK7moGDb5/hYNLyr0ArHIZu6SscGIXWRZEDntN6+ckjTyk99QhXZfCVvQ0+zeRP:ddb0#\n#Zkz.3/15:Y/pZ6jWQGaNvDmQEA5ET+2+VBjnv7DFzl8frb4TEXooi5xME2VedTIqBbbBcuo31dfvBl1sl64zuhpUar7pvqqtEsVmRwHvprDeVicILDeA9J2/5sgnv19Ym0KMnIEEFfh8UYfe6:a616#\n#Zkz.4/15:IWqUBlK04ss2UK95JdRnY8FrIPf+blVGSlo8UTXAZurzvGQlq59YwxoAAP7snORi+Ud/y8OMRH4WtwxXhG50Ib8IV2IxngNuvuskxAF5SDcfc1ZcSMOTzSZpRTaX25wldXLLbmBK:714d#\n#Zkz.5/15:VQj/DHK1E+8wAHH67vcp+fQVP5B65edGdhAhYJKo1zSgO4CYEIn/vWfSMeXN1E6qBtzcZmet0xE+iMl8Q6X6dC4/3YN61+Ie7UYPbv/kK80YnKI9UnXGFZIGojStE6ubJO7CPQKj:15d4#\n#Zkz.6/15:2TG9EdCCbjyNCRcKQRenzDYe9pFq6N4wPxQ0j/Yeixsfb/Ah6gL1IksU9pYGOrRoZZZM3JApP9IUhXRULZYf8Aaq/pCcDSmtBUOSZQ8KRlsBCgoQJqfm1qtiDMHQISsxDG/CC5CB:2b8c#\n#Zkz.7/15:r/bOyA3ki6Bi0RsxM4DkBtm037qtIy+xdfGFYkUr2h+vyIYKjypYG2EB8VuT6pCUbaSDHDS2FfU4euO8NXMpBHWP8SD38YuEis4JiwwQ7dIX1SzAxDCL3lP5r0PU84Q10nLXCGwJ:0208#\n#Zkz.8/15:WHM3ajJEGL1jHJuREYkty9HJ2V/Yu5PPStU6QkRfEYtqi8A5J/rAoqkMRv5Hpp3HNryhDXQ5YHSIoXhfmyOEIQUCr/ZKRTqrMdItpb1iyOWhPT0rv01qJu7/06HvHUQU8SzuRlZa:6831#\n#Zkz.9/15:FLkp6Evaxz499KS7Unv6hy6dQN7+zT+Rg+z9NFfSvTEQjhhjSMy734eO/+g1I4ixUsx7OG4iKkNQGt6wKhrY41rkPCA3kibmgZdhVVfcX5hWtVEParR4i/BCUowGXHO34fD1qM5k:589f#\n#Zkz.10/15:qcLv6BUXPknhhmWtLGT40rM3EUrgrKXVPnHMAtSgtTok0kQYf73iEq94HMQUgl8nBD7REOTQSwUzHtEmu43OdZH4NHJqwMAKzXbietoJ+5zJxRcOX5WlEvxkm9J+95V41ZezccH+:618e#\n#Zkz.11/15:1uFqCbKzbR9Nx11y/TlfzqFE3ITicxXoOyyYMNod2voIkwqwD18XWz8G8PgTUrfRKI2TDgXBrn8aZyVHIVHIREfSlVFZ3i0pCVKcrpnjVoQVybQL7rYJZupr4YZ8ZkC8ppdkUYJ/:eaa5#\n#Zkz.12/15:u2+CY6W2WMVkC2Cv3iiWzhq0lgqt9hcCtYAiF1fqe0rlZIqOfTTVG4ZvrWyv+GUqclS4dPFeNMlZD74h/4VHrZN0Abh0om9LHA7Cqvz/jXPW9ZXO49T2cqqNggXWadeCwOIKxCDl:355a#\n#Zkz.13/15:mkX06SvQutDzdP26Yk115l3F3i0s/PFXxZLKE8aOi29mqcisxTc60AXuziavLTDbfvZWR5vN8Wavv1H9g+CGCLJdi2haBIJCgwa44lQ6p9qgFs84owHfbdr6FACrQyPoxr2kfVVG:0352#\n#Zkz.14/15:YQnDlGur9AY+UMPBT9o2VBwfbzxFeGI6BuHu2j5xWssSQUEEQCw4HeY9nr/gf/t59ZHeWjz2BStPEDp7bnJzULKaCwqYZRAuKfbXGMzs+PIewVIlcZM0FseaKrovVglzpx4jvjnw:d3fd#\n#Zkz.15/15:NdiNV3ZBQ0TtwY57/VVPZG3cjNFZ75l4AQ2vmXaD1ims3z+wSwB5L9078MBAKCOujOmQkO3VZaCc3gGWPH/lD0GQEAAA:c758#",
+   "texts": 15,
+   "bytes": 1497
+  },
+  {
+   "from": "muse",
+   "text": "Your pickup is not buried. You can drive it out.",
+   "texts": 1
+  }
+ ],
+ "answer": "Your pickup is not buried. You can drive it out.",
+ "phone_bytes": 4921,
+ "photo_bytes": 6610352,
+ "target": {
+  "in_photo": [
+   0.172,
+   0.215,
+   0.429,
+   0.304
+  ],
+  "score": 0.77,
+  "from": "SAM 3.1 on the run's close-ups, afterwards (\"truck\")"
+ }
+}

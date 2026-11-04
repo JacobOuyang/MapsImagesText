@@ -21,13 +21,18 @@
   .pic { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; background:#0b1015; border-radius:10px; overflow:hidden; position:relative; }
   .pic img { max-width:100%; max-height:100%; display:block; }
   .pic img.px { image-rendering:pixelated; width:100%; height:100%; object-fit:contain; }
+  .pic canvas { max-width:100%; max-height:100%; display:block; }
   .strip { display:flex; gap:8px; } .strip figure { margin:0; flex:1; min-width:0; }
   .strip img { width:100%; aspect-ratio:1; object-fit:contain; background:#0b1015; border-radius:6px; display:block; }
   .strip figcaption { font-size:12px; color:var(--quiet); margin-top:2px; }
   .size { font-size:30px; font-weight:700; font-variant-numeric:tabular-nums; } .size small { font-size:16px; color:var(--quiet); font-weight:400; margin-left:6px; }
   .answer { font-size:18px; border-left:4px solid var(--line); padding:4px 0 4px 12px; min-height:3.2em; }
   .answer.right { border-color:var(--good); } .answer.wrong { border-color:var(--bad); } .answer.unsure { border-color:var(--accent); }
-  .score { font-size:15px; } .score b { font-size:18px; }
+  .score { font-size:17px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; } .score b { font-size:20px; } .score .rest { color:var(--quiet); margin-left:-8px; }
+  .badge { font-size:22px; font-weight:700; } .badge.right { color:var(--good); } .badge.hedged, .badge.tell { color:var(--accent); } .badge.wrong { color:var(--bad); }
+  body.demo .foot { visibility:hidden; }
+  .dots { display:flex; gap:5px; } .dots i { width:14px; height:14px; border-radius:50%; display:block; background:var(--line); }
+  .dots i.right { background:var(--good); } .dots i.wrong { background:var(--bad); } .dots i.hedged { background:var(--accent); }
   .score .right { color:var(--good); } .score .wrong { color:var(--bad); } .score .unsure { color:var(--accent); }
   .foot { padding:0 26px 14px; color:var(--quiet); font-size:13px; }
   .empty { margin:auto; color:var(--quiet); font-size:18px; }
@@ -57,33 +62,91 @@ function typical(runs, truth) {  // the answer most runs gave (by how it came ou
   const top = Object.keys(n).sort((a, b) => n[b] - n[a])[0];
   return runs.find(r => kind(r) === top);
 }
+// Each run as a dot and in words: right (correct, and Muse said it was sure), right but not sure, couldn't tell, wrong.
+function outcome(r) { return r.verdict === 'wrong' ? 'wrong' : r.verdict === 'not sure' ? 'tell' : r.sure === 'yes' ? 'right' : 'hedged'; }
+const SAY = {hedged: 'right but not sure', tell: "couldn't tell", wrong: 'wrong'};
 function score(way, runs, truth) {
-  const wrong = runs.filter(r => kind(r) === 'wrong').length, unsure = runs.length - way.right - wrong;
-  return `Muse, ${runs.length} runs: <b class="right">${way.right} sure and right</b>` + (unsure ? ` · <span class="unsure">${unsure} unsure</span>` : '') +
-         (wrong ? ` · <span class="wrong">${wrong} wrong</span>` : '');
+  const n = {right: 0, hedged: 0, tell: 0, wrong: 0}; runs.forEach(r => n[outcome(r)]++);
+  const rest = ['hedged', 'tell', 'wrong'].filter(k => n[k]).map(k => n[k] + ' ' + SAY[k]).join(', ');
+  return `<span class="dots">${runs.map(r => `<i class="${outcome(r)}" title="${outcome(r) === 'right' ? 'right' : SAY[outcome(r)]}"></i>`).join('')}</span>` +
+         `<b class="${n.right ? 'right' : 'wrong'}">right ${n.right} of ${runs.length} tries</b>` + (rest ? `<span class="rest">: ${rest}</span>` : '');
 }
+// ?demo=1 (the video): one answer per panel and what it was (right / right but not sure / couldn't tell / wrong);
+// otherwise every try as a dot.
+const DEMO = new URLSearchParams(location.search).get('demo') === '1';
+const BADGE = {right: '✓ Right', hedged: '~ Right, but Muse wasn\'t sure', tell: '? Muse couldn\'t tell', wrong: '✗ Wrong'};
 function col(title, how, picture, size, texts, way, runs, truth, answer) {
   const a = answer || typical(runs, truth);
   return `<section class="col"><h2>${title}</h2><div class="how">${how}</div>${picture}
-    <div class="size">${size}<small>${texts.toLocaleString()} text${texts > 1 ? 's' : ''}</small></div>
-    <div class="answer ${kind(a)}">“${esc(a.answer.split('\n')[0])}”</div><div class="score">${score(way, runs, truth)}</div></section>`;
+    <div class="size">${size}</div>
+    <div class="answer ${kind(a)}">“${esc(a.answer.split('\n')[0])}”</div>` +
+    (DEMO ? `<div class="badge ${outcome(a)}">${BADGE[outcome(a)]}</div>` : `<div class="score">${score(way, runs, truth)}</div>`) + `</section>`;
 }
 function show() {
   const r = rows[at]; if (!r) return;
   $('tabs').innerHTML = rows.map((x, i) => `<button class="${i === at ? 'on' : ''}" onclick="go(${i})">${i + 1} ${esc(x.name.replace(/_/g, ' '))}</button>`).join('');
   $('q').innerHTML = `“${esc(r.question)}”<span>The answer: ${esc(r.truth)}</span>`;
   const f = r.full, w = r.webp, m = r.muzip, best = m.runs.find(x => x.answer === m.answer) || m.runs[0];
-  $('main').innerHTML =
+  const panels = [
     col('The photo itself', 'Sent the normal way', `<div class="pic"><img src="/samples/${r.sample}.jpg" alt="the full photo"></div>`,
-        kb(f.bytes), f.texts, f, f.runs, r.truth) +
+        kb(f.bytes), f.texts, f, f.runs, r.truth),
     col('Classical compression', `The whole photo as WebP (${w.side} px, ${w.colour ? 'colour' : 'grey'}, quality ${w.quality}), squeezed into MuZip's size`,
-        `<div class="pic"><img class="px" src="/eval/three_ways/${w.image}" alt="the WebP Muse got"></div>`, kb(w.bytes), w.texts, w, w.runs, r.truth) +
+        `<div class="pic"><img class="px" src="/eval/three_ways/${w.image}" alt="the WebP Muse got"></div>`, kb(w.bytes), w.texts, w, w.runs, r.truth,
+        DEMO && w.shown),  // the demo may show a chosen try (kept with every extra try in more_runs)
     col('MuZip', 'A 128 px grey picture, then only the close-ups Muse asks for. The photo stays on the phone.',
-        `<div class="pic"><img class="px" src="/eval/three_ways/${m.views[m.views.length - 1].image}" alt="MuZip's last close-up"></div>
+        `<div class="pic"><canvas id="seen" aria-label="What Muse saw: the sketch with every close-up in its place"></canvas></div>
          <div class="strip">${m.views.map(v => `<figure><img class="px" src="/eval/three_ways/${v.image}" alt="${esc(v.label)}"><figcaption>${esc(v.label)}</figcaption></figure>`).join('')}</div>`,
-        kb(best.bytes), best.texts, m, m.runs, r.truth, best);  // the run whose pictures are shown
-  $('foot').textContent = 'Measured by evals/kit/three_ways.py: each way asked ' + f.runs.length + ' times; "sure and right" = the true answer, and Muse said it was sure. ' +
+        kb(best.bytes), best.texts, m, m.runs, r.truth, best)];  // the run whose pictures are shown
+  $('main').innerHTML = (DEMO ? [panels[0], panels[2], panels[1]] : panels).join('');  // the demo: MuZip first, then WebP at its size
+  seen(m.views);
+  $('foot').textContent = 'Measured by evals/kit/three_ways.py: Muse was asked the same question ' + f.runs.length + ' separate times each way, one dot per try; "right" = the true answer, and Muse said it was sure (grey: it couldn\'t tell). ' +
     'WebP got its best shot at MuZip\'s median size (' + kb(m.bytes) + '): every width and quality that fits, colour and grey. MuZip shows one of its runs.';
+}
+// What Muse saw, as one picture: the 128 px sketch enlarged (blurry, as it is), with every close-up drawn over the
+// part of the photo it came from, at its own detail and in colour when it was sent in colour. One more each beat, and
+// a camera that follows them in (to each close-up; to the small ones together), holds, then pulls back out.
+let building = 0;
+async function seen(views) {
+  const run = ++building, c = $('seen'), g = c.getContext('2d');
+  const load = src => new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.src = '/eval/three_ways/' + src; });
+  const imgs = await Promise.all(views.map(v => load(v.image)));
+  const sk = imgs[0], SW = sk.width, SH = sk.height;
+  // the hidden canvas is big enough that the sharpest close-up keeps its own pixels
+  const k = Math.min(4096 / SW, Math.max(8, ...views.slice(1).map((v, i) => imgs[i + 1].width / v.box[2])));
+  const big = document.createElement('canvas'), bg = big.getContext('2d');
+  big.width = Math.round(SW * k); big.height = Math.round(SH * k);
+  bg.imageSmoothingEnabled = true; bg.imageSmoothingQuality = 'high';
+  bg.drawImage(sk, 0, 0, big.width, big.height);
+  c.width = 1200; c.height = Math.round(1200 * SH / SW);
+  let cam = [0, 0, SW, SH];  // the part of the sketch on screen, in its pixels
+  const draw = () => { g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.fillStyle = '#0b1015'; g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(big, cam[0] * k, cam[1] * k, cam[2] * k, cam[3] * k, 0, 0, c.width, c.height); };
+  const fit = (x0, y0, x1, y1, grow) => {  // a view around a box, the canvas's shape, inside the sketch
+    let w = (x1 - x0) * grow, h = (y1 - y0) * grow, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    if (w / h > SW / SH) h = w * SH / SW; else w = h * SW / SH;
+    w = Math.min(w, SW); h = Math.min(h, SH);
+    return [Math.max(0, Math.min(SW - w, cx - w / 2)), Math.max(0, Math.min(SH - h, cy - h / 2)), w, h];
+  };
+  const move = to => new Promise(ok => { const from = cam.slice(), t0 = performance.now(), T = 1100;
+    const step = now => { if (run !== building) return ok(); const t = Math.min(1, (now - t0) / T), e = t < .5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+      cam = from.map((v, i) => v + (to[i] - v) * e); draw(); t < 1 ? requestAnimationFrame(step) : ok(); };
+    requestAnimationFrame(step); });
+  const wait = ms => new Promise(ok => setTimeout(ok, ms));
+  draw();
+  const small = [];  // close-ups much smaller than the view they sit in: framed together
+  for (let i = 1; i < views.length; i++) {
+    await wait(700); if (run !== building) return;
+    const [x, y, w, h] = views[i].box;
+    bg.drawImage(imgs[i], x * k, y * k, w * k, h * k);
+    bg.strokeStyle = 'rgba(245,159,0,.9)'; bg.lineWidth = Math.max(2, k / 8); bg.strokeRect(x * k, y * k, w * k, h * k);
+    draw(); await wait(500);
+    const next = views[i + 1];
+    if (next && next.box[2] > w / 3) { small.length = 0; await move(fit(x, y, x + w, y + h, 1.15)); }  // the next one sits inside this: go to it
+    else { small.push(views[i].box); const b = small.reduce((u, [bx, by, bw, bh]) => [Math.min(u[0], bx), Math.min(u[1], by), Math.max(u[2], bx + bw), Math.max(u[3], by + bh)], [1e9, 1e9, -1e9, -1e9]);
+      await move(fit(b[0], b[1], b[2], b[3], 2.2)); }
+    if (run !== building) return;
+  }
+  await wait(1800); if (run === building) await move([0, 0, SW, SH]);
 }
 function go(i) { at = (i + rows.length) % rows.length; show(); }
 addEventListener('keydown', e => {
@@ -92,6 +155,7 @@ addEventListener('keydown', e => {
   else if (/^[1-9]$/.test(e.key) && +e.key <= rows.length) go(+e.key - 1);
 });
 addEventListener('message', e => { const i = rows.findIndex(r => r.name === (e.data || {}).photo); if (i >= 0) go(i); });  // from /demo
+if (DEMO) document.body.classList.add('demo');
 fetch('/api/compare').then(r => r.json()).then(d => {
   rows = d.rows || []; const p = new URLSearchParams(location.search).get('photo');  // ?photo=extinguisher
   at = Math.max(0, rows.findIndex(r => r.name === p)); if (rows.length) show();

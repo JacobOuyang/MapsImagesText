@@ -1,185 +1,197 @@
 {
- "loop": "00eefae035",
- "runs": 5,
+ "loop": "ee1c90721e",
+ "runs": 3,
  "rows": [
   {
    "id": "medicine_headache",
    "kind": "generated",
-   "runs": 5,
-   "right": 5,
+   "runs": 3,
+   "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 62,
+   "texts": 65,
    "looks": 1,
-   "seconds": 16.7,
+   "seconds": 15.5,
    "answers": [
-    "You can take the ibuprofen 200 mg, on the bottom shelf on the right side of the cabinet.",
-    "You can take the ibuprofen 200 mg on the bottom shelf on the right side of the cabinet.",
-    "You can take the Ibuprofen 200 mg pain reliever on the bottom shelf on the right side.",
-    "You can take the Ibuprofen 200 mg on the bottom shelf, far right side of the cabinet above the sink.",
-    "You can take the Ibuprofen 200 mg pain reliever, on the bottom shelf on the far right."
+    "You can take the Ibuprofen 200 mg pain reliever on the bottom shelf on the right side of the cabinet",
+    "You can take the Ibuprofen 200 mg pain reliever, on the bottom shelf on the right side of the cabine",
+    "You can take the Ibuprofen 200 mg on the bottom shelf on the right side of the medicine cabinet abov"
    ]
   },
   {
    "id": "medicine_allergy",
    "kind": "generated",
-   "runs": 5,
-   "right": 3,
+   "runs": 3,
+   "right": 2,
    "hedged": 0,
    "wrong": 1,
-   "texts": 97,
-   "looks": 2,
-   "seconds": 25.4,
+   "texts": 86,
+   "looks": 1,
+   "seconds": 20.0,
    "answers": [
-    "I can't tell from what I can see. (not sure)",
-    "Yes, Cetirizine Allergy Relief on the middle shelf of the cabinet above the sink.",
-    "Yes, Loratadine Allergy Relief on the middle shelf of the cabinet above the sink.",
-    "Yes. An Allergy Relief bottle on the left side of the middle shelf of the cabinet above the sink.",
-    "Yes, Loratadine Allergy Relief on the middle shelf of the cabinet above the sink."
+    "Yes, there is Allergy Relief on the middle shelf of the cabinet above the sink, just left of the Ant",
+    "Yes, there is Cortadine Allergy Relief on the middle shelf, left of the antacid box.",
+    "Yes, Loratadine Allergy Relief on the middle shelf of the cabinet above the sink, left of center."
    ]
   },
   {
    "id": "tick",
    "kind": "generated",
-   "runs": 5,
-   "right": 5,
+   "runs": 3,
+   "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 34,
+   "texts": 46,
    "looks": 2,
-   "seconds": 22.0,
+   "seconds": 22.1,
    "answers": [
-    "That's a tick biting your lower leg.",
-    "That's a tick biting your lower leg.",
-    "That's a tick on your lower leg.",
     "That's a tick on your lower leg just above your sock.",
-    "That's a tick on your lower leg just above your sock."
+    "That's a tick biting your lower leg just above your sock.",
+    "That's a tick biting your lower leg."
    ]
   },
   {
    "id": "extinguisher",
    "kind": "generated",
-   "runs": 5,
-   "right": 5,
+   "runs": 3,
+   "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 48,
+   "texts": 44,
    "looks": 1,
-   "seconds": 15.4,
+   "seconds": 11.8,
    "answers": [
-    "No. It is marked empty and needs recharging, so do not use it.",
-    "No. This extinguisher is marked EMPTY / RECHARGE, so it cannot be used.",
-    "No - it is marked EMPTY / RECHARGE and says do not use.",
-    "No. It is marked Empty/Recharge and says do not use.",
+    "No, do not use it. The label says EMPTY / RECHARGE, so it will not work.",
+    "No, do not use it. It is marked empty and needs recharging.",
     "No, do not use it. It is marked EMPTY / RECHARGE."
    ]
   },
   {
    "id": "bus_timetable",
    "kind": "real",
-   "runs": 5,
+   "runs": 3,
    "right": 0,
    "hedged": 0,
    "wrong": 0,
-   "texts": 160,
+   "texts": 181,
    "looks": 3,
-   "seconds": 29.6,
+   "seconds": 33.9,
    "answers": [
-    "I can't tell from what I can see. (not sure)",
-    "I can't tell from what I can see. (not sure)",
-    "I can't tell from what I can see. (not sure)",
-    "I can't tell from what I can see. (not sure)",
-    "I can't tell from what I can see. (not sure)"
+    "I can't tell - the Saturday morning times are too blurry to read, I would need a sharper close-up of",
+    "I can't tell the next bus, the Saturday times are too blurry to read. I would need a sharper close-u",
+    "I can't tell for sure, the Saturday times are too blurry to read - the 9am bus looks like 9:03 but I"
    ]
   },
   {
    "id": "whole_milk",
    "kind": "real",
-   "runs": 5,
-   "right": 4,
+   "runs": 3,
+   "right": 2,
    "hedged": 0,
    "wrong": 0,
-   "texts": 124,
+   "texts": 127,
    "looks": 5,
-   "seconds": 45.5,
+   "seconds": 40.1,
    "answers": [
     "A gallon of whole milk is $3.69 on special.",
-    "A gallon of whole milk is $3.69 on special.",
-    "$3.69 on special.",
-    "A gallon of whole milk is $3.69 on special.",
-    "I can't tell from what I can see. (not sure)"
+    "I can't tell the price - the jugs show Stew Leonard's whole milk but no price tag is visible. (not s",
+    "A gallon of whole milk is $3.69."
    ]
   },
   {
    "id": "almond_milk",
    "kind": "real",
-   "runs": 5,
-   "right": 5,
+   "runs": 3,
+   "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 133,
-   "looks": 3,
-   "seconds": 25.3,
+   "texts": 97,
+   "looks": 2,
+   "seconds": 19.2,
    "answers": [
-    "Yes, there is almond milk - Almond Breeze.",
-    "Yes, there is almond milk \u2013 Almond Breeze.",
-    "Yes, there is almond milk here. It is Almond Breeze.",
-    "Yes, there is almond milk here. The brand is Almond Breeze.",
-    "Yes, there is almond milk. It is Blue Diamond Almond Breeze."
+    "Yes, there is almond milk. It is Blue Diamond Almond Breeze.",
+    "Yes, there is Almond Breeze almond milk on the shelf.",
+    "Yes, there is almond milk. The brand is Almond Breeze."
    ]
   },
   {
    "id": "cinnamon",
    "kind": "real",
-   "runs": 5,
-   "right": 3,
+   "runs": 3,
+   "right": 2,
    "hedged": 0,
    "wrong": 0,
-   "texts": 113,
-   "looks": 2,
-   "seconds": 20.7,
+   "texts": 104,
+   "looks": 1,
+   "seconds": 16.9,
    "answers": [
-    "Yes, a white jar labeled SIR. CINNAMOMI.",
-    "Yes, there is a jar in the middle shelf labeled SIR. CINNAMOMI.",
-    "I can't tell from what I can see. (not sure)",
-    "Yes, a jar on the lower shelf is labeled SIR. CINNAMOMI.",
-    "I can't tell from what I can see. (not sure)"
+    "Yes, there is a jar labeled SIR. CINNAMOMI.",
+    "Yes, there is a jar labeled SIR. CINNAMOMI.",
+    "I can't tell for sure; the labels I can read don't say cinnamon but many jars are still too blurry t"
    ]
   },
   {
    "id": "storage_box",
    "kind": "easy",
-   "runs": 5,
-   "right": 5,
+   "runs": 3,
+   "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 36,
+   "texts": 39,
    "looks": 1,
-   "seconds": 10.5,
+   "seconds": 10.2,
    "answers": [
-    "The box is Propranolol 40mg with expiry 02/2020. It is not good in November 2026 - it expired over 6",
+    "It is Propranolol 40mg, expired 02/2020, so it is not good in November 2026.",
     "The box is Propranolol 40mg with expiry 02/2020. It is expired and not good to use in November 2026.",
-    "The box is Propranolol 40mg with expiry 02/2020. It is expired and not good to use in November 2026.",
-    "The box is labeled Propranolol 40mg with exp 02/2020. It is expired and not good in November 2026.",
-    "The box is labeled Propranolol 40mg with expiry 02/2020. It is expired and not good in November 2026"
+    "The box is Propranolol 40mg, expiring 02/2020. It is expired and not good to use in November 2026."
    ]
   },
   {
    "id": "parking",
    "kind": "easy",
-   "runs": 5,
+   "runs": 3,
    "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 57,
-   "looks": 3,
-   "seconds": 32.5,
+   "texts": 32,
+   "looks": 1,
+   "seconds": 11.4,
    "answers": [
-    "I can't tell from what I can see. (not sure)",
-    "No, you can't park here at 8 am Friday in June. It's no parking 7 to 9 am Fridays for street cleanin",
-    "No. It's No Parking 7-9am on Fridays in June for street cleaning.",
-    "No. Street cleaning no parking 7am-9am on Fridays April to October is in effect at 8am.",
-    "I can't tell from what I can see. (not sure)"
+    "No. It's no parking 7am to 9am on Fridays in June for street cleaning.",
+    "No, you can't park here. It's no parking 7-9 AM on Fridays in June for street cleaning, and it's a t",
+    "No. No parking 7am to 9am on Fridays April to October for street cleaning, and it is a tow zone."
+   ]
+  },
+  {
+   "id": "drone_sign",
+   "kind": "field",
+   "runs": 3,
+   "right": 3,
+   "hedged": 0,
+   "wrong": 0,
+   "texts": 106,
+   "looks": 2,
+   "seconds": 17.2,
+   "answers": [
+    "The sign on the roof says NEED INSULIN 2 PEOPLE.",
+    "The sign on the roof says \"NEED INSULIN 2 PEOPLE\".",
+    "The sign says \"NEED INSULIN 2 PEOPLE\"."
+   ]
+  },
+  {
+   "id": "pump_station",
+   "kind": "field",
+   "runs": 3,
+   "right": 2,
+   "hedged": 0,
+   "wrong": 1,
+   "texts": 60,
+   "looks": 1,
+   "seconds": 10.5,
+   "answers": [
+    "This camera is watching Pump Station Line 3, at its control cabinet.",
+    "This is Pump Station Line 3, seen on CAM-07.",
+    "This is CAM-07 watching Pump Station Line 2."
    ]
   }
  ]

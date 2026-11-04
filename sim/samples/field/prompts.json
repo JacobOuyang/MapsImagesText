@@ -1,0 +1,7 @@
+{
+ "model": "muse-image-1.0, size 2048x2048 (returned 1600 px)",
+ "photos": {
+  "drone_sign": "A realistic aerial photo taken by a drone from about 40 metres up over a flooded suburban street: brown floodwater, five houses, treetops, a half-submerged car. On one grey roof, two people sit beside a white bedsheet laid flat on the roof with words painted on it in black: NEED INSULIN 2 PEOPLE. The sheet is a small part of the frame. Nothing is centred or highlighted.",
+  "pump_gauge": "A realistic photo from a fixed security camera high in the corner of a remote pipeline pumping station: pipes, valves, a control cabinet, a fire extinguisher, a ladder. On one pipe, small in the frame, a round pressure gauge with a white dial, a green zone and a red zone; its black needle points into the red zone, and a label under it reads LINE 3. Nothing is centred or highlighted."
+ }
+}

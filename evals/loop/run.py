@@ -10,7 +10,8 @@ seconds it took, and the change against BASELINE.json.
 
 Kinds: "generated" (Muse Image photos, sim/samples/hard/), "real" (Wikimedia Commons, sim/samples/real/), both with a
 small detail that decides the answer; "easy" (real photos whose detail a 5 KB WebP already shows): there the loop
-should answer in a look or two, so they measure what it wastes. Each run is kept by a hash of the loop's code
+should answer in a look or two, so they measure what it wastes; "field" (the demo branch: a drone and a remote camera
+instead of a phone, sim/samples/field/). Each run is kept by a hash of the loop's code
 (out/eval/loop/<hash>/), so re-running an unchanged loop costs nothing.
 """
 import argparse
@@ -83,7 +84,7 @@ def table(rows, base):
         lines.append("| %s | %s | %d/%d%s | %d | %d | %g%s | %g | %g |" % (
             r["id"], r["kind"], r["right"], r["runs"], delta(r, "right", ""), r["hedged"], r["wrong"],
             r["texts"], delta(r, "texts", "%+g"), r["looks"], r["seconds"]))
-    for kind in ("generated", "real", "easy"):
+    for kind in ("generated", "real", "easy", "field"):
         part = [r for r in rows if r["kind"] == kind]
         if part:
             lines.append("| **all %s** | | **%d/%d** | %d | %d | %g | | |" % (kind, sum(r["right"] for r in part), sum(r["runs"] for r in part),

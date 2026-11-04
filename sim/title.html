@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MuZip Title</title>
+<style>
+  /* The video's title card: μ and a zipper, "agentic image compression" under it. Click or R: replay. */
+  :root { --bg:#0f1419; --fg:#e8edf2; --quiet:#8b98a5; --accent:#f59f00; --muse:#0866ff; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font-family:system-ui, -apple-system, "Segoe UI", sans-serif; overflow:hidden; }
+  body { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5vh; }
+  .mark { display:flex; align-items:center; gap:2.5vh; opacity:0; animation:in .9s ease-out .2s forwards; }
+  .mu { height:34vh; overflow:visible; transform:none; }  /* a brush-stroke μ in a blue gradient: straight slanted strokes, tight turns */
+  #zip { height:30vh; overflow:visible; transform:skewX(-12deg); }  /* italic, like the μ */
+  .tooth { fill:var(--fg); }
+  .slider { fill:url(#blue); }
+  .tag { font-size:5vh; font-weight:500; letter-spacing:.02em; color:var(--quiet); opacity:0; animation:in .9s ease-out 1s forwards; }
+  @keyframes in { to { opacity:1; } }
+</style>
+</head>
+<body>
+<div class="mark" aria-label="MuZip">
+  <svg class="mu" viewBox="0 0 200 240" aria-hidden="true">
+    <defs><linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0050e6"/><stop offset="1" stop-color="#1a8cff"/></linearGradient></defs>
+    <path d="M74 42 L36 224 M74 42 L57 150 Q52 182 74 172 L152 42 L136 150 Q131 182 162 168"
+          fill="none" stroke="url(#blue)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <svg id="zip" viewBox="0 0 60 200" aria-hidden="true"></svg>
+</div>
+<div class="tag">agentic image compression</div>
+<script>
+// A zipper drawn tooth by tooth: closed below the slider, opening into a V above it.
+const NS = 'http://www.w3.org/2000/svg', SLIDER = 62;
+const svg = document.getElementById('zip');
+const el = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); svg.appendChild(e); return e; };
+for (let y = 0; y < 200; y += 10) {
+  [[-1, 0], [1, 5]].forEach(([side, dy]) => {
+    const ty = y + dy, open = Math.max(0, SLIDER - ty) * 0.22;
+    el('rect', {class: 'tooth', x: side < 0 ? 17 - open : 29 + open, y: ty, width: 14, height: 6, rx: 1.5});
+  });
+}
+el('path', {class: 'slider', d: `M16 ${SLIDER - 8} H44 L40 ${SLIDER + 14} H20 Z`, rx: 3});
+el('rect', {class: 'slider', x: 24, y: SLIDER + 12, width: 12, height: 32, rx: 4});
+el('rect', {x: 27.5, y: SLIDER + 30, width: 5, height: 9, rx: 2, fill: 'var(--bg)'});
+function replay() { const b = document.body; const h = b.innerHTML; b.innerHTML = ''; void b.offsetWidth; b.innerHTML = h; }
+addEventListener('click', replay);
+addEventListener('keydown', e => { if (e.key === 'r' || e.key === 'R') replay(); });
+</script>
+</body>
+</html>

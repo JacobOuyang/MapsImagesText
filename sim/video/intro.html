@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MuZip Intro</title>
+<style>
+  /* Section 1 of the video, drawn as a function of time so every frame can be captured exactly:
+     ?t=4.2 shows the frame at 4.2 s; ?play=1 plays it in real time (no sound: the voice-over is muxed in later).
+     The times are where the lines fall in the voice-over (private/voice/01_intro.mp3, found from its pauses).
+     First a phone on one bar of signal fails to send a photo; then the title; then the same photo three ways, from
+     one real MuZip run on sim/samples/real/parking_signs.jpg (sim/video/street/): the photo itself, MuZip's first
+     pass (its 128 px sketch) and the one close-up Muse asked for (both signs, high detail; its box in the sketch's
+     pixels). Each picture appears at once, the way it arrives: no fades between them. */
+  :root { --bg:#0f1419; --fg:#e8edf2; --quiet:#8b98a5; }
+  html, body { margin:0; width:1920px; height:1080px; background:var(--bg); color:var(--fg); font-family:system-ui, -apple-system, "Segoe UI", sans-serif; overflow:hidden; }
+  body { position:relative; }  /* the scene is its own 1920 x 1080 frame, whatever the window */
+  /* the phone: a photo that never finishes sending */
+  .phone { position:absolute; left:50%; top:50%; width:520px; height:900px; margin:-450px 0 0 -260px; border-radius:56px; background:#0b1015;
+           border:3px solid #2a3540; box-shadow:0 30px 80px rgba(0,0,0,.5); overflow:hidden; }
+  .status { display:flex; justify-content:space-between; align-items:center; padding:26px 38px 0; font-size:24px; font-weight:600; }
+  .bars { display:flex; gap:5px; align-items:flex-end; height:24px; } .bars i { width:8px; background:#3a4652; border-radius:2px; display:block; }
+  .bars i:nth-child(1) { height:7px; background:var(--fg); } .bars i:nth-child(2) { height:12px; } .bars i:nth-child(3) { height:17px; } .bars i:nth-child(4) { height:23px; }
+  .chat { position:absolute; left:0; right:0; bottom:120px; display:flex; flex-direction:column; align-items:flex-end; padding:0 30px; }
+  .bubble { position:relative; width:380px; border-radius:26px; overflow:hidden; background:#1f6f4a; padding:8px; }
+  .bubble img { width:100%; border-radius:20px; display:block; filter:blur(14px) brightness(.55); transform:scale(1.08); }
+  .bubble .ring { position:absolute; left:50%; top:50%; width:96px; height:96px; margin:-48px 0 0 -48px; }
+  .sent { margin-top:12px; font-size:24px; color:var(--quiet); }
+  .sent.bad { color:#fa5252; font-weight:650; }
+  .pic { position:absolute; left:50%; top:70px; width:1147px; height:860px; margin-left:-573px; border-radius:16px; overflow:hidden; transform-origin:50% 100%; }
+  .label { position:absolute; left:0; right:0; top:960px; text-align:center; font-size:44px; font-weight:600; }
+  .label small { color:var(--quiet); font-weight:500; margin-left:14px; }
+  .label em { font-style:normal; color:#1a8cff; }
+  .title { position:absolute; left:0; right:0; top:0; height:1080px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:44px; transform-origin:50% 0; }
+  .mark { display:flex; align-items:center; gap:28px; }
+  .mark .mu { height:367px; overflow:visible; }
+  .mark .zip { height:324px; overflow:visible; transform:skewX(-12deg); }
+  .tooth { fill:var(--fg); }
+  .tag { font-size:54px; font-weight:500; letter-spacing:.02em; color:var(--quiet); }
+</style>
+</head>
+<body>
+<div id="phoneLayer" style="position:absolute; inset:0">
+  <div class="phone">
+    <div class="status"><span>9:41</span><span class="bars"><i></i><i></i><i></i><i></i></span></div>
+    <div class="chat">
+      <div class="bubble"><img src="/samples/real/parking_signs.jpg" alt="">
+        <svg class="ring" viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" fill="rgba(0,0,0,.45)" stroke="rgba(255,255,255,.25)" stroke-width="7"/>
+          <circle id="arc" cx="50" cy="50" r="42" fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" transform="rotate(-90 50 50)" stroke-dasharray="0 264"/>
+          <path id="cross" d="M36 36 L64 64 M64 36 L36 64" stroke="#fff" stroke-width="7" stroke-linecap="round" opacity="0"/></svg>
+      </div>
+      <div class="sent" id="sent">Sending…</div>
+    </div>
+  </div>
+</div>
+<canvas class="pic" id="pic" width="1147" height="860"></canvas>
+<div class="label" id="label"></div>
+<div class="title" id="title">
+  <div class="mark" id="mark" aria-label="MuZip">
+    <svg class="mu" viewBox="0 0 200 240" aria-hidden="true">
+      <defs><linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0050e6"/><stop offset="1" stop-color="#1a8cff"/></linearGradient></defs>
+      <path d="M74 42 L36 224 M74 42 L57 150 Q52 182 74 172 L152 42 L136 150 Q131 182 162 168"
+            fill="none" stroke="url(#blue)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+    <svg class="zip" id="zip" viewBox="0 0 60 200" aria-hidden="true"></svg>
+  </div>
+  <div class="tag" id="tag">agentic image compression</div>
+</div>
+<script>
+// The lines of the voice-over, in seconds.
+const T = {weak: 3.66, fail: 4.6, gone: 5.5, logo: 6.04, tag: 7.58, muse: 9.6, first: 10.8, part: 12.93, x100: 14.52, end: 17.2};
+// The run: the photo as sent the normal way (a 2,048 px JPEG), MuZip's first pass (the sketch) and all it sent.
+const KB = {photo: 444, sketch: 0.5, muzip: 3.2};
+const VIEWS = [{src: 'street/1_closeup.png', box: [63.5, 2.0, 64.5, 72.0]}];  // the run where one high-detail close-up read both signs
+const $ = id => document.getElementById(id);
+const clamp = v => Math.max(0, Math.min(1, v));
+const ramp = (t, a, b) => clamp((t - a) / (b - a));
+const ease = x => x < .5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2;
+
+(function () {  // the zipper, tooth by tooth (the same as sim/title.html)
+  const NS = 'http://www.w3.org/2000/svg', SLIDER = 62, svg = $('zip');
+  const el = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); svg.appendChild(e); };
+  for (let y = 0; y < 200; y += 10) [[-1, 0], [1, 5]].forEach(([side, dy]) => {
+    const ty = y + dy, open = Math.max(0, SLIDER - ty) * 0.22;
+    el('rect', {class: 'tooth', x: side < 0 ? 17 - open : 29 + open, y: ty, width: 14, height: 6, rx: 1.5});
+  });
+  el('path', {fill: 'url(#blue)', d: `M16 ${SLIDER - 8} H44 L40 ${SLIDER + 14} H20 Z`});
+  el('rect', {fill: 'url(#blue)', x: 24, y: SLIDER + 12, width: 12, height: 32, rx: 4});
+  el('rect', {x: 27.5, y: SLIDER + 30, width: 5, height: 9, rx: 2, fill: 'var(--bg)'});
+})();
+
+const loadImg = src => new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.src = src; });
+let photo, sketch, parts = [];
+async function load() {
+  [photo, sketch, ...parts] = await Promise.all(['/samples/real/parking_signs.jpg', 'street/0_sketch.png', ...VIEWS.map(v => v.src)].map(loadImg));
+}
+
+// A close-up with soft edges: laid over the blurry first pass, it sharpens the photo where Muse looked instead of
+// showing a cut-out box.
+const softened = new Map();
+function soft(img, w, h) {
+  const key = img.src + w + 'x' + h; if (softened.has(key)) return softened.get(key);
+  const c = document.createElement('canvas'), g = c.getContext('2d'), f = Math.max(8, Math.min(w, h) * .09);
+  c.width = Math.round(w); c.height = Math.round(h);
+  g.imageSmoothingQuality = 'high'; g.drawImage(img, 0, 0, c.width, c.height);
+  const m = document.createElement('canvas'), mg = m.getContext('2d'); m.width = c.width; m.height = c.height;
+  mg.filter = `blur(${f / 2}px)`; mg.fillStyle = '#fff'; mg.fillRect(f, f, c.width - 2 * f, c.height - 2 * f);
+  g.globalCompositeOperation = 'destination-in'; g.drawImage(m, 0, 0);
+  softened.set(key, c); return c;
+}
+
+function drawPic(t) {
+  const c = $('pic'), g = c.getContext('2d'), W = c.width, H = c.height, k = W / sketch.width;
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+  g.globalAlpha = 1; g.drawImage(sketch, 0, 0, W, H);                     // MuZip's first pass, enlarged: as blurry as it is
+  if (t < T.first) g.drawImage(photo, 0, 0, W, H);                      // the photo itself, first
+  VIEWS.forEach((v, i) => {                                               // the parts Muse asked for, sharp, in their place
+    if (t < T.part) return;
+    const [x, y, w, h] = v.box;
+    g.drawImage(soft(parts[i], w * k, h * k), x * k, y * k, w * k, h * k);
+  });
+  g.globalAlpha = 1;
+}
+
+function render(t) {
+  // 0-6 s: a photo that never makes it
+  const p = $('phoneLayer'); p.style.opacity = ramp(t, 0, .4) * (1 - ramp(t, T.gone, T.logo));
+  const sent = Math.min(.23, .23 * ease(ramp(t, .5, T.weak)));  // stalls under a quarter
+  $('arc').setAttribute('stroke-dasharray', `${264 * sent} 264`);
+  const failed = t >= T.fail;
+  $('arc').style.opacity = failed ? 0 : 1; $('cross').setAttribute('opacity', failed ? 1 : 0);
+  $('sent').textContent = failed ? '! Not delivered' : 'Sending…'; $('sent').className = 'sent' + (failed ? ' bad' : '');
+  // 6 s: the title; 9.4 s: up, for the photo three ways
+  const up = ease(ramp(t, T.muse, T.muse + .8));
+  $('mark').style.opacity = ramp(t, T.logo, T.logo + .5);
+  $('tag').style.opacity = ramp(t, T.tag, T.tag + .5);
+  $('title').style.transform = `translateY(${-95 * up}px) scale(${1 - .66 * up})`;
+  $('pic').style.opacity = up; $('pic').style.transform = 'translateY(-40px) scale(.8)';
+  if (t >= T.muse) drawPic(t);
+  // the labels
+  const L = $('label');
+  if (t < T.muse) { L.style.opacity = 0; }
+  else if (t < T.first) { L.innerHTML = `The photo<small>${KB.photo} KB</small>`; L.style.opacity = up; }
+  else if (t < T.x100) { L.innerHTML = `MuZip's first pass<small>${KB.sketch} KB</small>`; L.style.opacity = 1; }
+  else { L.innerHTML = `The photo ${KB.photo} KB &nbsp;→&nbsp; <em>MuZip ${KB.muzip} KB</em>`; L.style.opacity = 1; }
+}
+
+const q = new URLSearchParams(location.search);
+load().then(() => {
+  if (q.get('play') === '1') { const t0 = performance.now(); const tick = () => { const t = (performance.now() - t0) / 1000; render(t); if (t < T.end) requestAnimationFrame(tick); }; tick(); }
+  else render(+(q.get('t') || 0));
+  document.title = 'ready';
+});
+</script>
+</body>
+</html>

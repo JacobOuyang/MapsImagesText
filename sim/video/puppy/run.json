@@ -1,0 +1,123 @@
+{
+ "sample": "hard/puppy_home",
+ "question": "",
+ "size": [
+  1600,
+  1600
+ ],
+ "sketch": [
+  128,
+  128
+ ],
+ "views": [
+  {
+   "image": "1_closeup.png",
+   "box": [
+    39.203125,
+    86.5,
+    69.59375,
+    41.5
+   ],
+   "asked": [
+    45,
+    90,
+    58,
+    35
+   ],
+   "colour": true,
+   "high": true,
+   "full": false,
+   "bytes": 5362,
+   "texts": 53,
+   "why": "the pale shape on the floor to see what animal it is and what it is doing",
+   "object": "animal",
+   "sam": {
+    "box": [
+     0.54296875,
+     0.2679738562091503,
+     0.9375,
+     0.6535947712418301
+    ],
+    "in_photo": [
+     0.6015,
+     0.7627,
+     0.816,
+     0.8877
+    ],
+    "score": 0.92,
+    "phrase": "animal"
+   }
+  }
+ ],
+ "decisions": [
+  {
+   "answer": "",
+   "sure": "no",
+   "safety": "",
+   "need": {
+    "box": [
+     0.35,
+     0.7,
+     0.8,
+     0.97
+    ],
+    "in": 1,
+    "colour": true,
+    "high": true,
+    "object": "animal",
+    "why": "the pale shape on the floor to see what animal it is and what it is doing"
+   },
+   "needs": [
+    {
+     "box": [
+      0.35,
+      0.7,
+      0.8,
+      0.97
+     ],
+     "in": 1,
+     "colour": true,
+     "high": true,
+     "object": "animal",
+     "why": "the pale shape on the floor to see what animal it is and what it is doing"
+    }
+   ],
+   "at": 1793767549.539253
+  },
+  {
+   "answer": "A light-colored puppy is curled up asleep on a rug by the couch.",
+   "sure": "yes",
+   "safety": "",
+   "need": null,
+   "needs": [],
+   "at": 1793767564.959567
+  }
+ ],
+ "messages": [
+  {
+   "from": "phone",
+   "text": "\n#Pg3.1/13:UklGRtQEAABXRUJQVlA4IMgEAACQJACdASqAAIAAP5WwyV24rSgksvlKwxAyiWkAFI1N4usG1ZpLrvSlSCVw//vFpA+jvF/qGDnr2eMZ3QBjw6t5sb+ilvnt/xOqc+Ku8V/vkZa1:5a12#\n#Pg3.2/13:YPSLPMvyltNUeEBgml9OpnFKNmZNDGeDvnHvhRWrcbgfQp+LcfyWI/Uo4MCD70WxxDLxoEepQRQlH2wqTWGbJCxoOYDvw7Afe4PGH99vwMVTugsPt9RwFaqNRbwujscAMFoY3Ntb:39f3#\n#Pg3.3/13:G3hoJ2Uj/womJTxCkziKx+OKc7vjOVPYJHqBi5+gHk22zIGWLb71BslnvJ9FwMdfARI8hKBkrOJixA4LDLzEzN0oJVpfEchGHJWkwkg//F5Z4MhlgTjPi14ynI4EqLqwXhFLzNFt:7c00#\n#Pg3.4/13:Gm6I9CLblINwDIP0iF5AAP7vT7uy3GvqBA4nr766OB+QBCFJ8M5fTikmpTp6VxOujX5I/z3wUhsJ3yObxNAag6msGaZg7wFATUDzzLnWfQn48Z8capA9yzIa/DMtinhNQ4sD15pm:56b7#\n#Pg3.5/13:8XNWiQ3Ti4X+lMRYe/oVCiBM7egB9+LoWom2/mVMmGeOpZSPAJ9RIs3zHhZTgPjyajDgUu32Qg6gLe8raZnqLdehYw25oAXOxL8O4AGnmel1O/+7eVVmgGd4Nc4GLHbTEcBc2N0u:eb81#\n#Pg3.6/13:PNddpWBbtQ6wyez6xKRAFlzNIR6uPrUjGO7Oo6DPIoP52xaI0ZjZc6VvCijulBuVIUc7+LpiRo8ew/4s/2vmgLqX5Fx7vsqQW0kW4s8VFUJzkiu0KbtUFuVsGTABPW8fGMP7bQZM:99bc#\n#Pg3.7/13:YEn/XY4gHbysFAU1Mrek8gGCQ5INdbG0RPFJPGEX6TT6swXHF1qWGLdlwsPKKPYRyT9iWs2Jxhnjoqn9HmWD5eoNq5cmvEj5CTRom52GWeVohYxxLX5WKtZZcV3G1pmrMKEwhBNO:1ed6#\n#Pg3.8/13:qpCx/6Dae2lFSi5sgcXe9DFm8x7J8Xe7yfIlbVu6BY7N4+ZagnVa9wb+BCYhoa4eDX/TO3iz+8px0EjPR7JeahmeYrmy+IbWXfzJzMVdnx6H5RyrNXVUfW5FY8Imoy9YgcQRo8to:a3fc#\n#Pg3.9/13:v5ycc+6urVAIdUWYBsWAnddD9QG92kWXtaXKCIUqzQicmQ0JYx2+nKFWXYOHH8e30VSFAmMTYKgc7SsVQoEEzjsFhgDtua1bhvfT/E3SXvuLmrtdeHqQ2uoNclE4m9UbIJki7OJ1:4321#\n#Pg3.10/13:j8/RDgDQJNud+qPwuP5Op6ztThkHWYuUDyNIpiiBN0tPbBHyNuLJEhLyzK7uSAzvH1XjXGo9xSWvLRbIeBXEJ/e4wVZ1q+VGf4s7vrFZkF5glyc+p6DOYUnYSbpvmevawbR1mmTv:7a52#\n#Pg3.11/13:qUCjpuvHB6bxXw2svsg0wEOThQDezjmbkcox3bA+rLtVAAZzzdIxKUM0IicxAO55Xwvt8aSVwEa/RjKmHrSTr+bAolgvzV4owpM+kMGnmqRIAs6kcorisvApwz4YfyvUUst4hGYj:37b4#\n#Pg3.12/13:Y7xk0DCmK+3TroFVDfKVy0TIXxRqHudIqT852hULgYEYAo+WEBmq1OLpqIzmsw9mzo2FeQzOZzdsmV6XM9PVeZcasf3n0ZBYLOMZRiOEX2JraPrR6ds8Jc9YZqUkMPbtKhjAmDI1:bdf4#\n#Pg3.13/13:I95Pf1L6xX/aoVdP9/Wyv0BgAAA=:6d3a#",
+   "texts": 13,
+   "bytes": 1244
+  },
+  {
+   "from": "muse",
+   "text": "Not sure yet: I need a closer look at the pale shape on the floor to see what animal it is and what it is doing, in colour, in high detail. Your kit crops it from your photo and sends it back.\nZOOM g3 45 90 58 35 C H",
+   "texts": 2
+  },
+  {
+   "from": "phone",
+   "text": "#Zgz.1/53:AmczCc0VoBFmCmBSSUZG6hQAAFdFQlBWUDgg3hQAABBfAJ0BKgABmQA/DWaqUCwlI6KymP15gCGJZWNarZW9mNGzMEbzNooP+M9plxABKPPGB/yf/k3oxXp3sQO08KndIAF3d9N4:cc3f#\n#Zgz.2/53:0z+96Qv8vZkSEOTAH8Hz/RvHzbVxgiXltfOfybkkOfSgT4xAbuXXyzXpvsvGer7/hhTK1oR47xccbg00kpOPeAtsMMXRvhMfCwYAp+baLJ0vuYe1AOxK22QFFuTymrtwH2LtbBdD:10ab#\n#Zgz.3/53:xy0AI+gUSLexcxDPEi/ffBFFzUo7/ikG5lZNuG7bfX+trNNQtzDzVlGKkq6szNuuLcj4GKDGShIAc+Li+t3MG6gZns9EUglcnbLis2ImwHdUXb3hFiz+A4UjqQuNYJg7ZsS4pq8x:458b#\n#Zgz.4/53:/8TmoXy1Gf3JjiCedn+OuVBVuCF4PK4zca7MjKgFfrPpjcIGge6QW34yQlk3euuIyFh+2Axk54Mez6h9AvJmaRC/XiWs9jMrCKqkSDGA5rDIqhCqjK17h9Q/5vXRbsvWdyrrVRax:210c#\n#Zgz.5/53:0Uu2RVV9KrzgZRd3eO9lh4MtlmAL+8ewRkXhDcw6dawzQ5aA81U+nR94ZZcGaV4dNeVJIyQrWh0hOIEZXbD/ricFFZvrjpcCIkYKWPrBun8EGGCKBAyHcjmyUpV7/59uhXIoALp5:4a2a#\n#Zgz.6/53:SYXsFv0lR+/uIv5e3kXDtYC6UJKUudHgDvCgJQDenXreY1afQE1ZRsqbqNNwm1UDmL+GrDOPy8Fujae58sYvyYm2LLID5ZP7q0c7NZyQsuPaC3C+o1nZ6Q4lnQzwJJzChgTyB8N4:c91e#\n#Zgz.7/53:9ZvTE1rN13AR5d3LjciKaUcqKD9JLvNpFdAwW69evuKksyP8EyOE9c8ZsScBumyVvGceSgCdaLLZPgCv/9ChWPxuOYmtx554cyI2UjJjDl2+G7z2u7FNRb4JxMvJafJbwHxf3Zqj:fe0c#\n#Zgz.8/53:TDcSLFcAUdpiFqEkQioqGO+CsFUoyc8K87VInCKt4/z40CI+OLG2X3U2kK1ns/graAAXsofv81fghnV6oIdJSF4BxXfk7K9jLA59eytyg88m18VOJAAA/vkTkZ5BOQyqCnqY6eU7:ff2b#\n#Zgz.9/53:p9+J5ZJj4afW/0AoxClzVKdtEnF+LT98ia9LvVy9NTDRO3peWDKH05zo6fIGcm4L/qWdA4dN2eF/6npML1LsYLTrq3lECQkT5fK8vY7kaFTqL+jBipGRX00/3hJhXV+QuPjc58Eu:b244#\n#Zgz.10/53:32pY/uBJJP2ofo3GOkCUqld4oU/8m4Cr9HSYCEtqwtC70Fki+/MlEtaKlWsGbDD1I2VbZ/o3e0U2tP2iT1Xp90VVMT0zC7EkuLwl/+FUsiLZxNXY9zrbcSEP8QYZ6gwpYAvKXXXE:ed1a#\n#Zgz.11/53:IZMoq+dHbQdYvIZuM+ZcP9KufqrO3SuRo0kD7zTMz/70OaYiMhnKJiLb+9bbO39mjjfd8hPH44DK8dw9Zd0wbUndgJr8bnVuaTgDLl4GtVfYNgU72HoBiC0c+zZOBx0jJEmN2yZA:48b3#\n#Zgz.12/53:8jAdNjeJqjTu1ZUC99OOymVTL7f2S5cxsGZuSTixNwwh8vhmKoY06Uh8425nXveo6LsC5XeHLQRUVgF07/an9n9T8Cp8c/JOOfFKn0fKCeJDpvT1z06JzNoRM0s+MVHV/6cy+2su:66d0#\n#Zgz.13/53:HvqtngItm36KdNn/yZMFWVxkX+1FPQIsa9znvGPez7K7ZXmHKrD/+oUtWB5DbXO0Piu14K5dpyHvcYZxsYksRKtZIs4rL1Uas+p5OV0sxH5ZDi0aaVakEs65KIut4/MtV1+znARN:4642#\n#Zgz.14/53:JQE0UTR1UZCmUO5c5EeCfQxiKKFOq3hVEa3rF2URKDjovm9SCupdnN7vvIlMCrdVTYAaDITPih8kpL/4gnjgRbHukY2j8aFBUKpoNHQOfOZ/D3JQTcK/Xjc1+L+t6+kAl8fmY/4B:398d#\n#Zgz.15/53:0YtxbtILEEJEVV+wMpKY/CByGiVnbEPWwL4jTXjUtGWRTh72rwZJimTKKz/mw0bBuZfVXIuvTM9I6gDpX08xIMSS9R68X+2lcQj5zlmiiJ1WXymdkyt0+3norhkkenmYfxCLHmmz:ed15#\n#Zgz.16/53:21sHxQvhzL/gaeOz0pBLQh2wk2ZDyMC4+mabZNd3CnY9qtCCjCqYgv3x5BWYdEARcl/9NfuLvUGIzXOPWy0DmBazO4SxhokZ2FVPt0lGrxwVspKB5DNXHCjzlbRTlhz+FYAPOS6G:a7b1#\n#Zgz.17/53:IgbfDuguRXpDWZylj5a0qDkt7nD41pO5P2ZVDOeiRoXmTo0n9Kcn8t7RGZiqqvnWxaikoXN6q7uvH7h//GawC0WSA/q+cXVVVRAhIW1ieYerr53nHQ1Tlns44bJpgSi+iVzQyvYb:7dbe#\n#Zgz.18/53:2N9/LeHQyzROKnHAixzPHq4b8VoSaQpU5BG6a6HrAyEqjPDOl31WSjyoFZfskcjnDtvuU4bc6CMRjuFe4U24wuCeGkSPRLt5F/oEV8ial5JOW82pjnRxjwpm/LtQ37OOCQ9+LMSo:2851#\n#Zgz.19/53:5HFM7Q0GqYDUVaFMvu2y0DoLCDvKrIJ/YQzLQYDKmoqC5kqM2hMP9qPBPVfcgvX4DDjOHqPEIbHt4PKdbukLFXGhySud/5burqTXEFjwA+JlGZ+E5YQZxaNUlcpxxhBCoS5N2Hlj:68be#\n#Zgz.20/53:zwQbsgxoZFrZSvYSsuB5Vz62etv4IFHuYHRnGDGY4K0DPY29/Z8y7UVcqhZE5UNHRquc9wAWvdQtXJlQYQ3IlGLgbdJUzdPP6Y2ucpNeizRqzvTLdwdKN/R+5Kr+k892CZBI8StI:f80e#\n#Zgz.21/53:9o3YsKVCzf3+QYrtD73fIozNMS7YV04fLVoZHlvT9ZGt+q1O1ZIn20zuvNKcHW5SbOVTgqvfqgLV6ShHsui1XK2lXyjq9WXpecj6d76MSFuOgYEsghBXHjdujxGniyoQXeg5vEh3:8318#\n#Zgz.22/53:92SGrqKXRclsOxv1XyNH2Uh9uToMmjNlrts5WNmPYbrC3QcCIdIZi2HrGTE8dzjQgaQQk4n3nGTf6iBngFq16J9Zs4+iY9PtUSR85nvF2JcNmjZbNqS+SPdgw5xN2lPGze4amf/t:df76#\n#Zgz.23/53:jdnOqBt0qornn1TW8nWNy/iix0587I3HBhi3VRdbMq8nDAKwtdWWvZQ4hbHQEbOuQsxEtZnnN3nQBtk/Vd/IFdawSUYnLnUWIG86HVCiw4EPk+7Znjef1weSSCvtYrB0QwwhJCAa:526b#\n#Zgz.24/53:kkOweYZaPmukH5q8xX/135ZoltevZVmqXJR5fSc/S43a2ipZaxGRviATjbLUyMB9lVKXxoBkgJIDsG14EL1NhDxsHFFY60WytvJP4QqLVPad7bR3C9uVN56mPpVtt8u01RLv0qWO:55a4#\n#Zgz.25/53:kw/Oh6LIJa6co44n61UQzhUKinhAe4oHAJpOQlgE5dBmH1UEAZwy8daaAHG0UB9tsaG6lMnn74v0tAlCZxjYdcllmBzKIizZ62FLk8pi0D+EQgfa8lcVesiEPp5dRZVe648ny1pr:16a7#\n#Zgz.26/53:rcRPuCYyKFS3V/STgtPL9douIwXS9S2SK54B4ndHYQ9cOiUHvQOlbfaIGssaS/iTQyNaTb6427OHZK2desI/Q85k9JVv/rTmygXXYVK/9kYc3+jdRhxTcv/uYG4/q2C9vpMlWwyD:c300#\n#Zgz.27/53:Tj3cC7N+Bp6g9mQTeDMcGxEPp8tjJyjhChqvZZKQbZVlxI9j+a9V/URapQbm0FWPrwV32y/LRBEKcOV6lJe91zuUh667XPv7051wnViaXiqgTLuRILGbqmf1bH3KCFK9MO+R9Y5h:ec10#\n#Zgz.28/53:p1V45zqk+fUM9EucdUUl4E9H2CUfrj8QmXHyPpwdSia+H0YG12zOjjsqffOVhk4afkwSBhU6RPujAEC8CWnLH2aTaLTHhFe3i3SwkvYCqIX3Lzbim19C0oEImTMy+Jg/radc62vZ:3202#\n#Zgz.29/53:bOyTgtFmUIZI/lvI/YtkqFs7Thc/5fiXDW6q/gyomw4OpPnC9xOrb5sAPzsRwUlA8DNqh49P2PQ3oD38tO+ZHS99AYauEekrIRVuCc4q/bhwa+9EunMTK6PqlYz/WOFNkADJAuxo:5b9a#\n#Zgz.30/53:kOEiDAxRRlus6QZgZ/eiO+XLGPY2RQh8TxTs9QlHm4uCM2z/2n2WSbd7gWmkLNWXp22kQRgbyY9XEZK9kZBXegvIsW05SrOwSS/1TJD26P1S+BC/UskxZKjq8IpMBOfweCCedBOR:e4d6#\n#Zgz.31/53:Q1vwTkXE7SHKDPPz7Iz3A81OV6qySJruidVEgoFeOBNH6pbqNtOOeAX6OGE8Fw6nkCbogTWmL0GO7Rg+MMhx76lR9HhsME7aFat3Olc8lKAKuH5GxFdUoHLz85h9QijHhvQrD8vZ:ab32#\n#Zgz.32/53:yWvEtT9YFeB+3VuWW/agR9KRGvs2lw8xchEmUXXwP2EXF4oE+QG1LpaYDkKr+0rmvpmaXwuxivBeMtQFNbYlI1JXE+zyJD0ORj3vsV072kXSZucWV3ixU2dOFdaakW2NXZ0RkaDA:3000#\n#Zgz.33/53:vj9Anj/EqxOj2FbCTOvUo/Jx25gtrdnm5MV/qbBcNWoNqRkX67CtBBUuxUgvYtpvno0MppCBZNvApi742hq1yaA52b816eoMLLbc2eK0Hdv4rtqltowxuK/2JbigjNXibCs7UVb0:9bd6#\n#Zgz.34/53:11RhgSGnXDOevB9ckQS+xT4Oe7qL9Qinx3jrj1gBjsDR/rXqMYPNxH6uwDPqTg3iemY6LHwLNoOaMIVtRYNg+7rkNBwiJetq5NXC5n0xT4nqzYwB9QQF+pDcEI0+z4ubrSGS9WB9:f889#\n#Zgz.35/53:EN+ehmlQC74h3Xr2ZFMVDX+R/lhMkofWCPLx6+UHD0KxhoaM7XCQeZ3cZfMyOVkPTCjehhUDxYosK4npEWfdkoLgulYuoKGl64GaH6wU+Uye2eg6C5nk/PvbqW5tEZSxPk1aAUwz:6121#\n#Zgz.36/53:53/3vpl98+xpvEJyPiGoWnKdFfiGZhuCu7QbslVM+DLOVxjV8wAdf9SmPVkk/4vJzPuvRF0VC39ocknFI6LmvBpuJYirY4erIY6RrnS7Hxz1XYwU3cKG785uXJm3Zo6u1HKjhM0l:a98a#\n#Zgz.37/53:WnSaWSOGYXqmTn91k7fQg0EkhXqp1CSijQU8BWH5q6HfIEYG4zFVsef1zhEQKbacMVWERY9Il470HeMM+v3X836k3+XfvQJoxBV1lGTsZ0et74h0Z+hUBLDderahpzMtzGCtb2WN:e9f0#\n#Zgz.38/53:8o+CaFngEPtmUg+rtrYDU9TnErogLDRMzis0EYpBHgSnLYTXrZAfy+6rMqfZq5bYVH1OFF3p7skU6sUGKiUalO9kaxDCdfrAL9Yevx6MLnOvfzJHsWYFoXCJB3CRpny9gNpi0und:6863#\n#Zgz.39/53:DoIIxNa+kDw4vM4q+C1AeyOKuss5Nk2u7urdGadCXi3/O6nmRj+mzEVr1UpfMbMnMVjUbNXtOjb0LAVd+oIKomptZ6OFbBXhqUSpmP/5mk3tRxi7THTeLMsYm/2hypmYq6kZvC7B:00f3#\n#Zgz.40/53:hXV/lJOBWVDseUySkO18hv2vbPRk9pgKbxlIbnnosEJmI3s5NmBmqaM1T7gBT/LT9J5DPzKbQ7LRVk2yibWqo+bFr0Mxchx2JjKixPBe99tPYM6NisyzdpNIHK9ZfE9PzS0IyxKw:a056#\n#Zgz.41/53:xbm2BuI9xAyBj96ag5V/CdjVH5kZBzMtJEe0IwJVCcBzE2Rh1zR43l/DGiUOkVOK5/HDR20MEltek1SN2nEurIHY/WLtFXZNrki5WeCWY1ixt+449z20Ke7lohe31hdVVnMd47eV:069e#\n#Zgz.42/53:+OGWP+HAMT4a4aPCczvl3cHFGyzwpVgdVvn655maV/MCCmPPiQcuepySQVl22msxk9nBIFT+m1HRy4QjYzUdkWfkp3ZPw3MAS48BQSpvfPyPatD3Xe2rpdsyo4UMUXUN5cJoDBS1:e571#\n#Zgz.43/53:kB8xU8iFv+baZFXneRDkUYCnHQYjFNlH3TL7NFX/C247vvsbJduhSm3CXkINzsOf/UzbxS8dfCXvMdRnh+p+2ySnmLsm4XNke4qEPtQsOMr3jmt3nTvaygjDwgkg5499YZpj11Xp:d212#\n#Zgz.44/53:P1j/rnBGSg0wcfGBfyymLuN1Pn+imtBDdD038sFxZ3Sf1oaNYIBA5YmlOCdEEAe6+O//F3+zxR4mPP91AlMP6bcFy5JCxzyFPiWZbv/+yk2Y5efqhGI/X6V0I0Irnxn2qv//kFcA:1d6d#\n#Zgz.45/53:umpj8Wp4uQMarvamN2DoWQj0AAhzRDtIVD0310UB2QtyJkRXu88YrL2NlaKHlYjcBqQAagnbmmdMPy7h1lmdeyfvU2j7334dWfiZF3dZAnBJfxEuxLP46qeIMR/3DCfHPJIUDInu:bc4f#\n#Zgz.46/53:Ly4lU99F7ogZuuXEUEJOEon4Da1tZPdDCpukZxrfb1vtPVhyp8LvMQWgwC62CJPyHo/pmWX6t11oYKlw+P/9VYfdJp0NrUH+JxVK97SLjqgjtxhcgohSgD0NFkOvCqbQ47vRT8LR:b340#\n#Zgz.47/53:Gy+ejEZWFfoYADI8sZGM2xHttP/Wwu8F2hLb6Neg52joJTysI3ty4soCBZz+tKs+Frw6DioDWkojWT1GpMp7DJUQLre4pqbuXwFSZ4Yl3y+XzXU1yA/GKnI5PhtDspGjdTzIWfH7:0989#\n#Zgz.48/53:Db13ZsgiOWVow705OgnPVejlRKf/bRJ7ntVfEZJ1tXml+y4AGie23rAC9rb/ANHfC0NBy7rBoLhLpDysivCiFCyIwgET6VpCLzc/zxqQIznZItMkMkrAibsPVesXi819qNpZIDFE:2716#\n#Zgz.49/53:l0gElgrTncRCgq6MC0mIhQ7ybz535vq3zhhjCilbSwDzU2UgmOtFiMRabgoJ0Vdse1W7zTrJmFDwhjGD5CPow0WJ9qLFmiJ6IqrJcYDvNpZ+D4SeK038xZ61mXfzxlkJId01CS2o:5806#\n#Zgz.50/53:fPLtQMGIwr0p2vuTHYXToYLiGo5lXov3O80JLZOzOYN+vMzC071GwaBHIOk0kAmPWm+z3YNJcqkOzmoTb5Ee4AVU1H3wCcEAoj4YVYpDTsTme7/CZ+Nl+wjEU5oiOLPiNDdhotnt:3cb3#\n#Zgz.51/53:5urZkYC6cEDK1wb/bZ72WQHoNUJnu1MnA7D/0opa6Oss0Nc8sLertv5rIHQxMJZCh1IOAutHI08Lz0GFcqjTzgyWfqd9T5N3ywejHl8L176VXNaLWlqX+kBm7xhgdeKsoD8eXDKD:f2ec#\n#Zgz.52/53:vACaT0u2ea2wneNM2RW98FTlikmek8E01F/oNjHWXmGmg4ViNfXf51GaTC9FDzkrstmky+fL8T+iu6tVZGIyVzV2bIT3DPXc274jUT9BvnuPfzNdkaKZR3e93/bDYDbUdtn9fzr4:d206#\n#Zgz.53/53:cWFQHjKLfqJpHH70d9FwLDsfN9bYVKFpyY6WG212/RT8krIvRgiWs8b+rrcvnVhyPyMjCbKedjE2qYvztaDITrYBgAAA:ce1c#",
+   "texts": 53,
+   "bytes": 5373
+  },
+  {
+   "from": "muse",
+   "text": "A light-colored puppy is curled up asleep on a rug by the couch.",
+   "texts": 1
+  }
+ ],
+ "answer": "A light-colored puppy is curled up asleep on a rug by the couch.",
+ "phone_bytes": 6617,
+ "photo_bytes": 605523
+}

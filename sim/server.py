@@ -3,8 +3,9 @@
     .venv/bin/python sim/server.py            # http://localhost:8765
 
 Pages: /closer (a phone asks about a photo it keeps; the real router, Muse Spark and SAM 3.1 answer, asking the phone
-for close-ups), /compare (one photo and question three ways: the photo, WebP at the loop's size, the loop; from the
-last run of evals/kit/three_ways.py).
+for close-ups; ?device=drone names the device), /compare (one photo and question three ways: the photo, WebP at the
+loop's size, the loop; from the last run of evals/kit/three_ways.py, else the copy in demo/three_ways/), /group (a
+simulated WhatsApp group with Muse in it), /demo (the video's stage: every scene, step by step).
 
 Look closer: GET /api/closer/samples, /api/closer/state?c=; POST /api/closer/start {"sample", "question"}
 Also: GET /api/compare, /kit.js (the code reader the pages use), /store/<record id>.jpg, /eval/three_ways/<file>.png
@@ -22,10 +23,13 @@ sys.path.insert(0, os.path.join(ROOT, ".."))
 sys.path.insert(0, ROOT)
 from evac import codes, llm, store  # noqa: E402
 import closer_demo  # noqa: E402  (a phone asks about a photo it keeps)
+import group_demo  # noqa: E402  (a WhatsApp group with Muse in it, simulated)
 
 PORT = int(os.environ.get("PORT", 8765))
-PAGES = {"/": "closer.html", "/closer": "closer.html", "/compare": "compare.html"}
+PAGES = {"/": "demo.html", "/demo": "demo.html", "/closer": "closer.html", "/compare": "compare.html", "/group": "group.html"}
 EVAL = os.path.join(ROOT, "..", "out", "eval")
+if not os.path.exists(os.path.join(EVAL, "three_ways", "results.json")):  # a fresh clone: the measured run kept with the demo
+    EVAL = os.path.join(ROOT, "..", "demo")
 
 
 def jpeg(img, side, quality):
@@ -73,12 +77,15 @@ class Handler(SimpleHTTPRequestHandler):
         if path.startswith("/store/") and path.endswith(".jpg"):  # a record's picture (a phone's 128 px photo, a close-up)
             img = store.image(path[len("/store/"):-4])
             return self.send_bytes(jpeg(img, 640, 88), "image/jpeg") if img else self.send_error(404)
+        if path == "/api/group/sketch":  # the 128 px sketch the group got
+            return self.send_bytes(group_demo.sketch_png(arg), "image/png")
         if path.startswith("/eval/three_ways/") and path.endswith(".png") and ".." not in path:
             p = os.path.join(EVAL, path[len("/eval/"):])
             return self.send_bytes(open(p, "rb").read(), "image/png") if os.path.exists(p) else self.send_error(404)
         api = {"/api/closer/samples": lambda: {"samples": closer_demo.samples()},
                "/api/closer/state": lambda: closer_demo.state(arg),
-               "/api/compare": compare_rows}
+               "/api/compare": compare_rows,
+               "/api/group/state": lambda: group_demo.state(arg)}
         if path in api:
             return self.send_json(api[path]())
         return super().do_GET()
@@ -88,6 +95,10 @@ class Handler(SimpleHTTPRequestHandler):
         try:
             if self.path == "/api/closer/start":  # a simulated phone asks about one of the sample photos
                 return self.send_json({"conv": closer_demo.start(body["sample"], body.get("question") or "What is this?")})
+            if self.path == "/api/group/start":  # a group member shares a sample photo
+                return self.send_json({"conv": group_demo.start(body["sample"])})
+            if self.path == "/api/group/ask":
+                return self.send_json({"error": group_demo.ask(body["conv"], body["who"], body["question"])})
             self.send_json({"error": "not found"}, 404)
         except Exception as ex:
             traceback.print_exc()

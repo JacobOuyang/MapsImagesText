@@ -110,8 +110,8 @@ class Handler(BaseHTTPRequestHandler):
             return self.send(open(os.path.join(ROOT, "muzip.html"), "rb").read(), "text/html; charset=utf-8")
         if self.path == "/api/state":
             try:
-                me = wa_phone.me()
-                me = me[:-4].replace(me[9:-4], "•" * len(me[9:-4])) + me[-4:]  # only the last digits on screen
+                wa_phone.me()
+                me = "your WhatsApp"  # set, but no digits on screen (the page gets filmed)
             except RuntimeError:
                 me = None
             return self.json({"via": STATE["via"], "me": me, "conv": STATE["conv"]})

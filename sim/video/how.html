@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MuZip How It Works</title>
+<style>
+  /* Section 3 of the video (how it works), drawn as a function of time like the other scenes: ?t=20 is the frame at
+     20 s, ?play=1 plays it. The times are where the lines fall in private/voice/03_how_it_works.mp3. Everything shown
+     is one recorded run (sim/video/dashboard/run.json, from demo/video/record_run.py): the codes the phone sent, Muse's
+     replies and ZOOM lines, each close-up and its box, SAM 3.1's outlines. Pictures are drawn pixel for pixel. */
+  :root { --bg:#0f1419; --panel:#161d24; --line:#2a3540; --fg:#e8edf2; --quiet:#8b98a5; --good:#40c057; --warn:#f59f00; --blue:#1a8cff; --sam:#e64980; }
+  html, body { margin:0; width:1920px; height:1080px; background:var(--bg); color:var(--fg); font-family:system-ui, -apple-system, "Segoe UI", sans-serif; overflow:hidden; }
+  body { position:relative; }  /* the scene is its own 1920 x 1080 frame, whatever the window */
+  .logo { position:absolute; left:0; right:0; top:22px; display:flex; justify-content:center; align-items:center; gap:10px; }
+  .logo svg { overflow:visible; } .tooth { fill:var(--fg); }
+  .side { position:absolute; top:120px; width:700px; height:910px; background:var(--panel); border:2px solid var(--line); border-radius:22px; }
+  .side h2 { margin:22px 28px 6px; font-size:32px; } .side .sub { margin:0 28px; color:var(--quiet); font-size:22px; }
+  #phone { left:50px; } #muse { left:1170px; }
+  .pic { position:absolute; left:28px; top:120px; width:644px; height:394px; border-radius:12px; overflow:hidden; background:#0b1015; }
+  .pic canvas { width:100%; height:100%; display:block; }
+  .label { position:absolute; left:28px; top:528px; font-size:28px; font-weight:650; }
+  .label small { color:var(--quiet); font-weight:500; margin-left:10px; }
+  .codes { position:absolute; left:28px; right:28px; top:590px; display:flex; flex-direction:column; gap:8px; }
+  .code { font:17px/1.25 Menlo, monospace; color:#cfe3ff; background:#1f2b38; border:1px solid #2f4152; border-radius:12px; padding:7px 12px;
+          white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .code.q { font-family:system-ui, -apple-system, sans-serif; font-size:21px; color:var(--fg); background:#1f6f4a; border-color:#2b8a5e; white-space:normal; }
+  .more { color:var(--quiet); font-size:20px; padding-left:6px; }
+  .packet { position:absolute; display:flex; flex-direction:column; gap:6px; width:380px; }
+  .packet .code { font-size:14px; padding:5px 10px; }
+  .link { position:absolute; left:770px; width:380px; top:520px; height:4px; background:repeating-linear-gradient(90deg, #2f4152 0 14px, transparent 14px 26px); }
+  .linklabel { position:absolute; left:770px; width:380px; top:470px; text-align:center; color:var(--quiet); font-size:22px; }
+  .chip { position:absolute; left:28px; top:528px; font-size:28px; font-weight:750; }
+  .chip.no { color:var(--warn); } .chip.yes { color:var(--good); }
+  .say { position:absolute; left:28px; right:28px; top:532px; font-size:21px; line-height:1.4; border-left:5px solid var(--blue); padding-left:16px; }
+  .say code { display:block; margin-top:6px; font:20px Menlo, monospace; color:#cfe3ff; }
+  .views { position:absolute; left:28px; right:28px; top:740px; display:flex; flex-direction:column; gap:8px; }
+  .row { display:flex; align-items:baseline; gap:10px; font-size:20px; white-space:nowrap; padding:7px 12px; border-radius:10px; background:#1b242d; }
+  .row .n { color:var(--quiet); font-weight:700; width:18px; } .row .what { flex:1; } .row .what small { color:var(--quiet); margin-left:8px; }
+  .row .what i { font-style:normal; color:#f783ac; margin-left:8px; font-size:19px; }
+  .row .v { font-weight:750; } .row .v.no { color:var(--warn); } .row .v.yes { color:var(--good); }
+  .row.now { background:#22303d; box-shadow:inset 4px 0 0 var(--blue); }
+  .tally { position:absolute; left:0; right:0; bottom:8px; text-align:center; font-size:40px; font-weight:700; }
+  .tally em { font-style:normal; color:var(--blue); }
+  .glow { box-shadow:0 0 0 4px var(--blue), 0 0 50px rgba(26,140,255,.6); }
+</style>
+</head>
+<body>
+<div class="logo">
+  <svg viewBox="0 0 200 240" style="height:76px" aria-hidden="true">
+    <defs><linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0050e6"/><stop offset="1" stop-color="#1a8cff"/></linearGradient></defs>
+    <path d="M74 42 L36 224 M74 42 L57 150 Q52 182 74 172 L152 42 L136 150 Q131 182 162 168" fill="none" stroke="url(#blue)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <svg id="zip" viewBox="0 0 60 200" style="height:66px; transform:skewX(-12deg)" aria-hidden="true"></svg>
+</div>
+<section class="side" id="phone"><h2>The phone</h2><div class="sub">keeps the photo</div>
+  <div class="pic" id="phonePic"><canvas id="pc" width="1288" height="788"></canvas></div>
+  <div class="label" id="plabel"></div><div class="codes" id="pcodes"></div></section>
+<div class="linklabel" id="linklabel">plain text only</div><div class="link"></div>
+<section class="side" id="muse"><h2>Muse Spark</h2><div class="sub">sees only what arrives</div>
+  <div class="pic" id="musePic"><canvas id="mc" width="1288" height="788"></canvas></div>
+  <div class="say" id="say"></div><div class="views" id="views"></div></section>
+<div class="packet" id="packet"></div>
+<div class="tally" id="tally"></div>
+<script>
+// Where the lines fall in the voice-over (seconds), from its pauses.
+const T = {shrink: 1.47, text: 4.88, handful: 6.94, send: 9.96, arrive: 11.3, notsure: 13.23, asks: 14.77, dash: 16.8,
+           crop: 18.91, cropText: 20.6, back: 22.45, pop1: 23.6, sam: 24.09, where: 27.29, two: 30.45, reply2: 31.0, cut2: 31.8, text2: 32.3, back2: 32.9, pop2: 34.1,
+           sure: 36.41, now: 39.04, battery: 40.11, engine: 41.14, never: 43.03, end: 45.8};
+const q = new URLSearchParams(location.search);
+const $ = id => document.getElementById(id);
+const clamp = v => Math.max(0, Math.min(1, v)), ramp = (t, a, b) => clamp((t - a) / (b - a));
+const ease = x => x < .5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2;
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
+const kb = b => (b / 1000).toFixed(1) + ' KB';
+
+(function () {  // the zipper (as in sim/title.html)
+  const NS = 'http://www.w3.org/2000/svg', SLIDER = 62, svg = $('zip');
+  const el = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); svg.appendChild(e); };
+  for (let y = 0; y < 200; y += 10) [[-1, 0], [1, 5]].forEach(([side, dy]) => {
+    const ty = y + dy, open = Math.max(0, SLIDER - ty) * 0.22;
+    el('rect', {class: 'tooth', x: side < 0 ? 17 - open : 29 + open, y: ty, width: 14, height: 6, rx: 1.5});
+  });
+  el('path', {fill: 'url(#blue)', d: `M16 ${SLIDER - 8} H44 L40 ${SLIDER + 14} H20 Z`});
+  el('rect', {fill: 'url(#blue)', x: 24, y: SLIDER + 12, width: 12, height: 32, rx: 4});
+  el('rect', {x: 27.5, y: SLIDER + 30, width: 5, height: 9, rx: 2, fill: 'var(--bg)'});
+})();
+
+const loadImg = src => new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.src = src; });
+const softened = new Map();
+function soft(img, w, h) {  // a close-up with soft edges, its own pixels enlarged as they are
+  const key = img.src + w + 'x' + h; if (softened.has(key)) return softened.get(key);
+  const c = document.createElement('canvas'), g = c.getContext('2d'), f = Math.max(5, Math.min(w, h) * .06);
+  c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h));
+  g.imageSmoothingEnabled = false; g.drawImage(img, 0, 0, c.width, c.height);
+  const m = document.createElement('canvas'), mg = m.getContext('2d'); m.width = c.width; m.height = c.height;
+  mg.filter = `blur(${f / 2}px)`; mg.fillStyle = '#fff'; mg.fillRect(f, f, c.width - 2 * f, c.height - 2 * f);
+  g.globalCompositeOperation = 'destination-in'; g.drawImage(m, 0, 0);
+  softened.set(key, c); return c;
+}
+
+let run, photo, sketch, parts, SW, SH, msgs;
+async function load() {
+  run = await (await fetch('dashboard/run.json')).json();
+  [photo, sketch, ...parts] = await Promise.all(['/samples/' + run.sample + '.jpg', 'dashboard/0_sketch.png', ...run.views.map(v => 'dashboard/' + v.image)].map(loadImg));
+  SW = sketch.width; SH = sketch.height; msgs = run.messages;
+}
+// The recorded run asked for the cluster, then for both lights in one request (views 2 and 3 came back together).
+const NAMES = () => [['The dashboard', run.views[0].colour && 'in colour', run.views[0].high && 'high detail'].filter(Boolean).join(', '),
+                     'Both lights, each on its own, at full resolution'];
+const codesOf = m => m.text.split('\n').filter(l => l.startsWith('#'));
+const zoomLine = m => (m.text.match(/ZOOM[^\n]*/g) || ['']).join('\n');
+const wordsOf = m => m.text.split('\n')[0].replace(' Your kit crops it from your photo and sends it back.', '').replace(' Your kit crops them from your photo and sends them back.', '');
+function bubbles(m, max, withQuestion) {
+  const c = codesOf(m), shown = c.slice(0, max);
+  return (withQuestion ? `<div class="code q">${esc(run.question)}</div>` : '') + shown.map(l => `<div class="code">${esc(l)}</div>`).join('') +
+         (c.length > max ? `<div class="more">+ ${c.length - max} more texts</div>` : '');
+}
+
+// Muse's picture: the sketch with the close-ups that have arrived, a box it asked for, SAM's outlines, the camera.
+const arrived = t => t >= T.pop2 ? 3 : t >= T.pop1 ? 1 : 0;
+function lightsCam() {
+  const b = run.views.slice(1).map(v => v.box);
+  const u = b.reduce((u, [x, y, w, h]) => [Math.min(u[0], x), Math.min(u[1], y), Math.max(u[2], x + w), Math.max(u[3], y + h)], [1e9, 1e9, -1e9, -1e9]);
+  const w = (u[2] - u[0]) * 3.2, h = w * SH / SW, cx = (u[0] + u[2]) / 2, cy = (u[1] + u[3]) / 2;
+  return [cx - w / 2, cy - h / 2, w, h];
+}
+function drawMuse(t) {
+  const c = $('mc'), g = c.getContext('2d');
+  g.fillStyle = '#0b1015'; g.fillRect(0, 0, c.width, c.height);
+  if (t < T.arrive) return;
+  const z = ease(ramp(t, T.two + .4, T.two + 1.2)) * (1 - ease(ramp(t, T.never, T.never + .8)));
+  const L = lightsCam(), cam = [0, 0, SW, SH].map((v, i) => v + (L[i] - v) * z), s = c.width / cam[2];
+  const X = x => (x - cam[0]) * s, Y = y => (y - cam[1]) * s;
+  g.imageSmoothingEnabled = false; g.drawImage(sketch, X(0), Y(0), SW * s, SH * s);
+  run.views.slice(0, arrived(t)).forEach((v, i) => { const [x, y, w, h] = v.box; g.drawImage(soft(parts[i], w * s, h * s), X(x), Y(y), w * s, h * s); });
+  const asking = t >= T.asks && t < T.pop1 ? [0] : t >= T.two && t < T.pop2 ? [1, 2] : [];  // the boxes it asked for (both lights at once)
+  for (const i of asking) { const [x, y, w, h] = run.views[i].asked; g.strokeStyle = '#1a8cff'; g.lineWidth = 5; g.setLineDash([16, 10]); g.strokeRect(X(x), Y(y), w * s, h * s); g.setLineDash([]); }
+  const outline = (v, on) => { if (!on || !v.sam) return; (v.sam.all || [v.sam]).forEach(o => { const [l, tp, r, b] = o.in_photo;  // every light SAM found
+    g.strokeStyle = '#e64980'; g.lineWidth = 5; g.strokeRect(X(l * SW), Y(tp * SH), (r - l) * SW * s, (b - tp) * SH * s); }); };
+  outline(run.views[0], t >= T.sam && t < T.two);
+  outline(run.views[1], t >= T.pop2 + .3 && t < T.sure); outline(run.views[2], t >= T.pop2 + .3 && t < T.sure);
+  const glowAt = (v, on) => { if (!on) return; const [x, y, w, h] = v.box; g.strokeStyle = '#40c057'; g.lineWidth = 7; g.strokeRect(X(x), Y(y), w * s, h * s); };
+  glowAt(run.views[1], t >= T.battery); glowAt(run.views[2], t >= T.engine);
+}
+// The phone's picture: the photo (or its sketch while it is made), and the box Muse asked for being cut out.
+function drawPhone(t) {
+  const c = $('pc'), g = c.getContext('2d'), k = c.width / SW;
+  g.imageSmoothingEnabled = false; g.fillStyle = '#0b1015'; g.fillRect(0, 0, c.width, c.height);
+  if (t >= T.shrink && t < T.send) g.drawImage(sketch, 0, 0, c.width, c.height);  // being made, then sent
+  else { g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(photo, 0, 0, c.width, c.height); }
+  const cut = t >= T.crop && t < T.back ? [0] : t >= T.cut2 && t < T.back2 ? [1, 2] : [];  // cutting out what Muse asked for
+  for (const i of cut) { const [x, y, w, h] = run.views[i].box; g.strokeStyle = '#1a8cff'; g.lineWidth = 6; g.strokeRect(x * k, y * k, w * k, h * k); }
+}
+
+function render(t) {
+  drawPhone(t); drawMuse(t);
+  const sentSoFar = msgs.filter((m, i) => m.from === 'phone' && t >= [T.send, T.back, T.back2][msgs.slice(0, i + 1).filter(x => x.from === 'phone').length - 1]);
+  // the phone's label and its outgoing texts
+  const P = $('plabel'), C = $('pcodes');
+  if (t < T.shrink) { P.innerHTML = `The photo<small>${kb(run.photo_bytes)}</small>`; C.innerHTML = ''; }
+  else if (t < T.text) { P.innerHTML = `A tiny grey WebP<small>${kb(msgs[0].bytes)}</small>`; C.innerHTML = ''; }
+  else if (t < T.send) { P.innerHTML = `As plain text<small>${msgs[0].texts} texts</small>`; C.innerHTML = t >= T.handful || true ? bubbles(msgs[0], 6, true) : ''; }
+  else if (t < T.crop) { P.innerHTML = `The photo<small>stays here</small>`; C.innerHTML = ''; }
+  else if (t < T.cropText) { P.innerHTML = `Cut from the full photo<small>in colour</small>`; C.innerHTML = ''; }
+  else if (t < T.back) { P.innerHTML = `As plain text<small>${msgs[2].texts} texts</small>`; C.innerHTML = bubbles(msgs[2], 6, false); }
+  else if (t < T.cut2) { P.innerHTML = `The photo<small>stays here</small>`; C.innerHTML = ''; }
+  else if (t < T.text2) { P.innerHTML = `Cut from the full photo<small>both lights</small>`; C.innerHTML = ''; }
+  else if (t < T.back2) { P.innerHTML = `As plain text<small>${msgs[4].texts} texts, both together</small>`; C.innerHTML = bubbles(msgs[4], 6, false); }
+  else if (t < T.never) { P.innerHTML = `The photo<small>stays here</small>`; C.innerHTML = ''; }
+  else { P.innerHTML = `The photo<small>never left the phone</small>`; C.innerHTML = ''; }
+  $('phonePic').classList.toggle('glow', t >= T.never);
+  // what crosses the link
+  const packet = $('packet'), hop = (a, html, back) => {
+    const k = ease(ramp(t, a, a + 1.2)); if (t < a || t > a + 1.25) return false;
+    const x0 = back ? 1190 : 330, x1 = back ? 330 : 1190;
+    packet.innerHTML = html; Object.assign(packet.style, {left: (x0 + (x1 - x0) * k) + 'px', top: '560px', opacity: 1}); return true; };
+  if (!(hop(T.send, bubbles(msgs[0], 4, true), false) || hop(T.dash, `<div class="code">${esc(zoomLine(msgs[1]))}</div>`, true) ||
+        hop(T.back, bubbles(msgs[2], 4, false), false) || hop(T.reply2, zoomLine(msgs[3]).split('\n').map(l => `<div class="code">${esc(l)}</div>`).join(''), true) ||
+        hop(T.back2, bubbles(msgs[4], 4, false), false))) packet.style.opacity = 0;
+  $('linklabel').textContent = t >= T.send ? 'plain text only · ' + kb(sentSoFar.reduce((a, m) => a + m.bytes, 0)) + ' sent' : 'plain text only';
+  // Muse's side: its request while it asks (or its answer), and a row for every view it has, with what it decided
+  const say = $('say');
+  const req = t >= T.two ? 2 : t >= T.asks ? 1 : 0, asking = req && t < [0, T.pop1, T.pop2][req];
+  if (t >= T.now) { say.innerHTML = esc(wordsOf(msgs[msgs.length - 1])); say.style.opacity = 1; say.style.borderColor = 'var(--good)'; }
+  else if (asking) { const m = msgs[2 * req - 1]; say.innerHTML = esc(wordsOf(m)) + zoomLine(m).split('\n').map(l => `<code>${esc(l)}</code>`).join(''); say.style.opacity = 1; say.style.borderColor = 'var(--blue)'; }
+  else say.style.opacity = 0;
+  const [v1, v2, v3] = run.views;
+  const ROWS = [{what: 'Sketch of the whole photo', kb: msgs[0].bytes, at: T.arrive, decided: T.notsure},
+                {what: NAMES()[0], kb: v1.bytes, at: T.pop1, decided: T.two, sam: v1.sam && 'SAM ' + (v1.sam.all || [v1.sam]).map(o => o.score).join(', '), samAt: T.sam},
+                {what: NAMES()[1], kb: v2.bytes + v3.bytes, at: T.pop2, decided: T.sure,
+                 sam: 'SAM ' + [v2, v3].filter(v => v.sam).map(v => v.sam.score).join(', '), samAt: T.pop2 + .3}];
+  const last = ROWS.filter(r => t >= r.at).length - 1;
+  $('views').innerHTML = ROWS.filter(r => t >= r.at).map((r, i) => {
+    const sure = i === ROWS.length - 1;
+    return `<div class="row${i === last && t < T.now ? ' now' : ''}"><span class="n">${i + 1}</span><span class="what">${r.what}<small>${kb(r.kb)}</small>` +
+           (r.sam && t >= r.samAt ? `<i>${esc(r.sam)}</i>` : '') + `</span>` +
+           (t >= r.decided ? `<span class="v ${sure ? 'yes' : 'no'}">${sure ? 'sure' : 'not sure yet'}</span>` : '') + `</div>`;
+  }).join('');
+  $('tally').innerHTML = t >= T.never ? `Sent: <em>${kb(run.phone_bytes)}</em> of a ${kb(run.photo_bytes).replace('.0 KB', ' KB')} photo` : '';
+}
+
+load().then(() => {
+  if (q.get('play') === '1') { const t0 = performance.now(); const tick = () => { const t = (performance.now() - t0) / 1000; render(t); if (t < T.end) requestAnimationFrame(tick); }; tick(); }
+  else render(+(q.get('t') || 0));
+  document.title = 'ready';
+});
+</script>
+</body>
+</html>

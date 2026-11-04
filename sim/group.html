@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Group Chat</title>
+<style>
+  :root { --bg:#0f1419; --panel:#161d24; --line:#2a3540; --fg:#e8edf2; --quiet:#8b98a5; --wa:#0b141a; --mine:#005c4b; --theirs:#202c33;
+          --ben:#53bdeb; --chen:#f59f00; --ana:#e87fd6; --muse:#25d366; }
+  * { box-sizing:border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font:15px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif; overflow:hidden; }
+  body { display:flex; flex-direction:column; }
+  header { display:flex; align-items:center; gap:12px; padding:12px 22px; border-bottom:1px solid var(--line); background:#0b1015; }
+  header h1 { margin:0; font-size:20px; } .quiet { color:var(--quiet); } .grow { flex:1; }
+  button { font:inherit; color:var(--fg); background:#25313c; border:1px solid var(--line); border-radius:999px; padding:6px 14px; cursor:pointer; }
+  button:disabled { opacity:.45; cursor:default; }
+  main { flex:1; display:grid; grid-template-columns:480px 1fr 380px; gap:18px; padding:16px 22px; min-height:0; }
+  .phone { background:var(--wa); border:10px solid #000; border-radius:36px; display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+  .top { display:flex; align-items:center; gap:10px; padding:12px 14px; background:#202c33; }
+  .top .av { width:38px; height:38px; border-radius:50%; background:#2a3942; display:flex; align-items:center; justify-content:center; font-size:20px; }
+  .top b { display:block; } .top small { color:var(--quiet); }
+  .chat { flex:1; overflow:auto; padding:12px 10px; display:flex; flex-direction:column; gap:6px; min-height:0; }
+  .m { max-width:84%; padding:6px 9px 4px; border-radius:9px; background:var(--theirs); font-size:14.5px; }
+  .m.me { align-self:flex-end; background:var(--mine); }
+  .m .who { font-size:12.5px; font-weight:650; margin-bottom:2px; }
+  .m img { display:block; width:240px; max-width:100%; border-radius:6px; margin:4px 0 2px; image-rendering:pixelated; }
+  .m .meta { font-size:11px; color:var(--quiet); text-align:right; }
+  .m.phone-auto { background:#1d2a30; border:1px dashed #3b4a54; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:14px; display:flex; flex-direction:column; gap:10px; min-height:0; }
+  .card h2 { margin:0; font-size:17px; }
+  .orig { position:relative; flex:1; min-height:0; display:flex; align-items:center; justify-content:center; }
+  .orig .wrap { position:relative; max-height:100%; }
+  .orig img { display:block; max-width:100%; max-height:calc(100vh - 260px); border-radius:8px; }
+  .box { position:absolute; border:3px solid; border-radius:3px; }
+  .legend span { display:inline-block; margin-right:14px; } .legend i { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:5px; vertical-align:-1px; }
+  table { width:100%; border-collapse:collapse; font-size:14px; } td { padding:6px 4px; border-bottom:1px solid var(--line); vertical-align:top; }
+  td.n { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .big { font-size:28px; font-weight:700; }
+</style>
+</head>
+<body>
+<header>
+  <h1>A group chat, with Muse in it</h1><span class="quiet">Simulated WhatsApp; the loop, Muse Spark and SAM 3.1 are real. → for the next step.</span>
+  <div class="grow"></div>
+  <button id="b1" disabled>Ben asks</button><button id="b2" disabled>Chen asks</button>
+</header>
+<main>
+  <section class="phone">
+    <div class="top"><div class="av">🌧</div><div><b>Harbor Way neighbours</b><small id="members"></small></div></div>
+    <div class="chat" id="chat"></div>
+  </section>
+  <section class="card">
+    <h2 id="origTitle">Stays on Ana's phone</h2>
+    <div class="legend quiet" id="legend"></div>
+    <div class="orig"><div class="wrap" id="orig"></div></div>
+  </section>
+  <section class="card">
+    <h2>What crossed the network</h2>
+    <table id="ledger"></table>
+    <div class="quiet" id="vs"></div>
+  </section>
+</main>
+<script>
+// The group-chat demo (sim/group_demo.py): Ana shares a photo, Ben and Chen each ask Muse about a different detail,
+// and Muse asks Ana's phone for the close-ups each question needs. → or space: the next step; ?auto=1 plays it all.
+const $ = id => document.getElementById(id);
+const esc = t => String(t || '').replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
+const kb = b => b < 1000 ? b + ' B' : b < 1e6 ? (b / 1000).toFixed(1) + ' KB' : (b / 1e6).toFixed(2) + ' MB';
+const Q = new URLSearchParams(location.search), SAMPLE = Q.get('sample') || 'redhook/flooded_corner';
+const ASKS = [['Ben', Q.get('q1') || 'What does the little sign under the street sign say?'],
+              ['Chen', Q.get('q2') || 'Which warehouse is this? What number is on the wall?']];
+const COLOUR = {Ana: 'var(--ana)', Ben: 'var(--ben)', Chen: 'var(--chen)', Muse: 'var(--muse)'};
+const WHATSAPP = 543000;  // a photo as WhatsApp sent it from an iPhone, measured (2160x3840 JPEG)
+let conv = null, S = null, shown = '', step = 0;
+
+async function post(path, body) { return fetch(path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)}).then(r => r.json()); }
+async function share() { conv = (await post('/api/group/start', {sample: SAMPLE})).conv; tick(); }
+async function ask(i) { const [who, q] = ASKS[i]; await post('/api/group/ask', {conv, who, question: q}); step = i + 2; tick(); }
+function next() { if (!conv) return share(); if (S && S.busy) return; if (step < 2) ask(0); else if (step < 3) ask(1); }
+
+function bubble(m) {
+  const auto = m.from.endsWith("'s phone"), name = auto ? m.from.replace("'s phone", '') : m.from;
+  const head = `<div class="who" style="color:${COLOUR[name] || 'var(--quiet)'}">${esc(m.from)}${m.note ? ' <span class="quiet" style="font-weight:400">' + esc(m.note) + '</span>' : ''}</div>`;
+  const img = m.image ? `<img src="${m.image === 'sketch' ? S.sketch : m.image}" alt="${auto ? 'a close-up' : 'the shared photo'}">` : '';
+  const meta = m.texts ? `<div class="meta">${m.texts} text${m.texts > 1 ? 's' : ''}</div>` : '';
+  return `<div class="m${auto ? ' phone-auto' : ''}">${head}${img}${m.text ? esc(m.text) : ''}${meta}</div>`;
+}
+function draw() {
+  $('members').textContent = S.members.join(', ');
+  $('chat').innerHTML = S.messages.map(bubble).join('') + (S.busy ? '<div class="quiet" style="padding:4px 8px">Muse is looking…</div>' : '');
+  $('chat').scrollTop = $('chat').scrollHeight;
+  for (const im of $('chat').querySelectorAll('img')) im.onload = () => { $('chat').scrollTop = $('chat').scrollHeight; };
+  $('origTitle').textContent = `Stays on ${S.sharer}'s phone: ${S.size.join('×')}, ${kb(S.original_bytes)}`;
+  $('legend').innerHTML = S.questions.map(q => `<span><i style="background:${COLOUR[q.who]}"></i>${esc(q.who)}'s close-ups</span>`).join('');
+  $('orig').innerHTML = `<img src="/samples/${SAMPLE}.jpg" alt="the original">` + S.questions.flatMap(q => q.boxes.map(([x, y, w, h]) => {
+    const [W, H] = q.pic_size; return `<div class="box" style="border-color:${COLOUR[q.who]};left:${x / W * 100}%;top:${y / H * 100}%;width:${w / W * 100}%;height:${h / H * 100}%"></div>`;
+  })).join('');
+  const share = S.messages[0] ? S.messages[0].texts : 0, total = share + S.questions.reduce((n, q) => n + q.texts, 0);
+  $('ledger').innerHTML = `<tr><td>${esc(S.sharer)} shares the photo (128 px sketch)</td><td class="n">${share} texts</td></tr>` +
+    S.questions.map(q => `<tr><td>${esc(q.who)}: “${esc(q.question)}”${q.done ? '' : ' …'}</td><td class="n">${q.texts} texts</td></tr>`).join('') +
+    `<tr><td><b>All of it</b></td><td class="n"><b>${total} texts</b><br><span class="quiet">${kb(total * 140)}</span></td></tr>`;
+  $('vs').innerHTML = `<div class="big">${Math.round(WHATSAPP / Math.max(1, total * 140))}× less</div>than one iPhone photo sent on WhatsApp (${kb(WHATSAPP)}, measured), and the photo never left ${esc(S.sharer)}'s phone.`;
+  $('b1').disabled = S.busy || step >= 2; $('b2').disabled = S.busy || step !== 2;
+}
+async function tick() {
+  if (!conv) return;
+  S = await fetch('/api/group/state?c=' + conv).then(r => r.json());
+  const key = JSON.stringify([S.messages.length, S.busy, S.questions.map(q => q.boxes.length)]);
+  if (key !== shown) { shown = key; draw(); }
+  if (Q.get('auto') && !S.busy && step < 3 && S.messages.length) next();
+}
+$('b1').onclick = () => ask(0); $('b2').onclick = () => ask(1);
+addEventListener('keydown', e => { if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); } });
+addEventListener('message', e => { if ((e.data || {}).next) next(); });  // /demo steps it
+setInterval(tick, 800);
+if (Q.get('auto')) share(); else { step = 0; share().then(() => { step = 1; }); }
+</script>
+</body>
+</html>

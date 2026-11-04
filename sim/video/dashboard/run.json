@@ -1,0 +1,326 @@
+{
+ "sample": "hard/dashboard",
+ "question": "Two warning lights came on on my dashboard. Which ones are they, and what do they mean?",
+ "size": [
+  1600,
+  980
+ ],
+ "sketch": [
+  128,
+  78
+ ],
+ "views": [
+  {
+   "image": "1_closeup.png",
+   "box": [
+    0.90625,
+    28.703125,
+    61.203125,
+    27.59375
+   ],
+   "asked": [
+    6,
+    31,
+    51,
+    23
+   ],
+   "colour": true,
+   "high": true,
+   "full": false,
+   "bytes": 1952,
+   "texts": 20,
+   "why": "the instrument cluster behind the steering wheel to see the shapes and colours of the warning lights in it",
+   "object": "warning light",
+   "sam": {
+    "box": [
+     0.55859375,
+     0.49137931034482757,
+     0.61328125,
+     0.5862068965517241
+    ],
+    "in_photo": [
+     0.2742,
+     0.5418,
+     0.3003,
+     0.5754
+    ],
+    "score": 0.91,
+    "phrase": "warning light",
+    "all": [
+     {
+      "box": [
+       0.55859375,
+       0.49137931034482757,
+       0.61328125,
+       0.5862068965517241
+      ],
+      "in_photo": [
+       0.2742,
+       0.5418,
+       0.3003,
+       0.5754
+      ],
+      "score": 0.91
+     },
+     {
+      "box": [
+       0.64453125,
+       0.49137931034482757,
+       0.6875,
+       0.5689655172413793
+      ],
+      "in_photo": [
+       0.3153,
+       0.5418,
+       0.3358,
+       0.5693
+      ],
+      "score": 0.89
+     }
+    ]
+   }
+  },
+  {
+   "image": "2_closeup.png",
+   "box": [
+    33.5,
+    40.59375,
+    6.0,
+    4.796875
+   ],
+   "asked": [
+    34,
+    41,
+    5,
+    4
+   ],
+   "colour": true,
+   "high": true,
+   "full": true,
+   "bytes": 338,
+   "texts": 4,
+   "why": "the left red warning light to see its symbol shape clearly",
+   "object": "warning light",
+   "sam": {
+    "box": [
+     0.25333333333333335,
+     0.36666666666666664,
+     0.8,
+     0.8333333333333334
+    ],
+    "in_photo": [
+     0.2736,
+     0.543,
+     0.2992,
+     0.5717
+    ],
+    "score": 0.66,
+    "phrase": "warning light",
+    "all": [
+     {
+      "box": [
+       0.25333333333333335,
+       0.36666666666666664,
+       0.8,
+       0.8333333333333334
+      ],
+      "in_photo": [
+       0.2736,
+       0.543,
+       0.2992,
+       0.5717
+      ],
+      "score": 0.66
+     }
+    ]
+   }
+  },
+  {
+   "image": "3_closeup.png",
+   "box": [
+    39.59375,
+    41.59375,
+    4.796875,
+    3.828125
+   ],
+   "asked": [
+    40,
+    42,
+    4,
+    3
+   ],
+   "colour": true,
+   "high": true,
+   "full": true,
+   "bytes": 266,
+   "texts": 3,
+   "why": "the right amber warning light to see its symbol shape clearly",
+   "object": "warning light",
+   "sam": {
+    "box": [
+     0.16666666666666666,
+     0.1875,
+     0.65,
+     0.6458333333333334
+    ],
+    "in_photo": [
+     0.3156,
+     0.5425,
+     0.3337,
+     0.5649
+    ],
+    "score": 0.8,
+    "phrase": "warning light",
+    "all": [
+     {
+      "box": [
+       0.16666666666666666,
+       0.1875,
+       0.65,
+       0.6458333333333334
+      ],
+      "in_photo": [
+       0.3156,
+       0.5425,
+       0.3337,
+       0.5649
+      ],
+      "score": 0.8
+     }
+    ]
+   }
+  }
+ ],
+ "decisions": [
+  {
+   "answer": "",
+   "sure": "no",
+   "safety": "",
+   "need": {
+    "box": [
+     0.05,
+     0.4,
+     0.45,
+     0.7
+    ],
+    "in": 1,
+    "colour": true,
+    "high": true,
+    "object": "warning light",
+    "why": "the instrument cluster behind the steering wheel to see the shapes and colours of the warning lights in it"
+   },
+   "needs": [
+    {
+     "box": [
+      0.05,
+      0.4,
+      0.45,
+      0.7
+     ],
+     "in": 1,
+     "colour": true,
+     "high": true,
+     "object": "warning light",
+     "why": "the instrument cluster behind the steering wheel to see the shapes and colours of the warning lights in it"
+    }
+   ],
+   "at": 1793754672.8462982
+  },
+  {
+   "answer": "",
+   "sure": "no",
+   "safety": "",
+   "need": {
+    "box": [
+     0.2663267135620117,
+     0.5317580542661362,
+     0.3081647872924805,
+     0.5854328995358089
+    ],
+    "in": 2,
+    "colour": true,
+    "high": true,
+    "object": "warning light",
+    "why": "the left red warning light to see its symbol shape clearly",
+    "snapped": 0.91
+   },
+   "needs": [
+    {
+     "box": [
+      0.2663267135620117,
+      0.5317580542661362,
+      0.3081647872924805,
+      0.5854328995358089
+     ],
+     "in": 2,
+     "colour": true,
+     "high": true,
+     "object": "warning light",
+     "why": "the left red warning light to see its symbol shape clearly",
+     "snapped": 0.91
+    },
+    {
+     "box": [
+      0.3090986728668213,
+      0.5335878785366932,
+      0.34197144508361815,
+      0.5775036610300619
+     ],
+     "in": 2,
+     "colour": true,
+     "high": true,
+     "object": "warning light",
+     "why": "the right amber warning light to see its symbol shape clearly",
+     "snapped": 0.89
+    }
+   ],
+   "at": 1793754679.662512
+  },
+  {
+   "answer": "They are the red battery / charging-system light, meaning the battery is not charging, and the amber check-engine light, meaning an engine or emissions fault.",
+   "sure": "yes",
+   "safety": "Stop somewhere safe and get help soon - a charging fault can stall the car.",
+   "need": null,
+   "needs": [],
+   "at": 1793754689.757961
+  }
+ ],
+ "messages": [
+  {
+   "from": "phone",
+   "text": "Two warning lights came on on my dashboard. Which ones are they, and what do they mean?\n#Pmx.1/7:UklGRngCAABXRUJQVlA4IGwCAAAwEQCdASqAAE4AP5nA1GI5MLc4qbgMAyAzCWkAAM4tAu3J+X9oOG/bK0lfCBNiPu069NlP+UGn8CsJF5MV9xc6bMkduyb1A5LlGIviRBBP5qYL:ed52#\n#Pmx.2/7:t+9QhpwpTFqeulOWp55H7KsjkmO3ViU3DJQWgywrKxmxfgPVWCCzkrmL4bhBOP3oIiAoWhqbaXRSFNxmPa8YAAD+7RfgIkLL/xX8jPTiRKRmBnKDkoLwzTl0XkwD3ZayW02iGF2A:d8c8#\n#Pmx.3/7:yWow/ppwWA+cw6HpiRejLOqYwde+V97IldvcsRbaxFsPWolRPZzSk3Dgj6pWJMaKdMlw+rPxannHJoeNgmQ069NQNjCfH5n4rGEKZW7oHQX8epRfsVpLnwl2qR7zDlHDYxGpaFf6:c30d#\n#Pmx.4/7:nGwLr2+THwUf2vZwOIKh0a9aWxhkA+bqBLiFEywDYoLki6I/eX5jOjrVjQzYe3SLO9RAo98sCr52/lETF8yz9X9HQzhd0rSvuvD/LYVmaqTvoTQP0XySN6+CNgRcXLlZ8pl51cha:f69b#\n#Pmx.5/7:pnqAtR9OFh4v27/M63B9eeu6Nsf/FEz2Svw3AIhP6V0bQnIMXHD9vrruxSoxeJeNmxDtQBiu+I88suUOQoHwvsa90VYvsNGA5xTcaY0jgXypnHns7PrmGFVt1bu1Gr+aqeKk5xs9:65f2#\n#Pmx.6/7:MImUPPrnSE40fviKlE7rrHlMRa7wAqZwJFNp2fg0FI+Mu7aIJqJ88cgyusT6S+HQOdCXE1xP3aS+hReVB/N76AhcYf2Dc572+CiBsefHxSwR1rcg1YOmdN7ALBgdozwifE7cTzBQ:90b2#\n#Pmx.7/7:+NXNF/tDugsJjlp2OrCoFdJWOmA8y1KjWsogAA==:0f6b#",
+   "texts": 7,
+   "bytes": 640
+  },
+  {
+   "from": "muse",
+   "text": "Not sure yet: I need a closer look at the instrument cluster behind the steering wheel to see the shapes and colours of the warning lights in it, in colour, in high detail. Your kit crops it from your photo and sends it back.\nZOOM mx 6 31 51 23 C H",
+   "texts": 2
+  },
+  {
+   "from": "phone",
+   "text": "#Zmz.1/20:Am14ADoHLQ9NBuZSSUZGmAcAAFdFQlBWUDggjAcAAPA0AJ0BKgABdAA/EXi1VqwmKzKmUUyCUCIJZwiQuM3ma/o5mzWWtE8EYw7dk+K4N6n7Edqf5vM0qOXdOMju2vfgUZmU1Y9O:99f1#\n#Zmz.2/20:6SjmiY/MV0BBvNx1gedQCQENdQEH0Ujdq77Q6ssf/bNzrVATDWxv70EhgkKkQRxlO7JxDwmvlX5wGF3gJkVbh6UTKlld2Gohd2ktLYowbS7PRv6cX+L9G144l/Q0nsVtWn/Gars0:d0cc#\n#Zmz.3/20:wUWvF8EIRQolna7xrTVaKRc9uRcsemJU8yIaRBxiZWYCJkklnmRuEOqQzB7MBh1rVD8+jbT8Ns6ZIEQ+khLwy/6OvQNHOZgiDfAdavQ0jSOewUjx0FEUP4hz5ADdSwy4uyNI/oQ0:58e9#\n#Zmz.4/20:jq4fp0d9iaJa61MoMkOIruensQuMk6flmube648XR7pZfKg9wzjW6DjD0qSDBuXSNaUpqQRQtYLtLlZAKSDxTVfRsRoOde8tNTqLOE3Cvrt7mn21WwVfxalvWzKZzyAX2+Gw1XbG:2dbc#\n#Zmz.5/20:incDLuulTP4WoWigL0oiubT07CKm1YEbRV7sMZ8bbNxlTpapndd4WSREkTLm7bsuKD2iddGn4AD+u7WVkJb3M30NhhiQzWqsxItFtuXOoI3pxjblBtypdkgHVNhplEsgE4jIMxFB:fb9a#\n#Zmz.6/20:p6weq4nEe1LmELjvXXjiXqCL/o1crXcCv7/Lck+G+Up5Q7zgIznvR+GbZOuWYQshOa5VJh/HCd63kEID6q9S2JATa0Czke5U5iBF3gTm3W7HGLuN8h+NiSFEeLYye/ZX1xf8060U:cb0d#\n#Zmz.7/20:RT5yLAqgpvG676v8qUUJGM/DLA1WdoHhDRtBYfP1PIDvlkp+4TvAbHoB5cq204CcLO17cZMVvaQUuTeFJOw9vzGpoEJEsl3SyXTB1r5smHXiV+jyP+9A9BdUX+KaTx4mJFWutLGH:9a8d#\n#Zmz.8/20:2giK6bk4YcNppO1vsJSUrG+1K9rBe8K7CDmP34aIuSkqO6xPzKmwgBCSRo32wP9T1/GQVv0+smnhu1OspAZ2ozDJ5lw9Yi/iGeZZIxwXLY/k5+umLyhOpgyOqQdzCaVURpGfhF4f:a440#\n#Zmz.9/20:x+K8vDtKJFBtQhp7iqTe70upqi1oeZfj++zoYhM7cjCuu+TX5eOnP4o9Dx/0/U1pIz0rLII8Ir5lFNV8HMZf6U80HVgQbgt/atOIvSZI9IT6yDGrg+djtHfafbAc1G5wwA5bV3Ds:1e30#\n#Zmz.10/20:UGiGO7NMUQTILqiOXpLuD5/dREouoyaNXnfaSXNVFVNV0DQdQH+ibg4Ki5V/dtCE++9IDb1PftYccC0HShgIqPq5LvyHtpEa6o1pHuL626LwNiX6Dm9Ff573cn3ZyAE5jKiYqvZ4:aa04#\n#Zmz.11/20:DIXupFm/9aiiCHGsZia4T8nbNx45wKXzMbuwetGZg9W9cQwnzG3M+scz/dTX5ui1Z7dzDXXQV15GXqn3aUermdaHzGmBcvOPJagRTn5QdPOqsPJjHIiOkFosfi+bqqxv4+YijFqF:9600#\n#Zmz.12/20:xXFbPRyJ739QHmVTultO1e3lQVp9qLKAI63+tLem96O9aaCGNYG7TrXwsO84vF30PIzqVnOVokWs+/ITKbJTIKIr14ExE3VIqik1FII6tm41spZY+Tfug8nrw4OJB3F2NJpc8LdR:4214#\n#Zmz.13/20:LMWpfoTI4wWDHIdgc5tW1mpee+x7EGUFI3UPQXVy9ok8oN2cN0ccYOixcK2JwyGmyf3HW6n0arMZ8XFRCLT/jbOvJ9ekTsHHXqcGkPKYEgoASxzxzZ9eXmTt5ShL5sPwA4V9IoxD:3add#\n#Zmz.14/20:pBrklD+D326qXtHqpbDLwrPyjkiYhRZiMW30O0Rh8z1+6J0PdYdWjPMVBbTa+LBvM/0ZtiTZfsiX6ebZomX0hlkUcVC6Ek4LmQkW3K7Jx/ZSuu0EHlO2EkKskidTpmnmJjKWoyeC:62b4#\n#Zmz.15/20:ce27RJOno2VeEFLH6M9+H8WOo/iJu9xVIKzy56qE/AYnwIUy3rimZbtTv2u4LaGT7ZNpyMpSfpUkjwhZxMJ5EG9rZrx4/NCeWvLIDwL4O80gUOEspPtPvXArgWmFFsn5DbnmZVeB:5a5e#\n#Zmz.16/20:WDaIz4rNMhQA4cign/Pegz/AJo6vLcQbAiqS/YyCNRyFmfPLVa8mNJs44xYt26SLldllUTiZWCQ+moCpC+PhLrmeHhMtSnMpXn4w/nV9J6dlOgrjyJ8ZNdFjepq1VZdIJc7bQH/y:6f98#\n#Zmz.17/20:omCLzRTF5KwH/p8U2RvjK1G5N2PCepQUJAAyZSaQfmwb732ywKpzGg0cWlbAPve05p/B81R+JIM9KADjFZ8BSQWlC3L+HIfkm5J8thT9++p9PinSS7xwWeHwotEicCV1RY0v/WNw:d222#\n#Zmz.18/20:MIt8fIe3VgpQPPIYHtbFKTq7CCVeqS/B2lEQmWcWDxDN+Wm+Rk8C6HHolzlr4QBIO8wRGDIMIKALC28imZX+jbFbxBfh/UKrqhSPVfvP7B/kJxCdGibTmjNe5FPeJldDNNpjXWAB:364c#\n#Zmz.19/20:sWvSlPNa+rGwayJCohy1u8yPMAA3JoQlY+EU1B39tLREc3ov5J03lCS97Mqw2vDYZ/l0IHTjFGlv0HaTzzKEOWJ84/HzliFaJugT89uEXtfOvxX9unzTFpRCAvTyCS71sHjHAB+a:55ad#\n#Zmz.20/20:sa0X8Y20B2ZdvRTGQdUPKQQpGWfKyQAAAA==:0511#",
+   "texts": 20,
+   "bytes": 1963
+  },
+  {
+   "from": "muse",
+   "text": "Not sure yet: I need closer looks at the left red warning light to see its symbol shape clearly, in colour, in high detail; and the right amber warning light to see its symbol shape clearly, in colour, in high detail. Your kit crops them from your photo and sends them back.\nZOOM mx 34 41 5 4 C H\nZOOM mx 40 42 4 3 C H",
+   "texts": 3
+  },
+  {
+   "from": "phone",
+   "text": "#Zmz.1/4:Am14CGAKJgGAATNSSUZGSgEAAFdFQlBWUDggPgEAAFAKAJ0BKksAPAA/EXy2VCwnpSQptVrZgCIJYgDGQEN+nqCz7lLPejomHdlM2DM2pkb5nFmojKuISCZfriWNRxZDBvL+YW74:98fe#\n#Zmz.2/4:BV8m4EifM61HmBTl8jfXUyJK/IAA/vHx8N9K3WsbwTPysbVZoG3pZvdwMcUpoV8HXP3qBKqbpBfX/rXI8wWXDbMA0PNmb/J5IADLw9syAUqzhYa6FF4HKTwiTt+TnccN+DPtxhek:9800#\n#Zmz.3/4:VJ5j7B1ZQX2rvOZ138Izs4JwLT6TUjkJlDyH0sbqttMHjCf3UIRO8GPMFzAkHnRTdk+Zudk8Ubmc2lGnahTEaK6+NUOtx1Trzulu60VU6viDgFpP3B9BtaceA9u+dith0/9/NZog:04d0#\n#Zmz.4/4:WikIsip/epEX4lLivG5ieLs8D/uePvZu+G1at7TgjjHnfVdJ7Mp6uwAAAA==:e733#\n#Zmy.1/3:Am14CeYKZgEzAPVSSUZGAgEAAFdFQlBWUDgg9gAAAHAIAJ0BKjwAMAA/EXi1UywnMKgqtAwCECIJYgC5XEXs39TYTTXZKIhegibyy1Y/CINzF5Ix6NF/XevnmoHNQKIcUIfqC+gK:b232#\n#Zmy.2/3:B9kcSAAA/vQg0pBn7d6OOczqQ4D6INRT6bpRmZ6tqeyCqTifwoocbxk4mmTQd6UHcc97SDdVZSnlopucGziG+OBgmhMoVqIxtll4EyKjbzdhDw07KymKOeo/jTctH+ZYKRxN7ufv:0300#\n#Zmy.3/3:OrWwU3uGi02/ECo/sElR76u3nQ0h0k0Vq6Qru9aY4o9aLOWUfe9cSjPHEjfjYnur8zOq1egl10d1ZzRtNvMVmYc/8yCUeXAAAA==:122c#",
+   "texts": 7,
+   "bytes": 626
+  },
+  {
+   "from": "muse",
+   "text": "They are the red battery / charging-system light, meaning the battery is not charging, and the amber check-engine light, meaning an engine or emissions fault.\nStop somewhere safe and get help soon - a charging fault can stall the car.",
+   "texts": 2
+  }
+ ],
+ "answer": "They are the red battery / charging-system light, meaning the battery is not charging, and the amber check-engine light, meaning an engine or emissions fault.\nStop somewhere safe and get help soon - a charging fault can stall the car.",
+ "phone_bytes": 3229,
+ "photo_bytes": 214194
+}

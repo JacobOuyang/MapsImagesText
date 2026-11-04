@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MuZip Side by Side</title>
+<style>
+  /* Section 2 of the video (the side-by-side), drawn as a function of time like sim/video/intro.html: ?t=12.5 is the
+     frame at 12.5 s, ?play=1 plays it. The times are where the lines fall in private/voice/02_the_side_by_side.mp3.
+     Every picture, size and answer is the dashboard row of the measured comparison (/api/compare). Options for the
+     storyboard: ?build=1 pops MuZip's close-ups in one by one (else its finished picture appears at once);
+     ?zoom=0 leaves out the zoom onto the two lights. MuZip's picture and the classical WebP each fill the screen first,
+     then shrink into their panels; both are drawn pixel for pixel (no smoothing), so the blur shows as it is. */
+  :root { --bg:#0f1419; --panel:#161d24; --line:#2a3540; --fg:#e8edf2; --quiet:#8b98a5; --good:#40c057; --warn:#f59f00; --blue:#1a8cff; }
+  html, body { margin:0; width:1920px; height:1080px; background:var(--bg); color:var(--fg); font-family:system-ui, -apple-system, "Segoe UI", sans-serif; overflow:hidden; }
+  body { position:relative; }  /* the scene is its own 1920 x 1080 frame, whatever the window */
+  .logo { position:absolute; left:0; right:0; top:22px; display:flex; justify-content:center; align-items:center; gap:10px; }
+  .logo svg { overflow:visible; }
+  .tooth { fill:var(--fg); }
+  .panel { position:absolute; top:120px; width:580px; height:900px; background:var(--panel); border:2px solid var(--line); border-radius:22px; }
+  .panel h2 { margin:22px 26px 14px; font-size:30px; }
+  .panel .pic { position:absolute; left:26px; top:80px; width:528px; height:324px; border-radius:12px; overflow:hidden; background:#0b1015; }
+  .panel .pic img, .panel .pic canvas { width:100%; height:100%; display:block; object-fit:cover; }
+  .panel .size { position:absolute; left:26px; top:430px; font-size:64px; font-weight:750; font-variant-numeric:tabular-nums; }
+  .panel .answer { position:absolute; left:26px; right:26px; top:530px; font-size:25px; line-height:1.4; border-left:5px solid var(--line); padding-left:16px; }
+  .panel .badge { position:absolute; left:26px; top:790px; font-size:38px; font-weight:750; }
+  .badge.right { color:var(--good); } .badge.tell { color:var(--warn); }
+  .answer.right { border-color:var(--good); } .answer.tell { border-color:var(--warn); }
+  .glow { box-shadow:0 0 0 4px var(--blue), 0 0 40px rgba(26,140,255,.55); border-radius:10px; }
+  .full { position:absolute; object-fit:cover; border-radius:0; }
+  .px { image-rendering:pixelated; }
+  .signal { position:absolute; right:60px; top:50px; display:flex; align-items:center; gap:14px; font-size:30px; font-weight:650;
+            background:rgba(0,0,0,.55); padding:12px 20px; border-radius:16px; }
+  .bars { display:flex; gap:6px; align-items:flex-end; height:30px; } .bars i { width:10px; background:#4a5662; border-radius:2px; display:block; }
+  .bars i:nth-child(1) { height:9px; background:var(--fg); } .bars i:nth-child(2) { height:16px; } .bars i:nth-child(3) { height:23px; } .bars i:nth-child(4) { height:30px; }
+  .bubble { position:absolute; right:110px; bottom:110px; max-width:760px; background:#1f7aff; color:#fff; font-size:40px; line-height:1.3;
+            padding:24px 32px; border-radius:34px 34px 8px 34px; box-shadow:0 20px 50px rgba(0,0,0,.45); }
+  .end { position:absolute; left:0; right:0; bottom:20px; text-align:center; font-size:46px; font-weight:700; }
+  .end em { font-style:normal; color:var(--blue); }
+</style>
+</head>
+<body>
+<div class="logo" id="logo">
+  <svg viewBox="0 0 200 240" style="height:76px" aria-hidden="true">
+    <defs><linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0050e6"/><stop offset="1" stop-color="#1a8cff"/></linearGradient></defs>
+    <path d="M74 42 L36 224 M74 42 L57 150 Q52 182 74 172 L152 42 L136 150 Q131 182 162 168" fill="none" stroke="url(#blue)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <svg id="zip" viewBox="0 0 60 200" style="height:66px; transform:skewX(-12deg)" aria-hidden="true"></svg>
+</div>
+<section class="panel" id="p0" style="left:45px"><h2>The photo itself</h2><div class="pic" id="pic0"></div>
+  <div class="size" id="size0"></div><div class="answer right" id="ans0"></div><div class="badge right" id="badge0">✓ Right</div></section>
+<section class="panel" id="p1" style="left:670px"><h2>MuZip</h2><div class="pic"><canvas id="seen" width="1056" height="648"></canvas></div>
+  <div class="size" id="size1"></div><div class="answer right" id="ans1"></div><div class="badge right" id="badge1">✓ Right</div></section>
+<section class="panel" id="p2" style="left:1295px"><h2>Classical compression</h2><div class="pic"><img id="webp" class="px" alt=""></div>
+  <div class="size" id="size2"></div><div class="answer tell" id="ans2"></div><div class="badge tell" id="badge2">? Muse couldn't tell</div></section>
+<img class="full" id="photo" alt="">
+<canvas class="full" id="fsMuzip" width="1764" height="1080"></canvas>
+<canvas class="full" id="fsWebp" width="1764" height="1080"></canvas>
+<div class="signal" id="signal"><span class="bars"><i></i><i></i><i></i><i></i></span>1 bar</div>
+<div class="bubble" id="bubble">Two warning lights came on. Which ones are they, and what do they mean?</div>
+<div class="end" id="end"></div>
+<script>
+// Where the lines fall in the voice-over (seconds), from its pauses.
+const T = {question: 3.44, normal: 7.93, kb200: 9.5, muzip: 12.11, kb3: 13.6, muzipIn: 13.85, answers: 14.49, sure: 15.63, lights: 17.77, back: 20.0,
+           squeeze: 20.44, same: 22.3, webpIn: 23.65, cant: 24.41, choose: 27.03, small: 29.43, right: 30.5, both: 32.03, accurate: 33.74, fraction: 35.92, end: 37.8};
+const q = new URLSearchParams(location.search), BUILD = q.get('build') === '1', ZOOM = q.get('zoom') !== '0';
+const $ = id => document.getElementById(id);
+const clamp = v => Math.max(0, Math.min(1, v)), ramp = (t, a, b) => clamp((t - a) / (b - a));
+const ease = x => x < .5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2;
+const easeOut = x => 1 - (1 - x) ** 3;  // a picture shrinking into its panel starts at once (ease-in-out hung at full size)
+// Full screen, a picture keeps the panels' shape (528 x 324, the photo's own): full height with thin bars at the sides.
+// Filling 16:9 cropped it top and bottom, so on the way into its panel it seemed to zoom, and MuZip's was stretched.
+const FS = [78, 0, 1764, 1080];
+const kb = b => (b / 1000).toFixed(b < 10000 ? 1 : 0) + ' KB';
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
+
+(function () {  // the zipper (as in sim/title.html)
+  const NS = 'http://www.w3.org/2000/svg', SLIDER = 62, svg = $('zip');
+  const el = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); svg.appendChild(e); };
+  for (let y = 0; y < 200; y += 10) [[-1, 0], [1, 5]].forEach(([side, dy]) => {
+    const ty = y + dy, open = Math.max(0, SLIDER - ty) * 0.22;
+    el('rect', {class: 'tooth', x: side < 0 ? 17 - open : 29 + open, y: ty, width: 14, height: 6, rx: 1.5});
+  });
+  el('path', {fill: 'url(#blue)', d: `M16 ${SLIDER - 8} H44 L40 ${SLIDER + 14} H20 Z`});
+  el('rect', {fill: 'url(#blue)', x: 24, y: SLIDER + 12, width: 12, height: 32, rx: 4});
+  el('rect', {x: 27.5, y: SLIDER + 30, width: 5, height: 9, rx: 2, fill: 'var(--bg)'});
+})();
+
+const loadImg = src => new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.src = src; });
+// A small picture drawn full screen pixel for pixel, at whole-pixel offsets: as an <img>, Chrome put the half-pixel
+// crop of a 5x enlargement 2 px up or down from one frame to the next (the classical WebP shook).
+function drawCover(c, img) {
+  const g = c.getContext('2d'), s = Math.max(c.width / img.width, c.height / img.height);
+  const w = Math.round(img.width * s), h = Math.round(img.height * s);
+  g.imageSmoothingEnabled = false; g.drawImage(img, Math.round((c.width - w) / 2), Math.round((c.height - h) / 2), w, h);
+}
+const softened = new Map();
+function soft(img, w, h) {  // a close-up with soft edges, laid over the blurry first pass (as in the intro)
+  const key = img.src + w + 'x' + h; if (softened.has(key)) return softened.get(key);
+  const c = document.createElement('canvas'), g = c.getContext('2d'), f = Math.max(6, Math.min(w, h) * .09);
+  c.width = Math.max(1, Math.round(w)); c.height = Math.max(1, Math.round(h));
+  g.imageSmoothingEnabled = false; g.drawImage(img, 0, 0, c.width, c.height);  // its own pixels, enlarged as they are
+  const m = document.createElement('canvas'), mg = m.getContext('2d'); m.width = c.width; m.height = c.height;
+  mg.filter = `blur(${f / 2}px)`; mg.fillStyle = '#fff'; mg.fillRect(f, f, c.width - 2 * f, c.height - 2 * f);
+  g.globalCompositeOperation = 'destination-in'; g.drawImage(m, 0, 0);
+  softened.set(key, c); return c;
+}
+
+let row, views, imgs, SW, SH, lightsCam, full = [0, 0, 0, 0];
+async function load() {
+  row = (await (await fetch('/api/compare')).json()).rows.find(r => r.name === 'dashboard');
+  const m = row.muzip; views = m.views;
+  imgs = await Promise.all(views.map(v => loadImg('/eval/three_ways/' + v.image)));
+  SW = imgs[0].width; SH = imgs[0].height;
+  const best = m.runs.find(r => r.answer === m.answer) || m.runs[0];
+  const fullAns = row.full.runs.find(r => r.verdict === 'right' && r.sure === 'yes') || row.full.runs[0];
+  $('photo').src = $('pic0').appendChild(Object.assign(new Image(), {src: '/samples/' + row.sample + '.jpg'})).src;
+  $('webp').src = '/eval/three_ways/' + row.webp.image;
+  $('size0').textContent = kb(row.full.bytes); $('size1').textContent = kb(best.bytes); $('size2').textContent = kb(row.webp.bytes);
+  $('ans0').textContent = '“' + fullAns.answer.split('\n')[0] + '”';
+  $('ans1').textContent = '“' + best.answer.split('\n')[0] + '”';
+  $('ans2').textContent = '“' + (row.webp.shown || row.webp.runs[0]).answer.split('\n')[0] + '”';
+  $('end').innerHTML = `The photo ${kb(row.full.bytes)} &nbsp;→&nbsp; <em>MuZip ${kb(best.bytes)}</em>, both right`;
+  drawCover($('fsWebp'), await loadImg('/eval/three_ways/' + row.webp.image));
+  await Promise.all([$('photo'), $('webp')].map(i => i.complete ? 0 : new Promise(ok => i.onload = ok)));
+  const small = views.slice(1).filter(v => v.box[2] < SW / 4).map(v => v.box);  // the two lights
+  const u = small.reduce((u, [x, y, w, h]) => [Math.min(u[0], x), Math.min(u[1], y), Math.max(u[2], x + w), Math.max(u[3], y + h)], [1e9, 1e9, -1e9, -1e9]);
+  let w = (u[2] - u[0]) * 2.4, h = w * SH / SW; const cx = (u[0] + u[2]) / 2, cy = (u[1] + u[3]) / 2;
+  lightsCam = [cx - w / 2, cy - h / 2, w, h]; full = [0, 0, SW, SH];
+}
+
+// MuZip's picture: its first pass with every close-up in place (at once, or one by one with ?build=1), drawn pixel
+// for pixel (no smoothing), into the panel or full screen; in the panel, the zoom onto the two lights.
+const pops = i => BUILD ? T.muzip + .3 + .45 * i : T.muzip;
+function drawMuzip(c, t, cam) {
+  const g = c.getContext('2d'), [cx, cy, cw, ch] = cam;
+  const s = Math.max(c.width / cw, c.height / ch), ox = (c.width - cw * s) / 2, oy = (c.height - ch * s) / 2;  // cover
+  g.fillStyle = '#0b1015'; g.fillRect(0, 0, c.width, c.height);
+  g.imageSmoothingEnabled = false;
+  g.drawImage(imgs[0], ox - cx * s, oy - cy * s, SW * s, SH * s);
+  for (let i = 1; i < views.length; i++) {
+    if (t < pops(i - 1)) continue;
+    const [x, y, w, h] = views[i].box;
+    g.drawImage(soft(imgs[i], w * s, h * s), ox + (x - cx) * s, oy + (y - cy) * s, w * s, h * s);
+  }
+}
+function drawSeen(t) {
+  const z = !ZOOM ? 0 : ease(ramp(t, T.lights, T.lights + .7)) * (1 - ease(ramp(t, T.back - .7, T.back)));
+  drawMuzip($('seen'), t, full.map((v, i) => v + (lightsCam[i] - v) * z));
+}
+// A picture that fills the screen, then shrinks into its panel's picture.
+function fly(el, t, t0, t1, target) {
+  const k = easeOut(ramp(t, t0, t0 + .6)), P = target.getBoundingClientRect();
+  const r = FS.map((v, i) => v + ([P.left, P.top, P.width, P.height][i] - v) * k);
+  Object.assign(el.style, {left: r[0] + 'px', top: r[1] + 'px', width: r[2] + 'px', height: r[3] + 'px', borderRadius: 12 * k + 'px',
+                           opacity: t >= t1 && t < t0 + .6 ? 1 : 0});
+}
+
+const show = (id, on) => { $(id).style.opacity = on ? 1 : 0; };
+const glow = (id, on) => $(id).classList.toggle('glow', !!on);
+function render(t) {
+  // 1-2: the photo full screen, one bar of signal, the question
+  const shrink = easeOut(ramp(t, T.normal, T.normal + .6));
+  const P = $('pic0').getBoundingClientRect(), from = FS, to = [P.left, P.top, P.width, P.height];
+  const r = from.map((v, i) => v + (to[i] - v) * shrink);
+  Object.assign($('photo').style, {left: r[0] + 'px', top: r[1] + 'px', width: r[2] + 'px', height: r[3] + 'px', borderRadius: 12 * shrink + 'px',
+                                   opacity: t < T.normal + .6 ? 1 : 0});
+  show('signal', t < T.normal); show('bubble', t >= T.question && t < T.normal);
+  // 3: the photo itself; 4-6: MuZip; 7-8: classical compression
+  show('logo', t >= T.normal); show('p0', t >= T.normal); show('size0', t >= T.kb200); show('ans0', t >= T.choose); show('badge0', t >= T.choose);
+  show('p1', t >= T.muzip); show('size1', t >= T.kb3); show('ans1', t >= T.answers); show('badge1', t >= T.sure);
+  show('p2', t >= T.squeeze); show('size2', t >= T.same); show('ans2', t >= T.cant); show('badge2', t >= T.cant);
+  if (t >= T.muzip) drawSeen(t);
+  fly($('fsMuzip'), t, T.muzipIn, T.muzip, $('seen')); if (t >= T.muzip && t < T.muzipIn + .6) drawMuzip($('fsMuzip'), t, full);
+  fly($('fsWebp'), t, T.webpIn, T.squeeze, $('webp'));
+  // 9-10: you choose, or you get both
+  glow('size2', t >= T.small && t < T.both); glow('badge0', t >= T.right && t < T.both);
+  glow('size1', t >= T.both); glow('badge1', t >= T.accurate);
+  const dim = (id, d) => { $(id).style.filter = d ? 'brightness(.45)' : ''; };
+  dim('p0', t >= T.both && t < T.accurate); dim('p2', t >= T.both);
+  show('end', t >= T.fraction);
+}
+
+load().then(() => {
+  if (q.get('play') === '1') { const t0 = performance.now(); const tick = () => { const t = (performance.now() - t0) / 1000; render(t); if (t < T.end) requestAnimationFrame(tick); }; tick(); }
+  else render(+(q.get('t') || 0));
+  document.title = 'ready';
+});
+</script>
+</body>
+</html>

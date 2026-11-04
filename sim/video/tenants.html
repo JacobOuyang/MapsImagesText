@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MuZip Tenants</title>
+<style>
+  /* Section 5 of the video (real use cases): a title card, then a tenant WhatsApp group after a hurricane, drawn as a
+     function of time like the other scenes (?t= one frame, ?play=1 plays it). Three recorded runs (demo/video/record_run.py):
+     sim/video/tree (a photo shared with no question: MuZip sends the one part that matters), sim/video/street_ben and
+     sim/video/street_chen (two neighbours' questions about one photo of the street). Times are where the lines fall in
+     its voice-over. */
+  :root { --bg:#0f1419; --panel:#161d24; --line:#2a3540; --fg:#e8edf2; --quiet:#8b98a5; --blue:#1a8cff; --wa:#0b141a; --in:#202c33; --out:#005c4b; }
+  html, body { margin:0; width:1920px; height:1080px; background:var(--bg); color:var(--fg); font-family:system-ui, -apple-system, "Segoe UI", sans-serif; overflow:hidden; }
+  body { position:relative; }
+  .card { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; }
+  .card h1 { margin:0; font-size:96px; font-weight:750; } .card p { margin:0; font-size:40px; color:var(--quiet); }
+  .chat { position:absolute; left:460px; width:1000px; top:40px; bottom:40px; background:var(--wa); border-radius:24px; overflow:hidden;
+          border:2px solid var(--line); display:flex; flex-direction:column; }
+  .head { display:flex; align-items:center; gap:18px; padding:20px 26px; background:#202c33; }
+  .head .av { width:58px; height:58px; border-radius:50%; background:#3a4a5a; display:flex; align-items:center; justify-content:center; font-size:30px; }
+  .head b { font-size:30px; } .head small { display:block; color:var(--quiet); font-size:21px; }
+  .head .net { margin-left:auto; font-size:22px; color:#f59f00; }
+  .msgs { flex:1; position:relative; overflow:hidden; }
+  .stack { position:absolute; left:0; right:0; top:0; padding:20px 28px; display:flex; flex-direction:column; gap:14px; }
+  .sys { align-self:center; background:#182229; color:var(--quiet); font-size:20px; padding:8px 16px; border-radius:10px; }
+  .b { max-width:640px; padding:12px 16px 10px; border-radius:14px; font-size:24px; line-height:1.35; background:var(--in); }
+  .b.me { align-self:flex-end; background:var(--out); } .b.muzip { border:2px solid var(--blue); }
+  .b .who { font-size:20px; font-weight:700; margin-bottom:4px; }
+  .b img { display:block; width:520px; height:auto; max-height:320px; object-fit:contain; border-radius:8px; margin-top:6px; image-rendering:pixelated; background:#0b141a; }
+  .b.fail { color:var(--quiet); font-style:italic; }
+  .b .meta { font-size:18px; color:var(--quiet); margin-top:6px; }
+  .code { font:15px/1.3 Menlo, monospace; color:#9fc3e7; word-break:break-all; max-height:150px; overflow:hidden; }
+  .side { position:absolute; left:1500px; right:40px; top:120px; display:flex; flex-direction:column; gap:22px; }
+  .tal { background:var(--panel); border:2px solid var(--line); border-radius:18px; padding:18px 20px; }
+  .tal h3 { margin:0 0 10px; font-size:22px; color:var(--quiet); font-weight:600; }
+  .tal .row { display:flex; justify-content:space-between; font-size:23px; margin:6px 0; } .tal .row b { color:var(--blue); }
+  .tal .row s { color:var(--quiet); }
+  .note { position:absolute; left:40px; width:390px; top:420px; font-size:24px; line-height:1.4; color:var(--quiet); }
+</style>
+</head>
+<body>
+<div class="card" id="card"><h1>Real use cases</h1><p>A tenant group chat, the day after a hurricane</p></div>
+<div class="chat" id="chat">
+  <div class="head"><div class="av">🏢</div><div><b>Elm St tenants</b><small>Maria, Ben, Chen, Dev, +18</small></div><div class="net">▂___ data barely working</div></div>
+  <div class="msgs"><div class="stack" id="stack"></div></div>
+</div>
+<div class="note" id="note">What crosses WhatsApp is plain text. Mew-zip on each phone turns it back into the picture.</div>
+<div class="side" id="side"></div>
+<script>
+// Where the lines fall in private/voice/05_real_use_cases.mp3 (seconds), from its pauses.
+const T = {card: 0, chat: 3.24, share: 8.85, shareSent: 12.94, mine: 19.23, street: 20.56, ben: 21.43, benAns: 23.58, chen: 24.91, chenAns: 26.3,
+           tally: 27.12, plane: 30.03, pup: 30.46, pupFail: 33.68, ask: 34.54, pupSent: 35.34, end: 38.6};
+const $ = id => document.getElementById(id);
+const kb = b => (b / 1000).toFixed(1) + ' KB';
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
+let tree, ben, chen, pup, normal;
+const words = m => m.text.split('\n')[0].replace(/ \((fairly|not) sure\)$/, '');
+async function load() {
+  [tree, ben, chen] = await Promise.all(['tree', 'street_ben', 'street_chen'].map(async n => Object.assign(await (await fetch(n + '/run.json')).json(), {dir: n})));
+  for (const r of [ben, chen]) SEEN[r.dir] = await seen(r);  // what Muse saw, framed on the car
+  SEEN[tree.dir] = await whole(tree);  // the share, as one image
+  pup = Object.assign(await (await fetch('puppy/run.json')).json(), {dir: 'puppy'});
+  SEEN[pup.dir] = await whole(pup);
+  normal = await (await fetch('normal_sizes.json')).json();
+}
+// With an answer, what Muse ended up seeing: the sketch with every close-up in its place, framed on where it looked
+// last (its final close-up alone can be a meaningless blur at the end of a search). Drawn once into a data URL.
+const loadImg = src => new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.src = src; });
+const SEEN = {};
+async function seen(r) {
+  const imgs = await Promise.all([r.dir + '/0_sketch.png', ...r.views.map(v => r.dir + '/' + v.image)].map(loadImg));
+  const [sk] = imgs, SW = sk.width, SH = sk.height, k = 24;
+  const big = document.createElement('canvas'); big.width = SW * k; big.height = SH * k;
+  const g = big.getContext('2d'); g.imageSmoothingEnabled = false; g.drawImage(sk, 0, 0, big.width, big.height);
+  r.views.forEach((v, i) => { const [x, y, w, h] = v.box; g.imageSmoothingEnabled = true; g.drawImage(imgs[i + 1], x * k, y * k, w * k, h * k); });
+  // framed on the car SAM 3.1 outlined (run.json: target), else on where Muse looked last
+  const tg = r.target && r.target.in_photo, last = r.views[r.views.length - 1].box;
+  const [x, y, w, h] = tg ? [tg[0] * SW, tg[1] * SH, (tg[2] - tg[0]) * SW, (tg[3] - tg[1]) * SH] : last, cx = x + w / 2, cy = y + h / 2;
+  let fw = Math.max(w * 2.2, SW / 4), fh = fw * 0.6; fw = Math.min(fw, SW); fh = Math.min(fh, SH);
+  const fx = Math.max(0, Math.min(SW - fw, cx - fw / 2)), fy = Math.max(0, Math.min(SH - fh, cy - fh / 2));
+  const c = document.createElement('canvas'); c.width = 1200; c.height = 720;
+  const cg = c.getContext('2d'); cg.imageSmoothingQuality = 'high'; cg.drawImage(big, fx * k, fy * k, fw * k, fh * k, 0, 0, c.width, c.height);
+  if (tg) {  // the box around the car the answer is about
+    const sx = c.width / fw, sy = c.height / fh;
+    cg.strokeStyle = '#40c057'; cg.lineWidth = 8; cg.strokeRect((x - fx) * sx - 8, (y - fy) * sy - 8, w * sx + 16, h * sy + 16);
+  }
+  return c.toDataURL('image/jpeg', 0.9);
+}
+const last = r => SEEN[r.dir] || r.dir + '/' + r.views[r.views.length - 1].image;
+// A shared photo as one image: the whole grey sketch, the sharp colour close-up blended in where it belongs.
+async function whole(r) {
+  const [sk, ...zs] = await Promise.all([r.dir + '/0_sketch.png', ...r.views.map(v => r.dir + '/' + v.image)].map(loadImg));
+  const c = document.createElement('canvas'), k = 1200 / sk.width; c.width = 1200; c.height = Math.round(sk.height * k);
+  const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(sk, 0, 0, c.width, c.height);
+  r.views.forEach((v, i) => {
+    const [x, y, w, h] = v.box, pw = Math.round(w * k), ph = Math.round(h * k), f = Math.max(8, Math.min(pw, ph) * .06);
+    const p = document.createElement('canvas'), pg = p.getContext('2d'); p.width = pw; p.height = ph;
+    pg.drawImage(zs[i], 0, 0, pw, ph);
+    const m = document.createElement('canvas'), mg = m.getContext('2d'); m.width = pw; m.height = ph;
+    mg.filter = `blur(${f / 2}px)`; mg.fillStyle = '#fff'; mg.fillRect(f, f, pw - 2 * f, ph - 2 * f);
+    pg.globalCompositeOperation = 'destination-in'; pg.drawImage(m, 0, 0);
+    g.drawImage(p, Math.round(x * k), Math.round(y * k));
+  });
+  return c.toDataURL('image/jpeg', 0.9);
+}
+const sent = r => r.phone_bytes;
+function msgs(t) {
+  const out = [];
+  if (t >= T.plane) {  // a second chat: a friend's photo on a plane's messaging-only Wi-Fi
+    const codes = m => m.text.split('\n').filter(l => l.startsWith('#'));
+    if (t >= T.pup) out.push(`<div class="b"><div class="who" style="color:#f7c873">Alex</div>meet the new family member!!</div>`);
+    if (t >= T.pupFail) out.push(`<div class="b fail"><div class="who" style="color:#f7c873;font-style:normal">Alex</div>📷 Photo · can't download on this Wi-Fi</div>`);
+    if (t >= T.ask) out.push(`<div class="b me">@Mew-zip can you show me Alex's photo?</div>`);
+    if (t >= T.pupSent) out.push(`<div class="b muzip"><div class="who" style="color:#1a8cff">Mew-zip</div><img src="${SEEN[pup.dir]}" style="image-rendering:auto">${esc(words(pup.messages[pup.messages.length - 1]))}<div class="meta">from Alex's phone, as text · ${kb(sent(pup))}</div></div>`);
+    return out.join('');
+  }
+  const codes = m => m.text.split('\n').filter(l => l.startsWith('#')), texts = m => m.texts;
+  if (t >= T.share) out.push(`<div class="b"><div class="who" style="color:#53bdeb">Maria</div>` + (t < T.share + 2.0
+      ? `<div class="code">${esc(codes(tree.messages[0]).join(' '))}</div><div class="meta">${texts(tree.messages[0])} texts arriving…</div>`
+      : `<img src="${tree.dir}/0_sketch.png"><div class="meta">photo · from ${texts(tree.messages[0])} texts, decoded by Mew-zip</div>`) + `@Mew-zip</div>`);
+  if (t >= T.shareSent) out.push(`<div class="b muzip"><div class="who" style="color:#1a8cff">Mew-zip</div><img src="${last(tree)}" style="image-rendering:auto">${esc(words(tree.messages[tree.messages.length - 1]))}<div class="meta">from Maria's phone, ${kb(sent(tree) - tree.messages[0].bytes)} · the photo stays there</div></div>`);
+  if (t >= T.mine) out.push(`<div class="b"><div class="who" style="color:#f7a8a8">Dev</div>omg that's mine!!</div>`);
+  if (t >= T.street) out.push(`<div class="b"><div class="who" style="color:#53bdeb">Maria</div><img src="${ben.dir}/0_sketch.png"><div class="meta">photo of the street · from ${texts(ben.messages[0])} texts, decoded by Mew-zip</div></div>`);
+  if (t >= T.ben) out.push(`<div class="b"><div class="who" style="color:#a8f7c1">Ben</div>@Mew-zip ${esc(ben.question)}</div>`);
+  if (t >= T.benAns) out.push(`<div class="b muzip"><div class="who" style="color:#1a8cff">Mew-zip</div><img src="${last(ben)}" style="image-rendering:auto">@Ben ${esc(words(ben.messages[ben.messages.length - 1]))}<div class="meta">${ben.views.length} close-ups from Maria's phone · ${kb(sent(ben) - ben.messages[0].bytes)}</div></div>`);
+  if (t >= T.chen) out.push(`<div class="b"><div class="who" style="color:#e2b4f7">Chen</div>@Mew-zip ${esc(chen.question)}</div>`);
+  if (t >= T.chenAns) out.push(`<div class="b muzip"><div class="who" style="color:#1a8cff">Mew-zip</div><img src="${last(chen)}" style="image-rendering:auto">@Chen ${esc(words(chen.messages[chen.messages.length - 1]))}<div class="meta">${chen.views.filter(v => !v.known).length} new close-ups · ${chen.views.filter(v => v.known).length} reused from Ben's question · ${kb(sent(chen))}</div></div>`);
+  return out.join('');
+}
+function render(t) {
+  $('card').style.opacity = t < T.chat ? 1 : 0;
+  $('chat').style.opacity = t >= T.chat ? 1 : 0;
+  $('stack').innerHTML = msgs(t);
+  const events = Object.values(T).filter(e => e <= t).sort((a, b) => b - a), last = events[0] || 0;
+  const view = document.querySelector('.msgs').clientHeight, end = () => Math.max(0, $('stack').scrollHeight - view);
+  const now = end();
+  $('stack').innerHTML = msgs(last - 0.001); const before = end(); $('stack').innerHTML = msgs(t);  // where it stood before the newest
+  const k = Math.min(1, (t - last) / 0.7), e = 1 - (1 - k) ** 3;
+  $('stack').style.transform = `translateY(${-(before + (now - before) * e)}px)`;
+  const plane = t >= T.plane;
+  document.querySelector('.head b').textContent = plane ? 'Alex' : 'Elm St tenants';
+  document.querySelector('.head small').textContent = plane ? 'you: on a plane' : 'Maria, Ben, Chen, Dev, +18';
+  document.querySelector('.head .net').textContent = plane ? '✈ Wi-Fi: messages only' : '▂___ data barely working';
+  document.querySelector('.head .av').textContent = plane ? '🐶' : '🏢';
+  if (plane) {
+    $('side').innerHTML = t >= T.pupSent ? `<div class="tal"><h3>The photo</h3><div class="row"><span>Mew-zip</span><b>${kb(sent(pup))}</b></div>
+      <div class="row"><span>Normal photo</span><s>${kb(normal['hard/puppy_home'].whatsapp)}</s></div><div class="row" style="color:#f59f00"><span>won't send on this Wi-Fi</span></div></div>` : '';
+    $('note').style.opacity = 0; return;
+  }
+  // what crossed the network so far, against sending the photos the normal way (WhatsApp's standard quality)
+  const muse = r => r.messages.filter(m => m.from === 'muse').reduce((a, m) => a + m.text.length, 0);
+  const cases = [[tree, T.shareSent, 'real/tree_on_car'], [ben, T.benAns, 'real/storm_street'], [chen, T.chenAns, null]].filter(c => t >= c[1]);
+  const up = cases.reduce((a, [r]) => a + sent(r), 0), down = cases.reduce((a, [r]) => a + sent(r) + muse(r), 0);
+  const norm = cases.reduce((a, [, , s]) => a + (s ? normal[s].whatsapp : 0), 0);
+  $('side').innerHTML = cases.length ? `<div class="tal"><h3>Uploaded from Maria's phone</h3><div class="row"><span>Mew-zip</span><b>${kb(up)}</b></div>
+      <div class="row"><span>Normal photo${cases.length > 1 ? 's' : ''}</span><s>${kb(norm)}</s></div></div>
+    <div class="tal"><h3>Downloaded by each neighbour</h3><div class="row"><span>Mew-zip</span><b>${kb(down)}</b></div>
+      <div class="row"><span>Normal photo${cases.length > 1 ? 's' : ''}</span><s>${kb(norm)}</s></div></div>
+    ${t >= T.tally ? '<div class="tal" style="border-color:#1a8cff"><h3>The photos</h3><div class="row"><span>never left Maria\'s phone</span></div></div>' : ''}` : '';
+  $('note').style.opacity = t >= T.share && t < T.street ? 1 : 0;
+}
+const q = new URLSearchParams(location.search);
+load().then(async () => {
+  await Promise.all([...['tree', 'street_ben', 'street_chen']].map(() => 0));
+  if (q.get('play') === '1') { const t0 = performance.now(); const tick = () => { const t = (performance.now() - t0) / 1000; render(t); if (t < T.end) requestAnimationFrame(tick); }; tick(); }
+  else render(+(q.get('t') || 0));
+  await Promise.all([...document.images].map(i => i.complete ? 0 : new Promise(ok => { i.onload = ok; i.onerror = ok; })));
+  document.title = 'ready';
+});
+</script>
+</body>
+</html>
