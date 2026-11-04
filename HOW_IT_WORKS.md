@@ -324,10 +324,9 @@ Section 5 (`sim/video/tenants.html`) is a tenants' WhatsApp group after a hurric
 called by name, the way @Meta AI is: Maria shares a photo with "@Mew-zip" (the share above), Ben and Chen each ask
 "@Mew-zip ..." about her street photo, and on a plane "@Mew-zip can you show me Alex's photo?" gets the puppy
 (`hard/puppy_home`, 6.6 KB against 338 KB). Each answer shows what Mew-zip sent: the sketch with the close-ups in place,
-the asker's car boxed. What WhatsApp would have sent for each photo was measured through the bridge
-(`sim/video/normal_sizes.json`).
+the asker's car boxed. What WhatsApp would have sent for each photo is estimated the way the comparison does it (`evals/kit/three_ways.py`: `normally`, WhatsApp's standard quality, a 1600 px JPEG), in `sim/video/normal_sizes.json`: the poison ivy photo, 1.7 MB as a file, would go as 219 KB.
 
-A third use case, a hiker on one bar of signal (`sim/video/ivy.html`, section 5b), is the recorded run `sim/video/ivy` ( a real photo, `real/leaf_ivy`, 3072×2304,
+A third use case, a hiker on one bar of signal (`sim/video/ivy.html`, section 5b), is the recorded run `sim/video/ivy` (a real photo, `real/leaf_ivy`, 3072×2304,
 1.7 MB): Muse asked for one close-up, grey at high detail, of the leaf group, and SAM 3.1 outlined "leaves" (0.75):
 
 ```
