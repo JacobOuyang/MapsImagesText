@@ -12,8 +12,7 @@ is `evals/kit/three_ways.py` (`evals/kit/THREE_WAYS.md`), the scenes are live ru
 | 3 | 0:52–1:30 | How it works, on the same photo | `/demo` scene 2 (look closer, live): the dashboard round by round | to write |
 | 4 | 1:41–1:51 | Any photo, any question | the workflow chart as a recap | draft |
 | 5 | 1:58–2:40 | Real use cases: a tenant group chat, and a plane | title card, the tenant chat, then a friend's chat | draft |
-| 6 | 2:10–2:40 | Decisions per byte, when bytes are the limit | a chart: bytes sent against right answers | to write |
-| 7 | 2:40–3:00 | Try it yourself | the live modes and the one command | to write |
+| 6 | about 2:17–2:42 | Try it yourself, and the end card | the repo, the one command, the simulator, WhatsApp; then μ and the tagline | draft |
 
 The sections below the agreed ones are drafts from the earlier outline, kept for their wording.
 
@@ -72,10 +71,33 @@ Photos: "Damaged car with tree on top", Wil540 art, CC BY 4.0; "Sand Covers Cars
 Let's walk through some real use cases of Mew-zip. <break time="0.5s" /> After a hurricane, the network slows to a crawl, but texts still get through. <break time="0.3s" /> A tenant shares a photo in the building's group chat, and tags Mew-zip. <break time="0.4s" /> Mew-zip sends the group just the part that matters: a grey SUV, under a fallen tree. <break time="0.5s" /> "That's mine!" <break time="0.6s" /> Then one photo of the street, and everyone asks about their own car. <break time="0.3s" /> Each neighbour gets their own close-ups, and the photo never leaves the phone that took it. <break time="0.7s" /> Or you're on a plane, with Wi-Fi for messages only. <break time="0.3s" /> A friend sends their new puppy, <break time="0.2s" /> and you still get to see it.
 ```
 
-## Possible closing tagline (undecided: at the very end, over the logo)
+## 6. Try it yourself, and the end card (about 2:17–2:42)
 
-"A picture may be worth a thousand words. Mew-zip finds the thousand characters that matter." (Figurative, like the
-saying; the dashboard run sent about 5,000 characters, so keep it away from any size on screen.)
+About 25 s at 1.1×, which leaves about 18 s under three minutes. No results screen: nine photos are a demonstration,
+not a benchmark. No "open source" either: the repo has no licence yet, so it says "on GitHub".
+
+On screen (`/video/close.html`, to build):
+
+1. **"Try it yourself"** and the repo, `github.com/JacobOuyang/muzip`, large.
+2. **The one command**, typed into a terminal: `.venv/bin/python sim/server.py`. Then the simulator answering the
+   dashboard question (`docs/screenshots/closer.png`, a real run): the phone that only sends texts on the left, the
+   close-ups on the photo in the middle, what Muse saw on the right.
+3. **WhatsApp:** a phone sending the photo to Mew-zip in WhatsApp, and three small labels: Meta Model API key,
+   Twilio sandbox, cloudflared. "Setup: README, step by step."
+4. **The end card:** μ and the zipper, the tagline written under it, the repo underneath.
+
+```text
+Mew-zip is on GitHub, and you can try it in a few minutes. <break time="0.4s" /> One command starts the simulator: a phone that only sends texts, and every close-up Muse asks for. <break time="0.3s" /> Add a Twilio sandbox, and it runs from WhatsApp on your own phone. <break time="0.3s" /> All it needs is a Meta Model API key. <break time="0.8s" /> A picture may be worth a thousand words. <break time="0.4s" /> Mew-zip finds the thousand characters that matter.
+```
+
+A shorter one (about 18 s), if the time runs short:
+
+```text
+Try Mew-zip yourself: it's on GitHub. <break time="0.3s" /> One command runs the simulator, and with a Twilio sandbox it runs from your own WhatsApp. <break time="0.8s" /> A picture may be worth a thousand words. <break time="0.4s" /> Mew-zip finds the thousand characters that matter.
+```
+
+The tagline is figurative, like the saying: the dashboard run sent about 5,000 characters, so no size is on screen
+while it is said.
 
 ## Earlier drafts (kept for their wording)
 
