@@ -309,7 +309,9 @@ To set it up (Twilio, the bridge, a tunnel, MuZip and the test phone), see [READ
 
 `demo/static/build.py` copies `/compare` into `docs/compare/` with the saved runs (the comparison's results, every
 WebP and close-up as Muse got them, each photo shrunk for display), so GitHub Pages can serve it with no server, no
-model calls and no API key: https://jacobouyang.github.io/muzip/compare/.
+model calls and no API key: https://jacobouyang.github.io/muzip/compare/. It shows hand-picked examples (`SHOW`), and the dashboard exactly as the
+video's slide (`AS_VIDEO`: a row's `"demo"` makes `compare.html` show that row as `?demo=1` does, the chosen WebP try,
+"I can't tell for sure because the photo is too dark and blurry to see the lights", and a badge per way).
 
 ```
 .venv/bin/python demo/static/build.py

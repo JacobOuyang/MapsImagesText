@@ -74,16 +74,18 @@ function score(way, runs, truth) {
 // ?demo=1 (the video): one answer per panel and what it was (right / right but not sure / couldn't tell / wrong);
 // otherwise every try as a dot.
 const DEMO = new URLSearchParams(location.search).get('demo') === '1';
+let demo = DEMO;  // this row as the video's slide: ?demo=1 for every row, or a row's own "demo": true (the static page's dashboard)
 const BADGE = {right: '✓ Right', hedged: '~ Right, but Muse wasn\'t sure', tell: '? Muse couldn\'t tell', wrong: '✗ Wrong'};
 function col(title, how, picture, size, texts, way, runs, truth, answer) {
   const a = answer || typical(runs, truth);
   return `<section class="col"><h2>${title}</h2><div class="how">${how}</div>${picture}
     <div class="size">${size}</div>
     <div class="answer ${kind(a)}">“${esc(a.answer.split('\n')[0])}”</div>` +
-    (DEMO ? `<div class="badge ${outcome(a)}">${BADGE[outcome(a)]}</div>` : `<div class="score">${score(way, runs, truth)}</div>`) + `</section>`;
+    (demo ? `<div class="badge ${outcome(a)}">${BADGE[outcome(a)]}</div>` : `<div class="score">${score(way, runs, truth)}</div>`) + `</section>`;
 }
 function show() {
   const r = rows[at]; if (!r) return;
+  demo = DEMO || !!r.demo; document.body.classList.toggle('demo', demo);
   $('tabs').innerHTML = rows.map((x, i) => `<button class="${i === at ? 'on' : ''}" onclick="go(${i})">${i + 1} ${esc(x.name.replace(/_/g, ' '))}</button>`).join('');
   $('q').innerHTML = `“${esc(r.question)}”<span>The answer: ${esc(r.truth)}</span>`;
   const f = r.full, w = r.webp, m = r.muzip, best = m.runs.find(x => x.answer === m.answer) || m.runs[0];
@@ -92,12 +94,12 @@ function show() {
         kb(f.bytes), f.texts, f, f.runs, r.truth),
     col('Classical compression', `The whole photo as WebP (${w.side} px, ${w.colour ? 'colour' : 'grey'}, quality ${w.quality}), squeezed into MuZip's size`,
         `<div class="pic"><img class="px" src="/eval/three_ways/${w.image}" alt="the WebP Muse got"></div>`, kb(w.bytes), w.texts, w, w.runs, r.truth,
-        DEMO && w.shown),  // the demo may show a chosen try (kept with every extra try in more_runs)
+        demo && w.shown),  // the demo may show a chosen try (kept with every extra try in more_runs)
     col('MuZip', 'A 128 px grey picture, then only the close-ups Muse asks for. The photo stays on the phone.',
         `<div class="pic"><canvas id="seen" aria-label="What Muse saw: the sketch with every close-up in its place"></canvas></div>
          <div class="strip">${m.views.map(v => `<figure><img class="px" src="/eval/three_ways/${v.image}" alt="${esc(v.label)}"><figcaption>${esc(v.label)}</figcaption></figure>`).join('')}</div>`,
         kb(best.bytes), best.texts, m, m.runs, r.truth, best)];  // the run whose pictures are shown
-  $('main').innerHTML = (DEMO ? [panels[0], panels[2], panels[1]] : panels).join('');  // the demo: MuZip first, then WebP at its size
+  $('main').innerHTML = (demo ? [panels[0], panels[2], panels[1]] : panels).join('');  // the demo: MuZip first, then WebP at its size
   seen(m.views);
   $('foot').textContent = 'Measured by evals/kit/three_ways.py: Muse was asked the same question ' + f.runs.length + ' separate times each way, one dot per try; "right" = the true answer, and Muse said it was sure (grey: it couldn\'t tell). ' +
     'WebP got its best shot at MuZip\'s median size (' + kb(m.bytes) + '): every width and quality that fits, colour and grey. MuZip shows one of its runs.';
