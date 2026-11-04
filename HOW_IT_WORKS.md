@@ -114,7 +114,7 @@ one at 0.91 and the amber one at 0.89, but the amber one is 7.8% of the close-up
 
 **A photo with no question is a share** (`closer.SHARE`, `share` in the inquiry): Muse asks for exactly one close-up,
 always in colour at high detail, of the part a group most needs to see, then says in one sentence what it shows. The
-group gets the sketch with that part sharp. "@Mew-zip show me Alex's photo" or "what's in it?" with a photo counts as
+group gets the sketch with that part sharp. "@MuZip show me Alex's photo" or "what's in it?" with a photo counts as
 no question (`router.SHOW`). A real run on a real photo (`real/tree_on_car`, 6.8 MB; WhatsApp sent it as 659 KB):
 
 ```
@@ -308,23 +308,43 @@ ffmpeg) encodes them and adds the voice-over.
 1140 frames, 114 distinct, captured in 73 s
 ```
 
-`encode.swift` writes a frame every 1/30 s with a keyframe each second, however long a picture is held: frames held
+`encode.swift` adds the voice without compressing the picture again (`BITRATE` sets its rate, 8 Mbps by default; `SCALE=1.3333` makes `render.py` capture the same page at 2560x1440) and writes a frame every 1/30 s with a keyframe each second, however long a picture is held: frames held
 for seconds made players stall and lose sync with the voice, worst where sections were joined (section 2 opened on
 a 3.5 s frame). `demo/video/speed.swift` plays a section faster with the voice at its own pitch (every section runs at
-1.1×) and `demo/video/join.swift` puts the sections one after another:
+1.1×) and `demo/video/join.py` puts the sections one after another. It pads each section's voice with silence to
+its picture's length and lays one continuous sound track under the joined picture, which `join.swift` re-encodes as
+one stream. Left as gaps in the track, the quiet stretches were skipped by some players, and by the hiker the voice ran
+about 4 s ahead of the picture:
 
 ```
 out/demo/speed private/video/05_real_use_cases.mp4 private/video/05_real_use_cases_1.1x.mp4 1.1
 wrote private/video/05_real_use_cases_1.1x.mp4: 35.1 s
-out/demo/join private/video/all_1.1x.mp4 private/video/0{1_intro,2_the_side_by_side,3_how_it_works,4_any_photo,5_real_use_cases}_1.1x.mp4
-wrote private/video/all_1.1x.mp4: 137.3 s
+.venv/bin/python demo/video/join.py
+...
+06_close_1.1x.mp4      picture  22.27 s, voice  20.19 s
+wrote private/video/all_1.1x.mp4: 170.0 s
 ```
 
-Section 5 (`sim/video/tenants.html`) is a tenants' WhatsApp group after a hurricane, then a chat on a plane. Mew-zip is
-called by name, the way @Meta AI is: Maria shares a photo with "@Mew-zip" (the share above), Ben and Chen each ask
-"@Mew-zip ..." about her street photo, and on a plane "@Mew-zip can you show me Alex's photo?" gets the puppy
-(`hard/puppy_home`, 6.6 KB against 338 KB). Each answer shows what Mew-zip sent: the sketch with the close-ups in place,
-the asker's car boxed. What WhatsApp would have sent for each photo was measured through the bridge
-(`sim/video/normal_sizes.json`).
+Section 5 (`sim/video/tenants.html`) is a tenants' WhatsApp group after a hurricane, then a chat on a plane. MuZip is
+called by name, the way @Meta AI is: Maria shares a photo with "@MuZip" (the share above), Ben and Chen each ask
+"@MuZip ..." about her street photo, and on a plane "@MuZip can you show me Alex's photo?" gets the puppy
+(`hard/puppy_home`, 6.6 KB against 338 KB). Each answer shows what MuZip sent: the sketch with the close-ups in place,
+the asker's car boxed. What WhatsApp would have sent for each photo is estimated the way the comparison does it (`evals/kit/three_ways.py`: `normally`, WhatsApp's standard quality, a 1600 px JPEG), in `sim/video/normal_sizes.json`: the poison ivy photo, 1.7 MB as a file, would go as 219 KB.
+
+A third use case, a hiker on one bar of signal (`sim/video/ivy.html`, section 5b), is the recorded run `sim/video/ivy` (a real photo, `real/leaf_ivy`, 3072×2304,
+1.7 MB): Muse asked for one close-up, grey at high detail, of the leaf group, and SAM 3.1 outlined "leaves" (0.75):
+
+```
+Phone (8 SMS)   I'm on a hike and about to step off the trail through this. Is this poison ivy?  + the sketch
+Muse (2 SMS)    Not sure yet: I need a closer look at the two pale leaves in the center to see stem join and leaf
+                edges to check for three leaflets, in high detail. ...
+Phone (45 SMS)  the close-up (4.5 KB)
+Muse (3 SMS)    Yes, that is poison ivy - three leaflets meeting at one point. Do not step through it.
+                Stay on the trail and do not touch it; wash skin and clothes if you do.
+```
+
+5.3 KB from the phone. Screened first: Muse was right and sure from the full photo 2 of 2 times, and through MuZip 3
+of 3. Four other poison ivy photos were dropped: in a dense patch Muse couldn't make out the groups of three (1 of 3
+each), and a wide marsh view went wrong every time.
 
 Voice-overs and finished videos stay in `private/`, which git ignores.

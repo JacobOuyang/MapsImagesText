@@ -161,7 +161,7 @@ class Loop(unittest.TestCase):
         self.assertTrue(texts[-1].startswith("A tree has fallen on a grey SUV."))
 
     def test_show_me_is_a_share(self):
-        self.assertTrue(router.SHOW.match("@Mew-zip show me Maria's photo"))
+        self.assertTrue(router.SHOW.match("@MuZip show me Maria's photo"))
         self.assertTrue(router.SHOW.match("can you show me Alex's photo?"))
         self.assertTrue(router.SHOW.match("What's in this photo?"))
         self.assertFalse(router.SHOW.match("Is the silver SUV stuck in the sand?"))

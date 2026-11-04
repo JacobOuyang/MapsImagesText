@@ -27,6 +27,7 @@ URL = "http://127.0.0.1:8765"
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 ENCODER = os.path.join(ROOT, "out", "demo", "encode")
 FPS, W, H, WORKERS = 30, 1920, 1080, 4
+SCALE = float(os.environ.get("SCALE", "1"))  # 4/3: the same 1920x1080 page captured at 2560x1440 (sharper text on YouTube)
 
 
 class Browser:
@@ -51,7 +52,7 @@ class Browser:
         self.n, self.buf = 0, b""
         target = self.call("Target.createTarget", url="about:blank")["targetId"]
         self.session = self.call("Target.attachToTarget", targetId=target, flatten=True)["sessionId"]
-        self.call("Emulation.setDeviceMetricsOverride", width=W, height=H, deviceScaleFactor=1, mobile=False, session=True)
+        self.call("Emulation.setDeviceMetricsOverride", width=W, height=H, deviceScaleFactor=SCALE, mobile=False, session=True)
         self.call("Page.navigate", url=url, session=True)
         for _ in range(400):  # the scene sets document.title to "ready" once its pictures are loaded
             if self.eval("document.title") == "ready":
@@ -126,7 +127,7 @@ def main(page, seconds, voice, out):
     if not os.path.exists(ENCODER):
         subprocess.run(["swiftc", "-O", os.path.join(os.path.dirname(__file__), "encode.swift"), "-o", ENCODER], check=True)
     os.makedirs(os.path.dirname(os.path.abspath(out)), exist_ok=True)
-    subprocess.run([ENCODER, listing, out, str(W), str(H)] + ([voice] if voice else []), check=True)
+    subprocess.run([ENCODER, listing, out, str(round(W * SCALE)), str(round(H * SCALE))] + ([voice] if voice else []), check=True)
     print("%d frames, %d distinct, captured in %.0f s" % (n, len(held), time.time() - started))
 
 

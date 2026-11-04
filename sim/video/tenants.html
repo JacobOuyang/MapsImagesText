@@ -40,17 +40,17 @@
 </style>
 </head>
 <body>
-<div class="card" id="card"><h1>Real use cases</h1><p>A tenant group chat, the day after a hurricane</p></div>
+<div class="card" id="card"><h1>Real use cases</h1></div>
 <div class="chat" id="chat">
   <div class="head"><div class="av">🏢</div><div><b>Elm St tenants</b><small>Maria, Ben, Chen, Dev, +18</small></div><div class="net">▂___ data barely working</div></div>
   <div class="msgs"><div class="stack" id="stack"></div></div>
 </div>
-<div class="note" id="note">What crosses WhatsApp is plain text. Mew-zip on each phone turns it back into the picture.</div>
+<div class="note" id="note">What crosses WhatsApp is plain text. MuZip on each phone turns it back into the picture.</div>
 <div class="side" id="side"></div>
 <script>
 // Where the lines fall in private/voice/05_real_use_cases.mp3 (seconds), from its pauses.
 const T = {card: 0, chat: 3.24, share: 8.85, shareSent: 12.94, mine: 19.23, street: 20.56, ben: 21.43, benAns: 23.58, chen: 24.91, chenAns: 26.3,
-           tally: 27.12, plane: 30.03, pup: 30.46, pupFail: 33.68, ask: 34.54, pupSent: 35.34, end: 38.6};
+           tally: 27.12, plane: 30.03, pup: 30.46, pupFail: 33.68, ask: 34.54, pupSent: 35.34, end: 38.8}  /* end: a short held pause before the hiker (39.5 felt too long) */;
 const $ = id => document.getElementById(id);
 const kb = b => (b / 1000).toFixed(1) + ' KB';
 const esc = s => String(s).replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
@@ -111,21 +111,21 @@ function msgs(t) {
     const codes = m => m.text.split('\n').filter(l => l.startsWith('#'));
     if (t >= T.pup) out.push(`<div class="b"><div class="who" style="color:#f7c873">Alex</div>meet the new family member!!</div>`);
     if (t >= T.pupFail) out.push(`<div class="b fail"><div class="who" style="color:#f7c873;font-style:normal">Alex</div>📷 Photo · can't download on this Wi-Fi</div>`);
-    if (t >= T.ask) out.push(`<div class="b me">@Mew-zip can you show me Alex's photo?</div>`);
-    if (t >= T.pupSent) out.push(`<div class="b muzip"><div class="who" style="color:#1a8cff">Mew-zip</div><img src="${SEEN[pup.dir]}" style="image-rendering:auto">${esc(words(pup.messages[pup.messages.length - 1]))}<div class="meta">from Alex's phone, as text · ${kb(sent(pup))}</div></div>`);
+    if (t >= T.ask) out.push(`<div class="b me">@MuZip can you show me Alex's photo?</div>`);
+    if (t >= T.pupSent) out.push(`<div class="b muzip"><div class="who" style="color:#1a8cff">MuZip</div><img src="${SEEN[pup.dir]}" style="image-rendering:auto">${esc(words(pup.messages[pup.messages.length - 1]))}<div class="meta">from Alex's phone, as text · ${kb(sent(pup))}</div></div>`);
     return out.join('');
   }
   const codes = m => m.text.split('\n').filter(l => l.startsWith('#')), texts = m => m.texts;
   if (t >= T.share) out.push(`<div class="b"><div class="who" style="color:#53bdeb">Maria</div>` + (t < T.share + 2.0
       ? `<div class="code">${esc(codes(tree.messages[0]).join(' '))}</div><div class="meta">${texts(tree.messages[0])} texts arriving…</div>`
-      : `<img src="${tree.dir}/0_sketch.png"><div class="meta">photo · from ${texts(tree.messages[0])} texts, decoded by Mew-zip</div>`) + `@Mew-zip</div>`);
-  if (t >= T.shareSent) out.push(`<div class="b muzip"><div class="who" style="color:#1a8cff">Mew-zip</div><img src="${last(tree)}" style="image-rendering:auto">${esc(words(tree.messages[tree.messages.length - 1]))}<div class="meta">from Maria's phone, ${kb(sent(tree) - tree.messages[0].bytes)} · the photo stays there</div></div>`);
+      : `<img src="${tree.dir}/0_sketch.png"><div class="meta">photo · from ${texts(tree.messages[0])} texts, decoded by MuZip</div>`) + `@MuZip</div>`);
+  if (t >= T.shareSent) out.push(`<div class="b muzip"><div class="who" style="color:#1a8cff">MuZip</div><img src="${last(tree)}" style="image-rendering:auto">${esc(words(tree.messages[tree.messages.length - 1]))}<div class="meta">from Maria's phone, ${kb(sent(tree) - tree.messages[0].bytes)} · the photo stays there</div></div>`);
   if (t >= T.mine) out.push(`<div class="b"><div class="who" style="color:#f7a8a8">Dev</div>omg that's mine!!</div>`);
-  if (t >= T.street) out.push(`<div class="b"><div class="who" style="color:#53bdeb">Maria</div><img src="${ben.dir}/0_sketch.png"><div class="meta">photo of the street · from ${texts(ben.messages[0])} texts, decoded by Mew-zip</div></div>`);
-  if (t >= T.ben) out.push(`<div class="b"><div class="who" style="color:#a8f7c1">Ben</div>@Mew-zip ${esc(ben.question)}</div>`);
-  if (t >= T.benAns) out.push(`<div class="b muzip"><div class="who" style="color:#1a8cff">Mew-zip</div><img src="${last(ben)}" style="image-rendering:auto">@Ben ${esc(words(ben.messages[ben.messages.length - 1]))}<div class="meta">${ben.views.length} close-ups from Maria's phone · ${kb(sent(ben) - ben.messages[0].bytes)}</div></div>`);
-  if (t >= T.chen) out.push(`<div class="b"><div class="who" style="color:#e2b4f7">Chen</div>@Mew-zip ${esc(chen.question)}</div>`);
-  if (t >= T.chenAns) out.push(`<div class="b muzip"><div class="who" style="color:#1a8cff">Mew-zip</div><img src="${last(chen)}" style="image-rendering:auto">@Chen ${esc(words(chen.messages[chen.messages.length - 1]))}<div class="meta">${chen.views.filter(v => !v.known).length} new close-ups · ${chen.views.filter(v => v.known).length} reused from Ben's question · ${kb(sent(chen))}</div></div>`);
+  if (t >= T.street) out.push(`<div class="b"><div class="who" style="color:#53bdeb">Maria</div><img src="${ben.dir}/0_sketch.png"><div class="meta">photo of the street · from ${texts(ben.messages[0])} texts, decoded by MuZip</div></div>`);
+  if (t >= T.ben) out.push(`<div class="b"><div class="who" style="color:#a8f7c1">Ben</div>@MuZip ${esc(ben.question)}</div>`);
+  if (t >= T.benAns) out.push(`<div class="b muzip"><div class="who" style="color:#1a8cff">MuZip</div><img src="${last(ben)}" style="image-rendering:auto">@Ben ${esc(words(ben.messages[ben.messages.length - 1]))}<div class="meta">${ben.views.length} close-ups from Maria's phone · ${kb(sent(ben) - ben.messages[0].bytes)}</div></div>`);
+  if (t >= T.chen) out.push(`<div class="b"><div class="who" style="color:#e2b4f7">Chen</div>@MuZip ${esc(chen.question)}</div>`);
+  if (t >= T.chenAns) out.push(`<div class="b muzip"><div class="who" style="color:#1a8cff">MuZip</div><img src="${last(chen)}" style="image-rendering:auto">@Chen ${esc(words(chen.messages[chen.messages.length - 1]))}<div class="meta">${chen.views.filter(v => !v.known).length} new close-ups · ${chen.views.filter(v => v.known).length} reused from Ben's question · ${kb(sent(chen))}</div></div>`);
   return out.join('');
 }
 function render(t) {
@@ -136,7 +136,7 @@ function render(t) {
   const view = document.querySelector('.msgs').clientHeight, end = () => Math.max(0, $('stack').scrollHeight - view);
   const now = end();
   $('stack').innerHTML = msgs(last - 0.001); const before = end(); $('stack').innerHTML = msgs(t);  // where it stood before the newest
-  const k = Math.min(1, (t - last) / 0.7), e = 1 - (1 - k) ** 3;
+  const k = last === T.plane ? 1 : Math.min(1, (t - last) / 0.7), e = 1 - (1 - k) ** 3;  // a new chat starts at its own top: no scroll from the old one
   $('stack').style.transform = `translateY(${-(before + (now - before) * e)}px)`;
   const plane = t >= T.plane;
   document.querySelector('.head b').textContent = plane ? 'Alex' : 'Elm St tenants';
@@ -144,7 +144,7 @@ function render(t) {
   document.querySelector('.head .net').textContent = plane ? '✈ Wi-Fi: messages only' : '▂___ data barely working';
   document.querySelector('.head .av').textContent = plane ? '🐶' : '🏢';
   if (plane) {
-    $('side').innerHTML = t >= T.pupSent ? `<div class="tal"><h3>The photo</h3><div class="row"><span>Mew-zip</span><b>${kb(sent(pup))}</b></div>
+    $('side').innerHTML = t >= T.pupSent ? `<div class="tal"><h3>The photo</h3><div class="row"><span>MuZip</span><b>${kb(sent(pup))}</b></div>
       <div class="row"><span>Normal photo</span><s>${kb(normal['hard/puppy_home'].whatsapp)}</s></div><div class="row" style="color:#f59f00"><span>won't send on this Wi-Fi</span></div></div>` : '';
     $('note').style.opacity = 0; return;
   }
@@ -153,9 +153,9 @@ function render(t) {
   const cases = [[tree, T.shareSent, 'real/tree_on_car'], [ben, T.benAns, 'real/storm_street'], [chen, T.chenAns, null]].filter(c => t >= c[1]);
   const up = cases.reduce((a, [r]) => a + sent(r), 0), down = cases.reduce((a, [r]) => a + sent(r) + muse(r), 0);
   const norm = cases.reduce((a, [, , s]) => a + (s ? normal[s].whatsapp : 0), 0);
-  $('side').innerHTML = cases.length ? `<div class="tal"><h3>Uploaded from Maria's phone</h3><div class="row"><span>Mew-zip</span><b>${kb(up)}</b></div>
+  $('side').innerHTML = cases.length ? `<div class="tal"><h3>Uploaded from Maria's phone</h3><div class="row"><span>MuZip</span><b>${kb(up)}</b></div>
       <div class="row"><span>Normal photo${cases.length > 1 ? 's' : ''}</span><s>${kb(norm)}</s></div></div>
-    <div class="tal"><h3>Downloaded by each neighbour</h3><div class="row"><span>Mew-zip</span><b>${kb(down)}</b></div>
+    <div class="tal"><h3>Downloaded by each neighbour</h3><div class="row"><span>MuZip</span><b>${kb(down)}</b></div>
       <div class="row"><span>Normal photo${cases.length > 1 ? 's' : ''}</span><s>${kb(norm)}</s></div></div>
     ${t >= T.tally ? '<div class="tal" style="border-color:#1a8cff"><h3>The photos</h3><div class="row"><span>never left Maria\'s phone</span></div></div>' : ''}` : '';
   $('note').style.opacity = t >= T.share && t < T.street ? 1 : 0;

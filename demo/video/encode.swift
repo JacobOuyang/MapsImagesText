@@ -26,7 +26,7 @@ let FPS = 30
 let writer = try AVAssetWriter(outputURL: outURL, fileType: .mp4)
 let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
     AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: width, AVVideoHeightKey: height,
-    AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: 8_000_000, AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+    AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: Int(ProcessInfo.processInfo.environment["BITRATE"] ?? "") ?? 8_000_000, AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
                                       AVVideoMaxKeyFrameIntervalKey: FPS, AVVideoExpectedSourceFrameRateKey: FPS],
 ])
 input.expectsMediaDataInRealTime = false
@@ -80,7 +80,9 @@ if args.count == 6 {  // add the sound
     try vt.insertTimeRange(CMTimeRange(start: .zero, duration: video.duration), of: vsrc, at: .zero)
     try at.insertTimeRange(CMTimeRange(start: .zero, duration: min(sound.duration, video.duration)), of: asrc, at: .zero)
     try? FileManager.default.removeItem(at: finalURL)
-    let export = AVAssetExportSession(asset: mix, presetName: AVAssetExportPresetHighestQuality)!
+    // passthrough: the picture as encoded above, not compressed a second time (the HighestQuality preset re-encoded it
+    // at its own, much lower bitrate)
+    let export = AVAssetExportSession(asset: mix, presetName: AVAssetExportPresetPassthrough)!
     export.outputURL = finalURL; export.outputFileType = .mp4
     let mixed = DispatchSemaphore(value: 0)
     export.exportAsynchronously { mixed.signal() }

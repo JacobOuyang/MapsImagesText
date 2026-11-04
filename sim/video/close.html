@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MuZip Close</title>
+<style>
+  /* Section 6 of the video: try it yourself, then the end card. Drawn as a function of time like the other scenes
+     (?t= one frame, ?play=1 plays it). Times are where the lines fall in private/voice/06_close.mp3. The simulator
+     picture is the README's screenshot of a real run (docs/screenshots/closer.png). */
+  :root { --bg:#0f1419; --panel:#161d24; --line:#2a3540; --fg:#e8edf2; --quiet:#8b98a5; --blue:#1a8cff; --wa:#0b141a; --in:#202c33; --out:#005c4b; }
+  html, body { margin:0; width:1920px; height:1080px; background:var(--bg); color:var(--fg); font-family:system-ui, -apple-system, "Segoe UI", sans-serif; overflow:hidden; }
+  body { position:relative; }
+  .fade { position:absolute; transition:none; }
+  #try { left:0; right:0; top:90px; text-align:center; }
+  #try h1 { margin:0; font-size:84px; font-weight:750; }
+  #try .repo { margin-top:18px; font:500 46px/1.2 Menlo, monospace; color:var(--blue); }
+  #term { left:120px; top:420px; width:760px; background:#05080b; border:2px solid var(--line); border-radius:16px; padding:22px 26px;
+          font:30px/1.5 Menlo, monospace; color:#d7e3ee; }
+  #term .dots { color:#3a4a5a; font-size:22px; margin-bottom:8px; } #term .p { color:#40c057; }
+  #term .cur { display:inline-block; width:16px; height:32px; background:#d7e3ee; vertical-align:-5px; }
+  #sim { left:960px; top:330px; width:860px; border-radius:14px; border:2px solid var(--line); overflow:hidden; }
+  #sim img { display:block; width:100%; }
+  .cap { color:var(--quiet); font-size:26px; margin-top:12px; }
+  #wa { left:960px; top:330px; width:860px; height:560px; background:var(--wa); border:2px solid var(--line); border-radius:22px; overflow:hidden; }
+  #wa .head { display:flex; align-items:center; gap:16px; padding:16px 22px; background:#202c33; font-size:28px; font-weight:700; }
+  #wa .head small { display:block; color:var(--quiet); font-size:19px; font-weight:400; }
+  #wa .av { width:52px; height:52px; border-radius:50%; background:#3a4a5a; display:flex; align-items:center; justify-content:center; color:var(--blue); font-size:30px; }
+  #wa .msgs { padding:18px 22px; display:flex; flex-direction:column; gap:14px; }
+  .b { max-width:600px; padding:12px 16px; border-radius:14px; font-size:23px; line-height:1.35; background:var(--in); }
+  .b.me { align-self:flex-end; background:var(--out); } .b.muzip { border:2px solid var(--blue); }
+  .b img { display:block; width:360px; height:220px; object-fit:cover; border-radius:8px; margin-bottom:6px; }
+  #need { left:120px; top:420px; width:760px; display:flex; flex-direction:column; gap:20px; }
+  .chip { background:var(--panel); border:2px solid var(--line); border-radius:16px; padding:18px 24px; font-size:32px; }
+  .chip small { display:block; color:var(--quiet); font-size:22px; margin-top:4px; }
+  .chip.key { border-color:var(--blue); box-shadow:0 0 0 2px var(--blue), 0 0 50px rgba(26,140,255,.35); }
+  .chip code { font:28px Menlo, monospace; color:#9fc3e7; }
+  #end { inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; }
+  #end .l1, #end .l2 { font-size:58px; font-weight:650; text-align:center; } #end .l2 { color:var(--blue); }
+  #end .repo { margin-top:26px; font:500 34px Menlo, monospace; color:var(--quiet); }
+</style>
+</head>
+<body>
+<div class="fade" id="try"><h1>Try it yourself</h1><div class="repo">github.com/JacobOuyang/muzip</div></div>
+<div class="fade" id="term"><div class="dots">● ● ●</div><span class="p">$</span> <span id="typed"></span><span class="cur" id="cur"></span></div>
+<div class="fade" id="sim"><img src="close/closer.png" alt=""><div class="cap">The simulator: a phone that only sends texts, and every close-up Muse asks for</div></div>
+<div class="fade" id="wa"><div class="head"><div class="av">μ</div><div>MuZip<small>WhatsApp, through Twilio's sandbox</small></div></div>
+  <div class="msgs"><div class="b me" id="waq"><img src="/samples/hard/dashboard.jpg" alt="">Two warning lights came on on my dashboard. Which ones are they, and what do they mean?</div>
+  <div class="b muzip" id="waa" title="the recorded dashboard run, sim/video/dashboard">They are the red battery / charging-system light, meaning the battery is not charging, and the amber check-engine light, meaning an engine or emissions fault.</div></div></div>
+<div class="fade" id="need">
+  <div class="chip" id="c1">Twilio WhatsApp sandbox<small>free; Twilio forwards each message to your computer</small></div>
+  <div class="chip" id="c2">cloudflared<small>a free public address for it</small></div>
+  <div class="chip key" id="c3">A Meta Model API key<small>Muse Spark and SAM 3.1 · <code>LLAMA_API_KEY=…</code></small></div>
+  <div class="chip" id="c4" style="border-style:dashed">The README, step by step</div>
+</div>
+<div class="fade" id="end"><svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 0 300 250" width="420" height="350" role="img" aria-label="MuZip"><title>MuZip</title><defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0050e6"/><stop offset="1" stop-color="#1a8cff"/></linearGradient></defs><path d="M74 42 L36 224 M74 42 L57 150 Q52 182 74 172 L152 42 L136 150 Q131 182 162 168" fill="none" stroke="url(#b)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/><g transform="translate(205 30) skewX(-12) scale(0.95)"><rect x="3.36" y="0" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="41.54" y="5" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="5.56" y="10" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="39.34" y="15" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="7.76" y="20" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="37.14" y="25" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="9.96" y="30" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="34.94" y="35" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="12.16" y="40" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="32.74" y="45" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="14.36" y="50" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="30.54" y="55" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="16.56" y="60" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="29.00" y="65" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="17.00" y="70" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="29.00" y="75" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="17.00" y="80" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="29.00" y="85" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="17.00" y="90" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="29.00" y="95" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="17.00" y="100" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="29.00" y="105" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="17.00" y="110" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="29.00" y="115" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="17.00" y="120" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="29.00" y="125" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="17.00" y="130" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="29.00" y="135" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="17.00" y="140" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="29.00" y="145" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="17.00" y="150" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="29.00" y="155" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="17.00" y="160" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="29.00" y="165" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="17.00" y="170" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="29.00" y="175" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="17.00" y="180" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="29.00" y="185" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="17.00" y="190" width="14" height="6" rx="1.5" fill="#e8edf2"/><rect x="29.00" y="195" width="14" height="6" rx="1.5" fill="#e8edf2"/><path fill="url(#b)" d="M16 54 H44 L40 76 H20 Z"/><rect fill="url(#b)" x="24" y="74" width="12" height="32" rx="4"/><rect x="27.5" y="92" width="5" height="9" rx="2" fill="#0d1117"/></g></svg><div class="l1" id="l1">A picture is worth a thousand words.</div><div class="l2" id="l2">MuZip finds the ones that matter most.</div><div class="repo">github.com/JacobOuyang/muzip</div></div>
+<script>
+// Where the lines fall in private/voice/06_close.mp3 (seconds), from its pauses: "Mew-zip is on GitHub, and you can
+// try it in a few minutes." 0-3.13; "One command starts the simulator:" 3.58-5.38, "a phone that only sends texts, and
+// every close-up Muse asks for." 5.75-9.87; "Add a Twilio sandbox, and it runs from WhatsApp on your own phone."
+// 10.37-13.74; "All it needs is a Meta Model API key." 14.2-16.64; "A picture is worth a thousand words." 17.19-19.32;
+// "Mew-zip finds the ones that matter most." 19.75-22.02.
+const T = {cmd: 3.58, sim: 5.75, wa: 10.37, key: 14.2, end: 17.19, l2: 19.75, done: 24.5};
+const $ = id => document.getElementById(id);
+const CMD = '.venv/bin/python sim/server.py';
+const ease = k => 1 - (1 - Math.max(0, Math.min(1, k))) ** 3;
+const show = (id, a, b, f = 0.35) => { const o = Math.min(ease((t_ - a) / f), b == null ? 1 : ease((b - t_) / f)); $(id).style.opacity = o; return o; };
+let t_ = 0;
+function render(t) {
+  t_ = t;
+  show('try', -1, T.end);
+  $('try').style.transform = `translateY(${-30 * ease((t - T.cmd) / .6)}px)`;
+  show('term', T.cmd, T.wa);
+  const n = Math.round(CMD.length * Math.max(0, Math.min(1, (t - T.cmd - .2) / 1.3)));
+  $('typed').textContent = CMD.slice(0, n);
+  $('cur').style.opacity = t < T.sim ? (Math.floor(t * 2.5) % 2 ? 0 : 1) : 0;
+  show('sim', T.sim, T.wa);
+  show('wa', T.wa, T.end); show('waq', T.wa + .4, null); show('waa', T.wa + 1.6, null);
+  show('need', T.wa, T.end);
+  show('c1', T.wa + .2, null); show('c2', T.wa + 1.2, null); show('c3', T.key, null); show('c4', T.key + 1.2, null);
+  show('end', T.end, null, .6); show('l1', T.end + .1, null); show('l2', T.l2, null);
+}
+const q = new URLSearchParams(location.search);
+(async () => {
+  await Promise.all([...document.images].map(i => i.complete ? 0 : new Promise(ok => { i.onload = ok; i.onerror = ok; })));
+  if (q.get('play') === '1') { const t0 = performance.now(); const tick = () => { const t = (performance.now() - t0) / 1000; render(t); if (t < T.done) requestAnimationFrame(tick); }; tick(); }
+  else render(+(q.get('t') || 0));
+  document.title = 'ready';
+})();
+</script>
+</body>
+</html>

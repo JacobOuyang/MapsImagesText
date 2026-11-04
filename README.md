@@ -1,4 +1,4 @@
-# MuZip
+<h1><picture><source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg"><img src="docs/logo-light.svg" alt="MuZip" height="110"></picture></h1>
 
 **Agentic compression for photos.** Instead of shrinking the whole photo and hoping the detail survives, MuZip sends
 a tiny sketch and lets the AI on the other end ask for exactly the parts it needs to answer your question. The photo
@@ -6,6 +6,10 @@ stays on your phone; what crosses the link is under a hundredth of it, as ordina
 
 Built on the Meta Model API: **Muse Spark** decides what to look at, **SAM 3.1** outlines it, **Muse Image** made
 the test photos.
+
+[![The MuZip demo video (2:49)](https://img.youtube.com/vi/WLSNYIcfzSI/maxresdefault.jpg)](https://www.youtube.com/watch?v=WLSNYIcfzSI)
+
+**[Watch the demo video (2:49)](https://www.youtube.com/watch?v=WLSNYIcfzSI)**
 
 ## How it works
 
@@ -30,7 +34,7 @@ inside the last, until it reads "EMPTY / RECHARGE".
 
 **A photo with no question** is a share: Muse picks the one part that matters, asks for it once in colour at high
 detail, and sends the sketch with that part sharp, plus a sentence ("A fallen tree is lying on top of a grey SUV":
-6.5 KB in all, where WhatsApp sent the photo as 659 KB). "@Mew-zip show me Alex's photo" is a share too. **A second question
+6.5 KB in all, where WhatsApp sent the photo as 659 KB). "@MuZip show me Alex's photo" is a share too. **A second question
 about the same photo** starts from the close-ups the phone already sent, at no cost, so in a group chat each person's
 question costs only what is new.
 

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MuZip Hiker</title>
+<style>
+  /* Section 5b of the video: a hiker on one bar of signal asks whether a plant is poison ivy. Drawn as a function of
+     time like the other scenes (?t= one frame, ?play=1 plays it), from the recorded run sim/video/ivy
+     (demo/video/record_run.py on real/leaf_ivy). Times are where the lines fall in private/voice/05b_hiker.mp3. */
+  :root { --bg:#0f1419; --panel:#161d24; --line:#2a3540; --fg:#e8edf2; --quiet:#8b98a5; --blue:#1a8cff; --wa:#0b141a; --in:#202c33; --out:#005c4b; }
+  html, body { margin:0; width:1920px; height:1080px; background:var(--bg); color:var(--fg); font-family:system-ui, -apple-system, "Segoe UI", sans-serif; overflow:hidden; }
+  body { position:relative; }
+  .card { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:22px; }
+  .card h1 { margin:0; font-size:96px; font-weight:750; } .card p { margin:0; font-size:40px; color:var(--quiet); }
+  .chat { position:absolute; left:460px; width:1000px; top:40px; bottom:40px; background:var(--wa); border-radius:24px; overflow:hidden;
+          border:2px solid var(--line); display:flex; flex-direction:column; }
+  .head { display:flex; align-items:center; gap:18px; padding:20px 26px; background:#202c33; }
+  .head .av { width:58px; height:58px; border-radius:50%; background:#3a4a5a; display:flex; align-items:center; justify-content:center; font-size:30px; }
+  .head b { font-size:30px; } .head small { display:block; color:var(--quiet); font-size:21px; }
+  .head .net { margin-left:auto; font-size:22px; color:#f59f00; }
+  .msgs { flex:1; position:relative; overflow:hidden; }
+  .stack { position:absolute; left:0; right:0; top:0; padding:20px 28px; display:flex; flex-direction:column; gap:14px; }
+  .sys { align-self:center; background:#182229; color:var(--quiet); font-size:20px; padding:8px 16px; border-radius:10px; }
+  .b { max-width:640px; padding:12px 16px 10px; border-radius:14px; font-size:24px; line-height:1.35; background:var(--in); }
+  .b.me { align-self:flex-end; background:var(--out); } .b.muzip { border:2px solid var(--blue); }
+  .b .who { font-size:20px; font-weight:700; margin-bottom:4px; }
+  .b img { display:block; width:520px; height:auto; max-height:320px; object-fit:contain; border-radius:8px; margin-top:6px; image-rendering:pixelated; background:#0b141a; }
+  .b.fail { color:var(--quiet); font-style:italic; }
+  .b .meta { font-size:18px; color:var(--quiet); margin-top:6px; }
+  .code { font:15px/1.3 Menlo, monospace; color:#9fc3e7; word-break:break-all; max-height:150px; overflow:hidden; }
+  .side { position:absolute; left:1500px; right:40px; top:120px; display:flex; flex-direction:column; gap:22px; }
+  .tal { background:var(--panel); border:2px solid var(--line); border-radius:18px; padding:18px 20px; }
+  .tal h3 { margin:0 0 10px; font-size:22px; color:var(--quiet); font-weight:600; }
+  .tal .row { display:flex; justify-content:space-between; font-size:23px; margin:6px 0; } .tal .row b { color:var(--blue); }
+  .tal .row s { color:var(--quiet); }
+  .note { position:absolute; left:40px; width:390px; top:420px; font-size:24px; line-height:1.4; color:var(--quiet); }
+  .b img { height:270px; max-height:none; }  /* a fixed height: the scroll is measured before a picture decodes */
+  .b.auto { align-self:flex-end; background:#103529; color:#cfe9df; font-size:21px; }
+</style>
+</head>
+<body>
+<div class="chat" id="chat">
+  <div class="head"><div class="av">μ</div><div><b>MuZip</b><small>you: on a trail</small></div><div class="net">▂___ 1 bar · texts only</div></div>
+  <div class="msgs"><div class="stack" id="stack"></div></div>
+</div>
+<div class="side" id="side"></div>
+<script>
+// Where the lines fall in private/voice/05b_hiker.mp3 (seconds), from its pauses: "Or you're on a trail, with one bar
+// of signal." 0-3.08, "Is that poison ivy?" 3.64-4.89, "Mew-zip looks closer at the leaves," 5.44-7.34, "and tells
+// you before you touch it." 7.52-9.18.
+const T = {ask: 3.64, look: 5.44, ans: 7.52, end: 10.6};
+const $ = id => document.getElementById(id);
+const kb = b => b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB' : (b / 1000).toFixed(1) + ' KB';
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;'}[c]));
+let run, SEEN, normal;
+const loadImg = src => new Promise(ok => { const i = new Image(); i.onload = () => ok(i); i.src = src; });
+// A shared photo as one image: the whole grey sketch, the sharp colour close-up blended in where it belongs.
+async function whole(r) {
+  const [sk, ...zs] = await Promise.all([r.dir + '/0_sketch.png', ...r.views.map(v => r.dir + '/' + v.image)].map(loadImg));
+  const c = document.createElement('canvas'), k = 1200 / sk.width; c.width = 1200; c.height = Math.round(sk.height * k);
+  const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(sk, 0, 0, c.width, c.height);
+  r.views.forEach((v, i) => {
+    const [x, y, w, h] = v.box, pw = Math.round(w * k), ph = Math.round(h * k), f = Math.max(8, Math.min(pw, ph) * .06);
+    const p = document.createElement('canvas'), pg = p.getContext('2d'); p.width = pw; p.height = ph;
+    pg.drawImage(zs[i], 0, 0, pw, ph);
+    const m = document.createElement('canvas'), mg = m.getContext('2d'); m.width = pw; m.height = ph;
+    mg.filter = `blur(${f / 2}px)`; mg.fillStyle = '#fff'; mg.fillRect(f, f, pw - 2 * f, ph - 2 * f);
+    pg.globalCompositeOperation = 'destination-in'; pg.drawImage(m, 0, 0);
+    g.drawImage(p, Math.round(x * k), Math.round(y * k));
+  });
+  return c.toDataURL('image/jpeg', 0.9);
+}
+async function load() {
+  run = Object.assign(await (await fetch('ivy/run.json')).json(), {dir: 'ivy'});
+  SEEN = await whole(run);
+  normal = (await (await fetch('normal_sizes.json')).json())[run.sample];  // WhatsApp's standard quality (evals/kit/three_ways.py: normally)  // what MuZip saw: the sketch with its close-up in place
+}
+function msgs(t) {
+  const out = [], m = run.messages, v = run.views[0];
+  if (t >= T.ask) out.push(`<div class="b me"><img src="/samples/${run.sample}.jpg" style="image-rendering:auto">${esc(run.question)}<div class="meta">sent as ${m[0].texts} texts · the photo stays on your phone</div></div>`);
+  if (t >= T.look) out.push(`<div class="b auto">↩ MuZip asked for a closer look at the leaves; your phone sent it (${kb(v.bytes)})</div>`);
+  if (t >= T.ans) out.push(`<div class="b muzip"><div class="who" style="color:#1a8cff">MuZip</div><img src="${SEEN}" style="image-rendering:auto">${esc(m[m.length - 1].text.split('\n')[0])}<div class="meta">what MuZip saw · ${kb(run.phone_bytes)} from your phone</div></div>`);
+  return out.join('');
+}
+function render(t) {
+  $('stack').innerHTML = msgs(t);
+  const events = Object.values(T).filter(e => e <= t).sort((a, b) => b - a), last = events[0] || 0;
+  const view = document.querySelector('.msgs').clientHeight, end = () => Math.max(0, $('stack').scrollHeight - view);
+  const now = end();
+  $('stack').innerHTML = msgs(last - 0.001); const before = end(); $('stack').innerHTML = msgs(t);  // where it stood before the newest
+  const k = Math.min(1, (t - last) / 0.7), e = 1 - (1 - k) ** 3;
+  $('stack').style.transform = `translateY(${-(before + (now - before) * e)}px)`;
+  $('side').innerHTML = t >= T.ans ? `<div class="tal"><h3>The photo</h3><div class="row"><span>MuZip</span><b>${kb(run.phone_bytes)}</b></div>
+    <div class="row"><span>Normal photo</span><s>${kb(normal.whatsapp)}</s></div><div class="row" style="color:#f59f00"><span>won't send on one bar</span></div></div>` : '';
+}
+const q = new URLSearchParams(location.search);
+load().then(async () => {
+  if (q.get('play') === '1') { const t0 = performance.now(); const tick = () => { const t = (performance.now() - t0) / 1000; render(t); if (t < T.end) requestAnimationFrame(tick); }; tick(); }
+  else render(+(q.get('t') || 0));
+  await Promise.all([...document.images].map(i => i.complete ? 0 : new Promise(ok => { i.onload = ok; i.onerror = ok; })));
+  document.title = 'ready';
+});
+</script>
+</body>
+</html>
