@@ -11,7 +11,7 @@ is `evals/kit/three_ways.py` (`evals/kit/THREE_WAYS.md`), the scenes are live ru
 | 2 | 0:10–0:50 | The side-by-side | `/demo` scene 1 (three ways), steps 1–4: the dashboard | draft |
 | 3 | 0:52–1:30 | How it works, on the same photo | `/demo` scene 2 (look closer, live): the dashboard round by round | to write |
 | 4 | 1:41–1:51 | Any photo, any question | the workflow chart as a recap | draft |
-| 5 | 1:25–2:10 | Real world: an emergency, and a group chat | `/demo` scenes 4 (drone) and 3 (group chat) | to write |
+| 5 | 1:58–2:40 | Real use cases: a tenant group chat, and a plane | title card, the tenant chat, then a friend's chat | draft |
 | 6 | 2:10–2:40 | Decisions per byte, when bytes are the limit | a chart: bytes sent against right answers | to write |
 | 7 | 2:40–3:00 | Try it yourself | the live modes and the one command | to write |
 
@@ -57,6 +57,19 @@ the photo on the phone → a tiny WebP piece → Muse Spark → SAM 3.1 → back
 
 ```text
 Built on existing image compression, the same loop works for any photo and any question. <break time="0.3s" /> Muse Spark decides, SAM three point one finds, and the device keeps the rest.
+```
+
+## 5. Real use cases: a tenant group chat after a hurricane (about 1:53–2:28)
+
+On screen (`/video/tenants.html`): a title card, "Real use cases", then a WhatsApp-style tenant group. Mew-zip is
+called the way @Meta AI is, by name, by anyone (nobody adds it): Maria shares a photo with just "@Mew-zip", no question: the group sees the blurry sketch, then Mew-zip's one sharp colour close-up
+(a grey SUV under a fallen tree; recorded run `sim/video/tree`), and Dev: "omg that's mine!!". Then Maria's photo of the
+street; Ben and Chen each ask about their own car and each gets an answer with what Mew-zip saw (runs
+`sim/video/street_ben`, `street_chen`). To end: "The photos never left Maria's phone", and what the whole chat cost.
+Photos: "Damaged car with tree on top", Wil540 art, CC BY 4.0; "Sand Covers Cars and the Street", FEMA, public domain.
+
+```text
+Let's walk through some real use cases of Mew-zip. <break time="0.5s" /> After a hurricane, the network slows to a crawl, but texts still get through. <break time="0.3s" /> A tenant shares a photo in the building's group chat, and tags Mew-zip. <break time="0.4s" /> Mew-zip sends the group just the part that matters: a grey SUV, under a fallen tree. <break time="0.5s" /> "That's mine!" <break time="0.6s" /> Then one photo of the street, and everyone asks about their own car. <break time="0.3s" /> Each neighbour gets their own close-ups, and the photo never leaves the phone that took it. <break time="0.7s" /> Or you're on a plane, with Wi-Fi for messages only. <break time="0.3s" /> A friend sends their new puppy, <break time="0.2s" /> and you still get to see it.
 ```
 
 ## Possible closing tagline (undecided: at the very end, over the logo)

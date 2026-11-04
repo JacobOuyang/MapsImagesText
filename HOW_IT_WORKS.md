@@ -106,7 +106,44 @@ the picture, which erased the spider altogether. It found things from about 25 p
 Muse aims the first close-up from context ("the dark spot under the shelf"), and SAM works on the close-ups, where the
 thing fills the frame: on the black widow it scored 0.82–0.89, its box within 1% of SAM's on the full original. A
 match counts from confidence 0.5 and when it is at least 8% of the close-up's side (15% threw away a warning light on
-a close-up of the whole cluster, about 11-14% of its width).
+a close-up of the whole cluster, about 11-14% of its width). Muse is told about the best match; the view also keeps
+every match down to half that size (`sam.all`), for showing: on the dashboard's cluster SAM found both lights, the red
+one at 0.91 and the amber one at 0.89, but the amber one is 7.8% of the close-up's height.
+
+## Shares and group chats (demo branch)
+
+**A photo with no question is a share** (`closer.SHARE`, `share` in the inquiry): Muse asks for exactly one close-up,
+always in colour at high detail, of the part a group most needs to see, then says in one sentence what it shows. The
+group gets the sketch with that part sharp. "@Mew-zip show me Alex's photo" or "what's in it?" with a photo counts as
+no question (`router.SHOW`). A real run on a real photo (`real/tree_on_car`, 6.8 MB; WhatsApp sent it as 659 KB):
+
+```
+Phone (10 SMS)  [the sketch, 1.0 KB]
+Muse (2 SMS)    Not sure yet: I need a closer look at the crashed car to see the damage and what it hit, in colour,
+                in high detail. ...                            ZOOM ck 13 34 90 43 C H
+Phone (54 SMS)  [the close-up, 5.5 KB]
+Muse (1 SMS)    A fallen tree is lying on top of a grey SUV.
+```
+
+6.5 KB from the phone in all.
+
+**A second question about the same photo starts from what the phone already sent.** `closer.start` finds the
+close-ups this phone sent of the same picture for earlier questions and gives them to Muse as `known` views, labelled
+"Their phone sent it for an earlier question about this photo; you have it at no cost", outside the budget. Two
+neighbours asking about one street photo (`real/storm_street`, recorded with `demo/video/record_group.py`):
+
+```
+Ben             My pickup's on the left side, right behind the first two cars. Is it buried, or can I drive it out?
+                5 close-ups, 4.9 KB from the phone          -> Your pickup is not buried. You can drive it out.
+Chen            Is the silver SUV at the far end, on the right side of the road, stuck in the sand?
+                Ben's 5 close-ups free, 7 new ones, 4.6 KB  -> No. The silver SUV is sitting on clear pavement, with a
+                                                               pile of sand beside it on the left.
+```
+
+**Out of looks, Muse may still say it can't tell.** When it has no closer look left and no answer, it is asked once
+more: "Reply in one or two short sentences with what you can see and how sure you are; if you can't tell, say so and
+what you would need to see." Pressing it to answer instead turned the field questions' "can't tell"s into confident
+misreads (4 of 5 wrong).
 
 ## A photo as text
 
@@ -270,5 +307,24 @@ ffmpeg) encodes them and adds the voice-over.
 .venv/bin/python demo/video/render.py /video/side.html 38.0 private/voice/02_the_side_by_side.mp3 private/video/02_the_side_by_side.mp4
 1140 frames, 114 distinct, captured in 73 s
 ```
+
+`encode.swift` writes a frame every 1/30 s with a keyframe each second, however long a picture is held: frames held
+for seconds made players stall and lose sync with the voice, worst where sections were joined (section 2 opened on
+a 3.5 s frame). `demo/video/speed.swift` plays a section faster with the voice at its own pitch (every section runs at
+1.1×) and `demo/video/join.swift` puts the sections one after another:
+
+```
+out/demo/speed private/video/05_real_use_cases.mp4 private/video/05_real_use_cases_1.1x.mp4 1.1
+wrote private/video/05_real_use_cases_1.1x.mp4: 35.1 s
+out/demo/join private/video/all_1.1x.mp4 private/video/0{1_intro,2_the_side_by_side,3_how_it_works,4_any_photo,5_real_use_cases}_1.1x.mp4
+wrote private/video/all_1.1x.mp4: 137.3 s
+```
+
+Section 5 (`sim/video/tenants.html`) is a tenants' WhatsApp group after a hurricane, then a chat on a plane. Mew-zip is
+called by name, the way @Meta AI is: Maria shares a photo with "@Mew-zip" (the share above), Ben and Chen each ask
+"@Mew-zip ..." about her street photo, and on a plane "@Mew-zip can you show me Alex's photo?" gets the puppy
+(`hard/puppy_home`, 6.6 KB against 338 KB). Each answer shows what Mew-zip sent: the sketch with the close-ups in place,
+the asker's car boxed. What WhatsApp would have sent for each photo was measured through the bridge
+(`sim/video/normal_sizes.json`).
 
 Voice-overs and finished videos stay in `private/`, which git ignores.

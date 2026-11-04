@@ -6,11 +6,16 @@ in a short text.
     router.handle("Is this a black widow?\\n#Pab.1/10:...#", who="+15550140")
 """
 import io
+import re
 import time
 
 from PIL import Image
 
 from . import closer, codes, llm
+
+# "@Mew-zip show me Maria's photo", "what's in it?": no question of its own, so the photo is shared (closer.SHARE: the
+# one part that matters, sharp), the same as a photo sent with no text.
+SHOW = re.compile(r"^\s*(@\S+[\s,:]*)?((can|could) you |please )?(show( me)?|let me see|what'?s in)\b", re.I)
 
 SYSTEM = ("You answer questions by text message: plain words, under 500 characters, no greeting or sign-off. To ask "
           "about something they can see, they can send a photo with their question.")
@@ -48,7 +53,8 @@ def handle(message, you=None, image=None, who=None):
     if pic and not llm.available():
         return dict(_quick("I can't look at photos right now (no model key)."), log=log)
     if pic:  # a question about a photo the phone keeps: look closer as needed
-        inq, text = closer.start(who, Image.open(io.BytesIO(pic["data"])), pic["id"], codes.plain(message) or "What is this?",
+        asked = codes.plain(message)
+        inq, text = closer.start(who, Image.open(io.BytesIO(pic["data"])), pic["id"], "" if SHOW.match(asked) else asked,  # "": a share
                                  texts=codes.sms_parts(message))
         return dict(_quick(text), inquiry=inq, log=log + ["question %s about photo %s" % (inq, pic["id"])], seconds=round(time.time() - t, 1))
     if found["missing"]:

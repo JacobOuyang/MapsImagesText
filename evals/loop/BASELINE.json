@@ -1,5 +1,5 @@
 {
- "loop": "ae09787af2",
+ "loop": "ee1c90721e",
  "runs": 3,
  "rows": [
   {
@@ -9,29 +9,29 @@
    "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 72,
+   "texts": 65,
    "looks": 1,
-   "seconds": 15.8,
+   "seconds": 15.5,
    "answers": [
-    "You can take the Ibuprofen 200 mg pain reliever on the bottom right shelf of the medicine cabinet ab",
-    "You can take the Ibuprofen 200 mg pain reliever on the bottom shelf on the right side.",
-    "You can take the Ibuprofen 200 mg on the bottom right shelf of the cabinet."
+    "You can take the Ibuprofen 200 mg pain reliever on the bottom shelf on the right side of the cabinet",
+    "You can take the Ibuprofen 200 mg pain reliever, on the bottom shelf on the right side of the cabine",
+    "You can take the Ibuprofen 200 mg on the bottom shelf on the right side of the medicine cabinet abov"
    ]
   },
   {
    "id": "medicine_allergy",
    "kind": "generated",
    "runs": 3,
-   "right": 3,
+   "right": 2,
    "hedged": 0,
-   "wrong": 0,
-   "texts": 90,
-   "looks": 2,
-   "seconds": 20.2,
+   "wrong": 1,
+   "texts": 86,
+   "looks": 1,
+   "seconds": 20.0,
    "answers": [
-    "Yes, Loratadine Allergy Relief on the middle shelf of the cabinet above the sink.",
-    "Yes, there is Allergy Relief on the middle shelf, left of the Antacid box.",
-    "Yes, Loratadine Allergy Relief on the middle shelf of the cabinet, left of center."
+    "Yes, there is Allergy Relief on the middle shelf of the cabinet above the sink, just left of the Ant",
+    "Yes, there is Cortadine Allergy Relief on the middle shelf, left of the antacid box.",
+    "Yes, Loratadine Allergy Relief on the middle shelf of the cabinet above the sink, left of center."
    ]
   },
   {
@@ -41,13 +41,13 @@
    "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 36,
+   "texts": 46,
    "looks": 2,
-   "seconds": 20.1,
+   "seconds": 22.1,
    "answers": [
-    "That's a tick on your ankle.",
-    "That's a tick attached to your leg.",
-    "That's a tick on your leg just above your sock."
+    "That's a tick on your lower leg just above your sock.",
+    "That's a tick biting your lower leg just above your sock.",
+    "That's a tick biting your lower leg."
    ]
   },
   {
@@ -57,44 +57,44 @@
    "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 49,
+   "texts": 44,
    "looks": 1,
-   "seconds": 13.1,
+   "seconds": 11.8,
    "answers": [
-    "No, do not use it. It is marked EMPTY / RECHARGE.",
-    "No, do not use it. It is marked EMPTY/RECHARGE on the front.",
-    "No, do not use it. It is marked EMPTY and RECHARGE."
+    "No, do not use it. The label says EMPTY / RECHARGE, so it will not work.",
+    "No, do not use it. It is marked empty and needs recharging.",
+    "No, do not use it. It is marked EMPTY / RECHARGE."
    ]
   },
   {
    "id": "bus_timetable",
    "kind": "real",
    "runs": 3,
-   "right": 1,
+   "right": 0,
    "hedged": 0,
    "wrong": 0,
-   "texts": 184,
-   "looks": 4,
-   "seconds": 39.6,
+   "texts": 181,
+   "looks": 3,
+   "seconds": 33.9,
    "answers": [
-    "I can't tell from what I can see. (not sure)",
-    "It's Saturday 9 am, and the 9 am Saturday slot is blank. The next bus is at 10:06.",
-    "I can't tell from what I can see. (not sure)"
+    "I can't tell - the Saturday morning times are too blurry to read, I would need a sharper close-up of",
+    "I can't tell the next bus, the Saturday times are too blurry to read. I would need a sharper close-u",
+    "I can't tell for sure, the Saturday times are too blurry to read - the 9am bus looks like 9:03 but I"
    ]
   },
   {
    "id": "whole_milk",
    "kind": "real",
    "runs": 3,
-   "right": 1,
+   "right": 2,
    "hedged": 0,
    "wrong": 0,
-   "texts": 130,
+   "texts": 127,
    "looks": 5,
-   "seconds": 42.3,
+   "seconds": 40.1,
    "answers": [
-    "I can't tell from what I can see. (not sure)",
-    "I can't tell from what I can see. (not sure)",
+    "A gallon of whole milk is $3.69 on special.",
+    "I can't tell the price - the jugs show Stew Leonard's whole milk but no price tag is visible. (not s",
     "A gallon of whole milk is $3.69."
    ]
   },
@@ -105,29 +105,29 @@
    "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 111,
+   "texts": 97,
    "looks": 2,
-   "seconds": 26.1,
+   "seconds": 19.2,
    "answers": [
-    "Yes, there is Almond Breeze almond milk.",
-    "Yes, there is almond milk. The brand is Almond Breeze.",
-    "Yes, there is almond milk - Blue Diamond Almond Breeze."
+    "Yes, there is almond milk. It is Blue Diamond Almond Breeze.",
+    "Yes, there is Almond Breeze almond milk on the shelf.",
+    "Yes, there is almond milk. The brand is Almond Breeze."
    ]
   },
   {
    "id": "cinnamon",
    "kind": "real",
    "runs": 3,
-   "right": 1,
+   "right": 2,
    "hedged": 0,
-   "wrong": 1,
-   "texts": 138,
-   "looks": 3,
-   "seconds": 31.0,
+   "wrong": 0,
+   "texts": 104,
+   "looks": 1,
+   "seconds": 16.9,
    "answers": [
-    "Yes, a jar on the middle shelf is labeled SIL. CINNAMOMI.",
-    "Yes, there is a jar for cinnamon. Its label says SIR. CINNAMOMI.",
-    "I can't tell from what I can see. (not sure)"
+    "Yes, there is a jar labeled SIR. CINNAMOMI.",
+    "Yes, there is a jar labeled SIR. CINNAMOMI.",
+    "I can't tell for sure; the labels I can read don't say cinnamon but many jars are still too blurry t"
    ]
   },
   {
@@ -137,29 +137,29 @@
    "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 38,
+   "texts": 39,
    "looks": 1,
-   "seconds": 10.5,
+   "seconds": 10.2,
    "answers": [
-    "The box is Propranolol 40mg with exp 02/2020. It is expired and not good in November 2026.",
-    "The box is labeled Propranolol 40mg with expiry 02/2020. It is expired and not good to use in Novemb",
-    "The box is Propranolol 40mg, expiring 02/2020. It is expired and not good in November 2026."
+    "It is Propranolol 40mg, expired 02/2020, so it is not good in November 2026.",
+    "The box is Propranolol 40mg with expiry 02/2020. It is expired and not good to use in November 2026.",
+    "The box is Propranolol 40mg, expiring 02/2020. It is expired and not good to use in November 2026."
    ]
   },
   {
    "id": "parking",
    "kind": "easy",
    "runs": 3,
-   "right": 2,
+   "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 47,
-   "looks": 2,
-   "seconds": 22.2,
+   "texts": 32,
+   "looks": 1,
+   "seconds": 11.4,
    "answers": [
-    "No. It's no parking 7 to 9 am on Fridays in June for street cleaning, tow zone.",
-    "I can't tell from what I can see. (not sure)",
-    "No, you cannot. It is no parking 7 to 9 am on Fridays from April to October for street cleaning."
+    "No. It's no parking 7am to 9am on Fridays in June for street cleaning.",
+    "No, you can't park here. It's no parking 7-9 AM on Fridays in June for street cleaning, and it's a t",
+    "No. No parking 7am to 9am on Fridays April to October for street cleaning, and it is a tow zone."
    ]
   },
   {
@@ -169,13 +169,13 @@
    "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 103,
+   "texts": 106,
    "looks": 2,
-   "seconds": 16.1,
+   "seconds": 17.2,
    "answers": [
-    "The sign says NEED INSULIN 2 PEOPLE.",
-    "The sign says NEED INSULIN 2 PEOPLE.",
-    "The sign says NEED INSULIN 2 PEOPLE."
+    "The sign on the roof says NEED INSULIN 2 PEOPLE.",
+    "The sign on the roof says \"NEED INSULIN 2 PEOPLE\".",
+    "The sign says \"NEED INSULIN 2 PEOPLE\"."
    ]
   },
   {
@@ -185,13 +185,13 @@
    "right": 2,
    "hedged": 0,
    "wrong": 1,
-   "texts": 61,
+   "texts": 60,
    "looks": 1,
-   "seconds": 9.7,
+   "seconds": 10.5,
    "answers": [
-    "This is CAM-07 watching Pump Station Line 3, as labeled on the control cabinet.",
-    "This is CAM-07 watching Pump Station Line 3.",
-    "This camera is watching Pump Station Line 1. The control cabinet label says so."
+    "This camera is watching Pump Station Line 3, at its control cabinet.",
+    "This is Pump Station Line 3, seen on CAM-07.",
+    "This is CAM-07 watching Pump Station Line 2."
    ]
   }
  ]

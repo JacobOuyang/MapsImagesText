@@ -148,7 +148,7 @@ function drawRounds() {
   const r = $('rounds'), inq = S.inquiry; if (!inq) return;
   r.innerHTML = '';
   const imgs = [`/store/${inq.id}.jpg`].concat(inq.views.filter(v => v.zoom).map(v => `/store/${v.zoom}.jpg`));
-  let had = 0;  // close-ups received before this round: a round may have asked for a few at once
+  let had = inq.views.filter(v => v.known).length;  // close-ups received before this round (kept from earlier questions, then a few per round)
   inq.decisions.forEach((d, i) => {
     const card = document.createElement('div'); card.className = 'card round';
     const seen = document.createElement('div'); seen.className = 'seen';

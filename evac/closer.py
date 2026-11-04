@@ -40,6 +40,8 @@ SAM_SIZE = 0.08  # and when it is at least this share of the close-up's side (a 
                  # light on a close-up of the whole cluster is about 11-14%)
 SAME = 0.6      # a box overlapping a view it has already got this much (IoU), at no more detail, shows nothing new
 AT_ONCE = 3     # closer looks Muse may ask for in one reply (two warning lights: one round trip, not two)
+SHARE = ("This photo was just shared with a group chat, with no question. Ask for one closer look at the part the "
+         "group most needs to see sharp (what happened, and to what or whom), then say in one short sentence what it shows.")
 SNAP = 0.4      # a box Muse draws inside a close-up narrower than this share of it is placed by SAM 3.1 (see _snap)
 SNAP_MARGIN = 0.3  # around SAM's outline, on each side, as a share of its size
 
@@ -97,6 +99,8 @@ def _views(inq):
                      i, 100 * x / w, 100 * (x + bw) / w, 100 * y / h, 100 * (y + bh) / h, "in colour" if v["colour"] else "in grey",
                      "in high detail" if v.get("high") else "in normal detail", px,
                      max(1, round(max(w / bw, h / bh) * px / 128)), v.get("texts", 0)))
+        if v.get("known"):
+            label += " Their phone sent it for an earlier question about this photo; you have it at no cost."
         if v.get("full"):
             label += " It shows that part at the photo's full resolution: a closer look inside it would show nothing new."
         if v.get("sam"):  # where a segmentation model outlined the thing, in the whole photo's terms
@@ -113,7 +117,10 @@ def _decide(inq):
     """Muse looks at every view so far: -> {"answer", "sure", "need", "safety"}."""
     rec = store.get(inq)
     used = texts_used(rec)
-    left = min(MAX_VIEWS - len(rec["meta"].get("views", [])), (BUDGET - used) // 5)  # a grey closer look is about 5 texts
+    asked = [v for v in rec["meta"].get("views", []) if not v.get("known")]  # close-ups kept from earlier questions are free
+    left = min(MAX_VIEWS - len(asked), (BUDGET - used) // 5)  # a grey closer look is about 5 texts
+    if rec["meta"].get("share"):  # a photo shared with no question: one close-up of what matters, then a sentence
+        left = min(left, 1 - len(asked))
     views = _views(inq)
     budget = ("So far their phone has sent %d texts; you can ask for up to %d more closer look%s (about 5 texts each in grey, "
               "15 in colour, 3 to 4 times that in high detail; %d texts left in all)." % (used, left, "" if left == 1 else "s", BUDGET - used) if left > 0 else
@@ -137,6 +144,14 @@ def _decide(inq):
             # Asking again for a view it has: on a bus timetable runs asked eight times for the same 128 px view
             # of the whole table, which never got sharper.
             note = next((r for r in (repeated(rec, box, high) for _, box, high in needs) if r), None)
+        elif not needs and rec["meta"].get("share") and left > 0 and attempt < 2 and not d.get("error"):
+            note = "Ask for the one closer look first: the group sees only what you ask for."  # a share always sends one
+        elif not needs and not str(d.get("answer") or "").strip() and attempt < 2 and not d.get("error"):
+            # Neither an answer nor a request it may make (out of looks, or a request that wasn't a box): runs fell
+            # back to a bare "I can't tell". Pressing it to answer turned those into confident misreads (field
+            # questions: 4 of 5 wrong), so it may still say it can't tell, but in its own words.
+            note = ("You can't ask for another closer look now. Reply in one or two short sentences with what you can see "
+                    "and how sure you are; if you can't tell, say so and what you would need to see.")
         elif not needs and attempt == 0 and left > 0 and d.get("sure") != "yes" and not d.get("error"):
             # It answered without being sure while it could still look (the prompt says not to; runs that gave up
             # early missed a bottle on the next shelf).
@@ -147,6 +162,9 @@ def _decide(inq):
         content[0] = dict(content[0], text=content[0]["text"] + "\n\n" + note)
     needs = [{"box": box, "in": n.get("in") or 1, "colour": bool(n.get("colour")), "high": high, "object": str(n.get("object") or ""),
               "why": _why(n.get("look_at"), n.get("to_see") or n.get("why"))} for n, box, high in needs]
+    if rec["meta"].get("share"):  # the group sees this close-up: in colour and sharp, so people can tell what is theirs
+        for need in needs:
+            need.update(colour=True, high=True)
     for need in needs:
         _snap(rec, need)
     if not needs and not d.get("answer"):
@@ -290,33 +308,45 @@ def _reply(inq, d):
 
 def start(who, picture, pic_id, question, texts=0):
     """A question with a photo from a phone (`picture`: the PIL image as received, `pic_id`: the phone's id for it,
-    `texts`: what the message cost). -> (inquiry id, the reply to send)."""
+    `texts`: what the message cost). -> (inquiry id, the reply to send). With no question (a photo shared with a group),
+    Muse picks the one part worth sending sharp, gets that close-up and says what it shows (SHARE)."""
+    share = not (question or "").strip()
+    # Close-ups this phone already sent of the same picture, for an earlier question (a group chat: Ben asks, then
+    # Chen): Muse starts with them, free, and asks only for what is still missing (repeated() refuses the rest).
+    known = [dict(v, texts=0, known=True) for r in store.find("inquiry") if r["who"] == who and r["meta"]["pic"]["id"] == pic_id
+             for v in got(r) if not v.get("known")]
     inq = store.new("inquiry", who=who, image=picture,
-                    meta={"question": question, "pic": {"id": pic_id, "size": list(picture.size), "texts": texts}, "views": [], "status": "open"})
+                    meta={"question": SHARE if share else question, "share": share, "pic": {"id": pic_id, "size": list(picture.size), "texts": texts},
+                          "views": known, "status": "open"})
     return inq, _reply(inq, _decide(inq))
 
 
 def _outline(closeup, thing, box, size):
     """SAM 3.1 on a close-up, for what Muse thinks the thing is ("spider"): {box in the close-up, in_photo: the same as
-    fractions of the whole photo, score, phrase}, or None (nothing confident and big enough, or no SAM)."""
+    fractions of the whole photo, score, phrase, all: every match, best first, as {box, in_photo, score}}, or None
+    (nothing confident and big enough, or no SAM). Muse is told about the best one at least SAM_SIZE; `all` also keeps
+    matches half that size, for showing: on the dashboard's two lights the amber one is 7.8% of the close-up's height."""
     if not thing or not sam.available():
         return None
     phrase = thing.lower().removeprefix("the ").removeprefix("a ").strip()
     cw, ch = closeup.size
+    side = lambda f: max((f["box"][2] - f["box"][0]) / cw, (f["box"][3] - f["box"][1]) / ch)
     try:
-        found = [f for f in sam.segment(closeup, phrase) if f["score"] >= SAM_MIN
-                 and max((f["box"][2] - f["box"][0]) / cw, (f["box"][3] - f["box"][1]) / ch) >= SAM_SIZE]
+        found = [f for f in sam.segment(closeup, phrase) if f["score"] >= SAM_MIN and side(f) >= SAM_SIZE / 2]
     except Exception:
         return None
-    if not found:
+    best = next((f for f in found if side(f) >= SAM_SIZE), None)
+    if not best:
         return None
-    x1, y1, x2, y2 = found[0]["box"]
     bx, by, bw, bh = box
     w, h = size
     to_photo = lambda fx, fy: ((bx + fx * bw) / w, (by + fy * bh) / h)
-    (l, t), (r, b) = to_photo(x1 / cw, y1 / ch), to_photo(x2 / cw, y2 / ch)
-    return {"box": [x1 / cw, y1 / ch, x2 / cw, y2 / ch], "in_photo": [round(v, 4) for v in (l, t, r, b)],
-            "score": round(found[0]["score"], 2), "phrase": phrase}
+
+    def one(f):
+        x1, y1, x2, y2 = f["box"]
+        (l, t), (r, b) = to_photo(x1 / cw, y1 / ch), to_photo(x2 / cw, y2 / ch)
+        return {"box": [x1 / cw, y1 / ch, x2 / cw, y2 / ch], "in_photo": [round(v, 4) for v in (l, t, r, b)], "score": round(f["score"], 2)}
+    return dict(one(best), phrase=phrase, all=[one(best)] + [one(f) for f in found if f is not best])
 
 
 def open_for(who, pic_id):

@@ -136,8 +136,8 @@ function drawMuse(t) {
   run.views.slice(0, arrived(t)).forEach((v, i) => { const [x, y, w, h] = v.box; g.drawImage(soft(parts[i], w * s, h * s), X(x), Y(y), w * s, h * s); });
   const asking = t >= T.asks && t < T.pop1 ? [0] : t >= T.two && t < T.pop2 ? [1, 2] : [];  // the boxes it asked for (both lights at once)
   for (const i of asking) { const [x, y, w, h] = run.views[i].asked; g.strokeStyle = '#1a8cff'; g.lineWidth = 5; g.setLineDash([16, 10]); g.strokeRect(X(x), Y(y), w * s, h * s); g.setLineDash([]); }
-  const outline = (v, on) => { if (!on || !v.sam) return; const [l, tp, r, b] = v.sam.in_photo;
-    g.strokeStyle = '#e64980'; g.lineWidth = 5; g.strokeRect(X(l * SW), Y(tp * SH), (r - l) * SW * s, (b - tp) * SH * s); };
+  const outline = (v, on) => { if (!on || !v.sam) return; (v.sam.all || [v.sam]).forEach(o => { const [l, tp, r, b] = o.in_photo;  // every light SAM found
+    g.strokeStyle = '#e64980'; g.lineWidth = 5; g.strokeRect(X(l * SW), Y(tp * SH), (r - l) * SW * s, (b - tp) * SH * s); }); };
   outline(run.views[0], t >= T.sam && t < T.two);
   outline(run.views[1], t >= T.pop2 + .3 && t < T.sure); outline(run.views[2], t >= T.pop2 + .3 && t < T.sure);
   const glowAt = (v, on) => { if (!on) return; const [x, y, w, h] = v.box; g.strokeStyle = '#40c057'; g.lineWidth = 7; g.strokeRect(X(x), Y(y), w * s, h * s); };
@@ -187,7 +187,7 @@ function render(t) {
   else say.style.opacity = 0;
   const [v1, v2, v3] = run.views;
   const ROWS = [{what: 'Sketch of the whole photo', kb: msgs[0].bytes, at: T.arrive, decided: T.notsure},
-                {what: NAMES()[0], kb: v1.bytes, at: T.pop1, decided: T.two, sam: v1.sam && `SAM ${v1.sam.score}`, samAt: T.sam},
+                {what: NAMES()[0], kb: v1.bytes, at: T.pop1, decided: T.two, sam: v1.sam && 'SAM ' + (v1.sam.all || [v1.sam]).map(o => o.score).join(', '), samAt: T.sam},
                 {what: NAMES()[1], kb: v2.bytes + v3.bytes, at: T.pop2, decided: T.sure,
                  sam: 'SAM ' + [v2, v3].filter(v => v.sam).map(v => v.sam.score).join(', '), samAt: T.pop2 + .3}];
   const last = ROWS.filter(r => t >= r.at).length - 1;

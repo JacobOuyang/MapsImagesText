@@ -147,6 +147,62 @@ class Loop(unittest.TestCase):
         self.assertAlmostEqual(bx + bw / 2, sx, delta=1.0)
         self.assertAlmostEqual(by + bh / 2, sy, delta=1.0)
 
+    def test_a_shared_photo_gets_one_close_up_then_a_sentence(self):
+        # No question: Muse is asked for the one part the group needs sharp. It answers straight away at first, is sent
+        # back for the close-up, and after it may not ask for another.
+        self.script({"answer": "A tree on a car.", "sure": "yes", "need": None},
+                    {"answer": "", "sure": "no", "need": {"box": [0.6, 0.1, 0.8, 0.3], "colour": True, "look_at": "the car under the tree"}},
+                    {"answer": "", "sure": "no", "need": {"box": [0.65, 0.15, 0.7, 0.2], "colour": True, "look_at": "its badge"}},
+                    {"answer": "A tree has fallen on a grey SUV.", "sure": "yes", "need": None})
+        texts = self.run_phone(question="")
+        inq = store.find("inquiry")[0]
+        self.assertTrue(inq["meta"]["share"])
+        self.assertEqual(len(closer.got(inq)), 1)  # one close-up only
+        self.assertTrue(texts[-1].startswith("A tree has fallen on a grey SUV."))
+
+    def test_show_me_is_a_share(self):
+        self.assertTrue(router.SHOW.match("@Mew-zip show me Maria's photo"))
+        self.assertTrue(router.SHOW.match("can you show me Alex's photo?"))
+        self.assertTrue(router.SHOW.match("What's in this photo?"))
+        self.assertFalse(router.SHOW.match("Is the silver SUV stuck in the sand?"))
+        self.assertFalse(router.SHOW.match("Which of these can I take for a headache?"))
+
+    def test_out_of_looks_it_is_asked_to_answer_not_to_give_up(self):
+        closer.MAX_VIEWS, saved = 1, closer.MAX_VIEWS
+        try:
+            self.script({"answer": "", "sure": "no", "need": {"box": [0.6, 0.1, 0.8, 0.3], "colour": True, "look_at": "the spot"}},
+                        {"answer": "", "sure": "no", "need": {"box": [0.6, 0.1, 0.7, 0.2], "colour": True, "look_at": "closer"}},
+                        {"answer": "Yes, a black widow.", "sure": "yes", "need": None})
+            texts = self.run_phone()
+        finally:
+            closer.MAX_VIEWS = saved
+        self.assertTrue(texts[-1].startswith("Yes, a black widow."))  # not "I can't tell from what I can see."
+
+    def test_a_second_question_starts_with_what_the_phone_already_sent(self):
+        # Ben asks, the phone sends a close-up; then Chen asks about the same picture: Muse starts with Ben's close-up
+        # (free), and the phone is asked only for what is new.
+        self.script({"answer": "", "sure": "no", "need": {"box": [0.6, 0.1, 0.8, 0.3], "colour": True, "look_at": "the spot"}},
+                    {"answer": "Yes.", "sure": "yes", "need": None},
+                    {"answer": "", "sure": "no", "need": {"box": [0.1, 0.6, 0.3, 0.8], "colour": True, "look_at": "the other corner"}},
+                    {"answer": "No.", "sure": "yes", "need": None})
+        texts = []
+
+        def send(who, text):
+            out = router.handle(text, HERE, who=who)
+            texts.append(out["text"])
+            phone.got(out["text"])
+            return out
+        phone = Phone("+15550140", send, delay=0)
+        phone.text("Is that a spider?\n" + codes.text(phone.picture(spider())))
+        first = store.find("inquiry")[0]
+        inq, reply = closer.start(phone.who, store.image(first["id"]), first["meta"]["pic"]["id"], "Is the other corner clear?")
+        phone.got(reply)
+        second = store.get(inq)
+        self.assertTrue(second["meta"]["views"][0]["known"])  # Ben's close-up, carried over
+        self.assertEqual(len(closer.got(second)), 2)  # it, plus the one new close-up Chen's question needed
+        self.assertEqual(closer.texts_used(second) - second["meta"]["pic"]["texts"], second["meta"]["views"][1]["texts"])  # only the new one cost
+        self.assertEqual(self.seen, [1, 2, 2, 3])  # Chen's first look already had the photo and Ben's close-up
+
     def test_zooms_in_step_by_step_inside_a_closer_look(self):
         self.script({"answer": "", "sure": "no", "need": {"in": 1, "box": [0.6, 0.1, 0.8, 0.3], "colour": False, "look_at": "the blob"}},
                     {"answer": "", "sure": "no", "need": {"in": 2, "box": [0.25, 0.25, 0.75, 0.75], "colour": True, "look_at": "the blob"}},

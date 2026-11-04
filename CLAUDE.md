@@ -45,12 +45,16 @@ round trip); a decision keeps the first as `need` and all as `needs`. `_snap`: f
 40% of the close-up it is drawn on) with a named `object`, SAM 3.1 runs on that close-up and the box moves onto the
 outline nearest Muse's, plus `SNAP_MARGIN` 30% (Muse's own boxes on the lights were 25-40 photo px off). Up to two notes per decision re-ask Muse: `repeated` refuses a
 box overlapping a view it has (IoU ≥ `SAME` 0.6) at no more detail, and an unsure answer while looks remain is sent back
-once. Budget: `BUDGET` (160) texts from the phone or `MAX_VIEWS` (8) close-ups, then it must answer. `_reply` turns a
+once. Budget: `BUDGET` (160) texts from the phone or `MAX_VIEWS` (8) close-ups; out of looks with no answer, it is asked once
+to say what it sees and how sure (it may say it can't tell: forcing an answer made misreads). An empty question is a
+share (`SHARE`: one close-up, forced colour + high, then one sentence); `router.SHOW` ("@Mew-zip show me …") counts as
+empty. `start` carries close-ups this phone already sent of the same pic id into `views` as `known` (free, outside the
+budget), so a second question in a group pays only for what is new. `_reply` turns a
 `need` (or each of `needs`) into words + one `ZOOM <pic id> x y w h[ C][ H]` line each (box in the 128 px sketch's pixels). `receive(who, parent, box,
 data)` takes the phone's `Z` code (one per close-up, in the order asked; the router feeds every Z in a message, and
 Muse decides again only after the last): a `zoom` record, `full` when it came back `FULL` (1.3)× wider than asked or smaller than the size it
 would be sent at (either way, the photo's own pixels), its texts, and `_outline`: SAM 3.1 on the close-up for `need.object` (a match ≥ `SAM_MIN` 0.5 and ≥
-`SAM_SIZE` 8% of the side), mapped into the whole photo. The prompt's rules each fixed a measured failure: answer only
+`SAM_SIZE` 8% of the side), mapped into the whole photo (`sam.all` also keeps matches down to `SAM_SIZE`/2, for showing only). The prompt's rules each fixed a measured failure: answer only
 when sure; colour when colour helps find the thing (grey runs picked the wrong amber bottle); high detail for small
 text; no repeats (eight identical timetable views); tight boxes; one symbol per close-up for two or three
 warning lights or icons, all asked for at once (naming labels too made it read shelves jar by jar); name the thing that
@@ -108,7 +112,10 @@ the shape asked for: `--shape big,small,small --together --sam-first --colour-fi
 <seconds> <voice.mp3> <out.mp4>` keeps one headless Chrome per worker, driven over `--remote-debugging-pipe` (JSON
 messages on fds 3/4, NUL-terminated; the viewport set to exactly 1920x1080), each worker one continuous stretch of
 frames (handed out in turn, the logo shimmered: Chromes antialias a few edge pixels differently); ~1 minute a section.
-`demo/video/encode.swift` (AVFoundation) encodes and adds the voice. Times in each page are where the lines fall in its
+`demo/video/encode.swift` (AVFoundation) encodes at a steady 30 fps, a keyframe a second (long held frames made
+players stall and drift from the voice), and adds the voice; `speed.swift` makes the 1.1× versions, `join.swift`
+joins sections. `tenants.html` is section 5 (runs `sim/video/{tree,street_ben,street_chen,puppy}`, the street pair from
+`demo/video/record_group.py`). Times in each page are where the lines fall in its
 voice-over (found from the pauses). Scenes are their own 1920x1080 frame (`body { position:relative }`); full-screen
 pictures keep their own shape and are drawn at whole pixels (an `<img>` 5x enlarged shook by 2 px between frames).
 Voice-overs and finished videos live in `private/` (git-ignored); `demo/video/voice.py` can make them with ElevenLabs

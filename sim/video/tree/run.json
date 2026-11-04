@@ -1,0 +1,123 @@
+{
+ "sample": "real/tree_on_car",
+ "question": "",
+ "size": [
+  4032,
+  3024
+ ],
+ "sketch": [
+  128,
+  96
+ ],
+ "views": [
+  {
+   "image": "1_closeup.png",
+   "box": [
+    4.0,
+    29.703125,
+    108.0,
+    51.59375
+   ],
+   "asked": [
+    13,
+    34,
+    90,
+    43
+   ],
+   "colour": true,
+   "high": true,
+   "full": false,
+   "bytes": 5452,
+   "texts": 54,
+   "why": "the crashed car to see the damage and what it hit",
+   "object": "car",
+   "sam": {
+    "box": [
+     0.22265625,
+     0.45901639344262296,
+     0.7734375,
+     0.9918032786885246
+    ],
+    "in_photo": [
+     0.2191,
+     0.5561,
+     0.6838,
+     0.8424
+    ],
+    "score": 0.92,
+    "phrase": "car"
+   }
+  }
+ ],
+ "decisions": [
+  {
+   "answer": "",
+   "sure": "no",
+   "safety": "",
+   "need": {
+    "box": [
+     0.1,
+     0.35,
+     0.8,
+     0.8
+    ],
+    "in": 1,
+    "colour": true,
+    "high": true,
+    "object": "car",
+    "why": "the crashed car to see the damage and what it hit"
+   },
+   "needs": [
+    {
+     "box": [
+      0.1,
+      0.35,
+      0.8,
+      0.8
+     ],
+     "in": 1,
+     "colour": true,
+     "high": true,
+     "object": "car",
+     "why": "the crashed car to see the damage and what it hit"
+    }
+   ],
+   "at": 1793764357.2042282
+  },
+  {
+   "answer": "A fallen tree is lying on top of a grey SUV.",
+   "sure": "yes",
+   "safety": "",
+   "need": null,
+   "needs": [],
+   "at": 1793764364.709899
+  }
+ ],
+ "messages": [
+  {
+   "from": "phone",
+   "text": "\n#Pck.1/10:UklGRvADAABXRUJQVlA4IOQDAAAQGQCdASqAAGAAP3mcu121qqWkuf0birAvCWkAFIP1Fwf3+aAShtTga3nPHRmE6SK5YXQj5DMnwbFDlFpAMp1igVLjadzXJc1zqluNI5RnnPuf:e761#\n#Pck.2/10:yn23RNhoE5ryjVMi98T5BSYD4leGFzpq6NOxfvnzSpvGj68QYEWKQNLUCQ0kgcCZP6z/qUUOrpwX2TP7ftwLgBsgtYzCmu9L29EoSjqStS2xBfqVaxg9GITosUW+CHsQOkW0TmAe:e3d6#\n#Pck.3/10:eTv+T1gzz5LLk8OtkOBVkMj/xGlSBkvUAADb3ZxZT9056TIFwl34DumesQ3LfX7Z2X9MnHio2C/iZrpIKQXYMNlqwhvM+z8jVO7MoGh5uV/DlDSp3Nk4FZ/dZI6wPYV+HutVm9R6:1b4e#\n#Pck.4/10:YlY9NCUWTzgFUOCpIwzFiJ1PKOOO0vF+bErGCQvweN+FdHtKdxfpVnLeNHqHJQjUuSrpFGwhkondKikoS+cVKLcw6duWvuLsSjd/fekeBFLke9S5ahp+WifSaGT7O2K9JRr30FyQ:3ff0#\n#Pck.5/10:A8vR4Us1rImVV1oC2jEhRbdJTHxmeoMhfuuVj6oqq5fa0pP1htx5fHipZweoIHD+KG1SSYOrJNi+Inxn3LbOXixVF3WssHQda2GXg1/7naN4jU6UO4Z4IIl14C4l+04nxCw3Bb+Z:0724#\n#Pck.6/10:tG7P9FQmcDcbK/ygjdzsCKBS1vcCHaA50QUykAK1e53zRXH6a/hadBCf1zBzUt/YgcosxdoAOclkQo4Vtyw5QsPg9cPVgxzHkhhVRCIpJhBfdG955HWFo2TGWdeUbaHtsvQ6kgHK:9c0e#\n#Pck.7/10:LbI4JWG+AQl2iDY5YMq6xad5wrbQRpc7XQt365ueIr65+ZrXq3IYbeiY29dYiA4xrKOqgvJLo8pNYRLsTq479CqEq+fFqh4pKbEjZZ9imMhABfw0TzOOhl+9sZYNJD96ofxifU7L:4366#\n#Pck.8/10:aAK5sd/ddyL3AGdQ3wQff6i6c0c9UFssLBVsnhdswxyjqNZBI6KgnNb4K0B5e++324r4wZ4IJUqVN8WGvAxo2sXY93WnYT1yJTj2bnnb/Gs7kZVNPOxkn4V20Bueoss0N6QU/HwM:7836#\n#Pck.9/10:WerrdIp8WqBgHHGDg+PonkazDAPAJgt1d+Uiw/YsXbEjQhG1I+ReIlSx7nPLRp45SCh1WDXsmr3tU5ykISutDpnB8AdpOBGDT/OJthnG8kf9wOk2Kq8C2FU2XF49Eb9ilu5o5sSt:1725#\n#Pck.10/10:ezT0a7Zk0u9AYneoLybG8LavOhcX8X6IBEKnnXvS5EvlHWtm8si0XgN4y20KZ1+JR8yCOiExIZ5Ljjz4dlxps2NujzEj9JyyfWxGZgjDdqRJkx8Ktq1jFJE4XrydUcZmgAA=:b523#",
+   "texts": 10,
+   "bytes": 1016
+  },
+  {
+   "from": "muse",
+   "text": "Not sure yet: I need a closer look at the crashed car to see the damage and what it hit, in colour, in high detail. Your kit crops it from your photo and sends it back.\nZOOM ck 13 34 90 43 C H",
+   "texts": 2
+  },
+  {
+   "from": "phone",
+   "text": "#Zcz.1/54:AmNrAQAHbRsADOZSSUZGRBUAAFdFQlBWUDggOBUAADBYAJ0BKgABegA+9WSkUCqlo6K2vK6xUB6JYxwADnu7s+/O9vzoA72m9k/s/4CmK/aCb/xFU62VjzdqA3GT+4hhlcsgWFdu:9b7e#\n#Zcz.2/54:AvTbC7UzIo29H2CQhFI+XlKJ4ATklqFrB9QGjRFaCw/A74+tEBE7YTr6SUKW8itesa56l/VUsT6dgzn5aSaSSEmvBMb602hF7t4TMYshW0Ogl/tJ5E7f8ERiUSSH+DIY3XZpCSIF:9dc5#\n#Zcz.3/54:SdE5XjO8KvYtXHRMhFLB+2ryPt9KC/TMkQnvFZqgoNKbu0GfreH0s0cxkOH+fWcYjabWyezBsc4UyGuGBIu214CtQExKJqCOSo1uHlgGuMP8EeXqSWa+roz3Yle7ymZI2eNmTHbR:fb2d#\n#Zcz.4/54:Dq8/2M34F3Y2zWa0NaeyCJyGZZgx8AmY3hdbyT6NKu1dIpKALEHHJihrkG5w/Dv1WhuBmzukVuk0mc/l0W2TaRq1qgLjOip01ccd9Ne8Ch1WGkbH4Nw+Hi52F2aiclqJGOU2mq5p:d90a#\n#Zcz.5/54:Lthe7vbOu7B70O8iO4bWpkPpe1cfoxcoNG07Mm8JbYyXgVbFyGYFNzdwRJKGmAX1Ot9kgu9SXh3tPpogw6Um9I2aHm6o4wOtwCgUzSd7Rlryp4I8xajtmkAEdArgtkPESbMS56UA:aec9#\n#Zcz.6/54:jcoKwmiIFBhI66U1BDGPi0wySrNDV1Jqial6+c8hMysEDgvOEY/geHLi+o94NsvnFxHpkViM96d7BWVIrkxqAEFypXgYuWtLApEHtnB0FZX/xI3WY8Tatr1hSvewpeurBRemK30C:fbf4#\n#Zcz.7/54:FPSVHc6jU+hBpRhdIX0vXYdWZsyXfVZf8qG8O5olTfZoffmg5HvbfI9KeOEv0VYsvdNKP6Gq2RQW9i0eA0qEAE1xg1Go3D63DuPLfuw01YlrlArmkywglqlFRhmmYR1RL5ZvnhKG:eabd#\n#Zcz.8/54:VTt0rJYy70B7ckj9/uWuAYVEinYUKvmuWWnGJPiNgAD+Xx5wbSdgG8cFTPrsBYEtdSbeLr5tIAOeW0Af/zBDY1xl7X8ONgWLGgwaZiFhXE/zWKJXKxEBmM04AtKirUBPa/TUi072:f553#\n#Zcz.9/54:BAYvyB8PcSN1kACdy26ISZGn8a8d6zGLIJaRIYMjoxvvnRHTczJlnNpjb0MLnGbHsCV67fImzQoT/eMQwCZEwku5i+uU5UsweBjTV6EXC0HK+QQ7hL10mI1s5RhP88i2UB79vOUN:6866#\n#Zcz.10/54:6SLobfW5OP3sl2MW1HZ2M3/sIotUAi81rKIWG7nDETslZsUZyE+cJroOZhyQ3XtUM3n1WT6l11uha7SAjBEmRmZR5h3Ko+8gSLLj6MnFrnKM5umLkhtiqBeUPefrsAA+rWdi1ssO:2183#\n#Zcz.11/54:zrm+cb8ee1fQjKfkc9rjmwDM7X+sGoYQzhYoFa7FLk3pajaDuFmGcsRpUAr792UY3cQwSI3ceotLb9Wd6q6qxwLZe99mMSF11ygZXDOQ+WtZhBhglD6x8TZTDfs5xoW3v1b4HVSn:3d8e#\n#Zcz.12/54:5kWftbxAXqw3yzu8HhFp9HIY19vgGZ8rwqznNVet82B1Gnjpb1LZFZ1svruXFBjYDjUJsCGxiWbXcG9IdBEB6bJii9LP1Q8vwd2WtQBgSwdarMCUAXkpyt2ZroWeY18Bn1MW+0KW:3cef#\n#Zcz.13/54:fGUiLJ60wLVR9tCvzRyERBSUMoHeLGaveLjctFXWDkunQcKDpLyvblzfQFZr+J4Hmn0U/okP+f7nuvxoYVWDE1VIFLM7zRXm2EZ6TWLDK7vdqNp6UiZ3QZUYfMPhkcJaO2ncWwTC:3ea9#\n#Zcz.14/54:4BHjSyH/s9jktVcOLtwZjW5kvvjxNToLdAL0i6WEqVHxZ0DzByMAkRicUirBPhwdPO2T7NRQ3G/o7TVmYa1VFY1Acdxo4Ob0YIByBbjnKMxCFf1JQsfm948J0UGHS/yZwQwHNiwG:2eb8#\n#Zcz.15/54:BBuPnd7qWRlO92ntb8sT/uGzwfiKRXH2Gni2TzGcN1tP0TuBRO7ecx7f1gEvSWWHGMGdfKO49BkDORkVRSOwOc51Cr1etZsaaWsBFC8kUi/tqLW78Sz9iZTAtahnGVaITsHlP8z/:c91f#\n#Zcz.16/54:+lSP7+Bd9QYsFvv0wlxISmtTIv0YcI7ZB3vLO0UMEexV5hyRXoHlAzocKOIaN5E2PtUyefThgX/hKhs+Nz4faOib86JMrwkfKEM5R5NoWQYYQCxbNbEgCftzOOF4yliwRhAImRJG:b744#\n#Zcz.17/54:r5SfXYubta5C/ll7TOuW7FMe2E4FzrTmZt/dOono0nlxgkBG2cROwd1V3ct1ugE5JcXGAejxG9DvUyDvtgkGCPKv4g3izW/p3YWu0l3jjXblFWPXbMVzjfhYDVCC8fK3iCyCxzYG:4980#\n#Zcz.18/54:LOZp7jIeOCFrRCKXITAJ3L/Hc4NSPlFhF8adSPeUZ42wtaynDnR1V2IMqYv5p+s7CPHS6S5a2aINC6XOMKmWiYHpHWKWs2/DWqS1OTPwUFEvLO1eBFs2yrHS0PWObIDP7PiHBg6I:06c6#\n#Zcz.19/54:8gSR8JIe9gXvDPLNjt2bg7GUnI/dtj6W8TdGSbndAho+jk087eHBxcrlukM6af4ulEL8knjiPzjV8WAGUQU3UzD8fKYeDwC9DKOO54U6QMQbItork/gduHaMaEyQxoQqA0Brmbmx:5a43#\n#Zcz.20/54:3CF5OpGy5gmOGt51DvKYUuQ8yAXDsReh+1IrmWFX6Smh0AfrJQfDUucjQmwcjO+6V4o1jFLzQILgKk7lC7kivUP1H44F64g/hJNra81kkcGRmsQ0hjlYO/PUfbM+zHKTPp2AvTX+:0a5a#\n#Zcz.21/54:PJwcBC+CDsWmCA3+CU1XLI0p47DMvDSuYtOHx8AmCOI8qWTJXaPkx9D8fTpRQeZBi35dnXbm0v27SqUzWHT7IGAo7luOSWTyzHvhW1MtL4t0YODLo4Be0yZxdjFJjn7/mesI+8gX:50cb#\n#Zcz.22/54:vHe8QYJkxV+cDwcoJGTD3fiz/G65q3XbFDDpPf9LTYr/mzI4ecqJPUZ8nuiD5dHhsf8l7TA1KTmcoZqBBwf9cOLLeEN/OHBCL1AM18bY/p20qh5SXcgq9uSc6xkecNkpjqYigv+T:3f59#\n#Zcz.23/54:3P4sdEqmrjNTbqjGa462ROwpzWMgaaNB1jJ5qeO52Uxs6ZjKcvdsg0dsKZX7tymKhetD90Uyg99RAFyrzUUAgk/HLyKhbsrmPNUNZy4bm8aCPoLAtwNpPgSUZP3sanGFt8+oD0lJ:abb2#\n#Zcz.24/54:MXoi24+F7PNoJUvB5wPQ/eJX5HPAXnye6Agf3R4QlY2N9cVxa1l0s3SjY6+0/zFrFhwM/M70r/O7FDWdiUARsG0heOqcH925C00gDMjPRjdgFuk0xRjoxwnho9QHnHx3EPz5UEL9:6f2c#\n#Zcz.25/54:MDBaWBifRNXPTZxrxH2tBd2mbJCOo2XQg9WJbou5/ijCL1eKCLbJBzTSPNv0/uiwrgAOxbzxT1YVd597VrBVbEEeZr04Q7gFIU1iPI5yTN9zPferkFTUjCcedXVCChy+9STCbgMF:fa86#\n#Zcz.26/54:xizO+XKHId//f0MJLm5hYoqus7DZjTvF7+iSntJjkAugl8j9f5Vj3kjcBcWcVP3BCi2+2UEUhPVDzvwUPDJKG4gfv6t+c4DaJ89y7Xovzl2MJivCpQUW9usWYPJxXx13ygBoL2Bi:3646#\n#Zcz.27/54:QZrZLxuNTGSmA8yeqXybrcV0vmApevhAF5uRL41gKxavY5B1VAXuNIUeTKzadmsYkrsQhS70GS+Wuw5Q21Hfoxtl68XZ9q2mRprAvyn8SmKs0IZmHz1UIUQnwJim9Xf4LZvEcTgv:c6ad#\n#Zcz.28/54:WD9jt3hK4H53V3DxlLfhOAIAFN9kzauXkDzTPHDV22eOV6CwYzNkXX1Pnq55tptsh3lwauzwGZrTTAaokokbLw4K/f2A0q118OpsrIVuzNn4sqgGOoBDd1hugBozlOCSD7pD9Vu8:d029#\n#Zcz.29/54:/JgXfHSFcoCJcz/Sf/hgkYpArA3t2XsQmDMZmGJTAYKf1zKc5ad/KIOFgu2pEPpxJDmh7QppwFO9ekSTWWueDLDGXu0eGysVUYOh6gmO/zmtvHHU+Rj3jq2EJmv9Lxr5qN6KyiUx:7091#\n#Zcz.30/54:4n0bKm0AVNKxbW9XI83kVhkSWBfnaH4GgTQUzGdeYV2IxQINdVl5SGTNT50FsB0MKqpd70nGbCxy3sTlQUShm6GGL72+DiEV3DcQnuzMv2j52KPar/aPURkoTpHK9DeFswMTURaq:794e#\n#Zcz.31/54:4/LHMgkCOTKJkcakkFIW6GVJBOekZVrHhSvr+E8Gm8NPNUCRu5AxpeGviziTrTUtMp0r8N8Q3G4yfR72zuWylhRZkDXnEJZ0c8jwJPsReOKHf6Vw7eJ8I+7XaMy1i2hAGHyNz+2B:e54a#\n#Zcz.32/54:sr0dF+uc8lYJN20zOUApT+pdkkwM5bjEr6xufaRIh35vj0VeOKVWaeFoPWz2SJ2rXXE0/GbOFuJIWZVG9EsWHH3ZRatQIgLPQx81CNCeRKhDS1QzRqqpJWzmJ9UvSCs5n1HIHJ/B:09da#\n#Zcz.33/54:CkC0PygOCnvAn+TbSKefJ5HAU2dp/VDihX0Ye0PY6dGGsHNT7TQLnZFtn8I3XkxNzudTqiamXGi02Zc6cKasOUuj68aHGmxA9v/fIzJXceomA4Qv1iCexIP8XrzCJuF1l76DGk+1:6350#\n#Zcz.34/54:ldBrbDs9+NZ6cr/iMNnvB4QMMnsjNYk8NhSU1cgCJNnRuqpe0isOwq6uP9U7aBZsFdN/bl/ciYWpT29Uz/0Ll2Jm1uMkQ90T82b9zrpZei0c0yKfp2swFKsUIOSooXmzoHeFxmjX:691d#\n#Zcz.35/54:OgmfVfd9VHrDnpuF62O1/W5j5F/jzTew6zII2sla5lcBdfpGfdEUpLZgfxPxE/4boSeDgI+CqP5B9Fb50+or64RTqbEqe3enDOjJYEiEklJ9M1EwnFAXvXX5BYk5pqxkLrrZucUs:29be#\n#Zcz.36/54:LZzYrb/DQDgUfkrOlq+6RoXi4VdMQWA3Y+ICCTA8fx9jZTUHBAlo8JWiQz/+Bo4MHFqpCNa8KG+chSg8RXpwQCQsq4B4z+Rm/SQ2Q4hczaT25YqLA++4MCTOkRALbplnscQ3mDpz:f8c0#\n#Zcz.37/54:2wC0XBSaAMq2Vw12V3VKrNUZIK9BrLd6M33q86U8268LklZQtXP5Q/fy0lSNkLm3sC8TMGu0xn3xdgnGG5pMfh12knJjmKEpb9JLrvkJeBz2IXFLcqradoN7eIVGnZqbOD/5Ro4t:a31f#\n#Zcz.38/54:2nYMA40BNGqhxNUIkz6dr9RztH3tTvIIVGUrm3AnOkxlpfZlf/XUtqwIwzKwf7NNUhMiJ3Bhmyeuk6tJjDWeYAZyIEE1pUnpbAdISd5WGSgJYWAj7CXj8TpEGlg5hDKLijKfmM/b:4a85#\n#Zcz.39/54:Zz0Q3S1gylpSPqg/P0BHpnKtc0a/2DmqeASi+QqnOEe3jF1vMvDRey9vKHQBrc8r43lk5SbBJ8rVBhT9Z/DgLpafwnfdYcEQg/6l4CzcXJC0d0Eu17TaP/poqPjs+4U6LXLDtZUC:d967#\n#Zcz.40/54:Y9G8vBBBgNPxQj4/HM1svgSu2UBxwuWF/hgb5gGpZfcF3ukgKLCeVhVk9qRR3tRkgjodNGaC4laxjIJe2q2qK77V1IOBE7Gs8X2oEaH2+PrNaPt3vK/pf28yAoVpnViwDdzHWMwA:35a1#\n#Zcz.41/54:L1zzh0Zk9XAIS06YPJ8WsaasdjecabpINOZshtG23dFaSWB/jKTQePQjK2O88TTWxxjSmV8e0j5dX5Y8uRVWjUbArPekqQP2WO2CwFjiVBPwTtAfeSb5/dIj5vJmQMcLLudoDE4x:2c84#\n#Zcz.42/54:gialLnT5axyOd489W5V/8ywthliDFXk3Dp/nsb+oGuSM324F0BeYQWvgk6ceLdxXiTtUt38a/nYo9as9bTM30Z1dh4PFVGWmWcRc3dth4ScPKBI3BxoPJRxJQWJQBVSXulpaN8ZF:6877#\n#Zcz.43/54:DszS1wpSjC1FbFyNaUvhkrAJj7ZXcxNEAtvjC+MXuYQTbWfU/bqE7n81CbSVgbiPLQDT3WAmk3xJ/6OkUB7AcWQhkhnonvRv+kIzciHixpv1HsLHm4cDUE+yD/ZWbExl7HLxhQGb:8438#\n#Zcz.44/54:jr63du55qHTziH/uJ44VDFS+BZtgrRk2I4Kuoe9n+Dav/ks0vuJ7CyAv05ihkb/oXHABE6Y9nnvdoxg2dTFuHQZdtxsnhUcrR4cODOZJP60N3c0WaDjEpmYNVOOWGnSfVfTm8RiD:de07#\n#Zcz.45/54:5oFpvULPmR7NtHAHP09Pubsrc1hD8v3qymY3Q1asFjrnr9iHtLVEK05y1frCK9bO3HP9Y4dJhIb+ZIwPdx29Wpn5BvoqBmt81QzXh3fhTMXy78/j+ZK8d2jInwo0KdD2EEb8cElY:b5ae#\n#Zcz.46/54:w8JvpsrNR+V8Lqznz7fcCpAWn/FXnn5KMBhixLqSO6fSymvHioXnqQSGGz2QG+f7KA59fSrexDjkhQlidZW1f6dBu5LbmHIgnPs0xc0Z8c4x5N14GS7MLOtBSluudRlQOtfOEjOW:e362#\n#Zcz.47/54:Qn3XQCKQ+EHOTtz/JInEKZN+rYWaG++0f081Z8jis6eALN6GZhPabfwdwaP/OZkBLl9XTrYDd9uNgv60gQLmdqYKqQLj/OB6BMplN49VWJbtaGGuj7X3ffzi/ATON9uDmmVSjajN:d8d9#\n#Zcz.48/54:T9+oj3lDadRuHLJEbLgQu5LCvjdmw1IlziprePNpNX+eGJfr/aGCJDCuZWOEMLIKHEpj4ZgL1cJPm99PHQp2vzIMRMD7HRlARii/4Kq3m4GLASn6zhz8jD2EHPuffrijqDTXa8W5:241d#\n#Zcz.49/54:ypO5KOhjpWA8SyJA1quhLkVwks7gBLAxIAzuKvl6ncrWZzemIyJa2wFdgvDq13Xq8nBRGGcFT3YGqYceVqOV3Xd89lfBp9+stcbz6imd3PaEQx76N4OBjMzsfQ0lUndnDkvGiy7n:c5da#\n#Zcz.50/54:821ClOoGSMHnCffMFNRlvpEQ4+V4DmDthKZw6Z0zeRPo7SipWmlY1MUpMEXstQ98EvwEWoi0/9C/oQ42lITH9FNWgkAiFFIWo+ddSVXKni6nA0dXEd/y8YV0c804x48VsNivfHCO:d32c#\n#Zcz.51/54:r/Vh6vpz+HTWGvW8KRM1EaehWzLMpkE7A1W+wSBnajbBr1qD5ni4NOKIouXZAoJN5U8fNNjCkipuXzRFSF8yubFP9qzsRCl3HhdnCmqLMmbgm8UWvj4EQc1ukvxTrAYSGHtPoTJV:8b7f#\n#Zcz.52/54:C0drzCkTQn5t2TCreIyqCrCQ0FLX8B7/2fn02iebNDQcfKojjLaPT4rCdB+mMuYl2aEdk6yXSfzrNrkjLfAuAvhWgRwFKJKnODhRK3EXDdZHenyCJaByf6BCLq8eTc08zwGuHHHu:7391#\n#Zcz.53/54:q6TIH1mVYjsEokc3HfqY5unZq4lPvITBDZInLhxGPt9n2KWrWg9ScY0ueugyMWgaI0kkDZ3L4jxPmlP4cSn9EjJV1KFQHJA/rxS9m44wWBAmrJYEt/Mo7J0hbR3PuRXKK6okhBVI:c5a8#\n#Zcz.54/54:Pb7I9YFFg1rpVAQBJ/KpHxQ41Hm4yAdkvzMbGg2lD2XG3JYmCIC22tFt7r3DX/pOCx2weGbaQAAA:3e48#",
+   "texts": 54,
+   "bytes": 5463
+  },
+  {
+   "from": "muse",
+   "text": "A fallen tree is lying on top of a grey SUV.",
+   "texts": 1
+  }
+ ],
+ "answer": "A fallen tree is lying on top of a grey SUV.",
+ "phone_bytes": 6479,
+ "photo_bytes": 6841565
+}

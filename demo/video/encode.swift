@@ -5,8 +5,9 @@
 //
 // With a sound file, the video is written first and the sound added as an AAC track (AVMutableComposition).
 //
-// frames.txt: one frame per line, "<seconds to show it> <path to a JPEG or PNG>". A still held for 6 s is one line,
-// so only moving parts (pans, fades) need many frames.
+// frames.txt: one frame per line, "<seconds to show it> <path to a JPEG or PNG>". A still held for 6 s is one line
+// (read once), but it is written as a frame every 1/30 s with a keyframe each second: a 6 s frame made players stall
+// and lose sync, worst where sections were joined.
 import AVFoundation
 import CoreGraphics
 import Foundation
@@ -21,10 +22,12 @@ let finalURL = URL(fileURLWithPath: args[2])
 let outURL = args.count == 6 ? finalURL.deletingPathExtension().appendingPathExtension("silent.mp4") : finalURL
 try? FileManager.default.removeItem(at: outURL)
 
+let FPS = 30
 let writer = try AVAssetWriter(outputURL: outURL, fileType: .mp4)
 let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
     AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: width, AVVideoHeightKey: height,
-    AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: 8_000_000, AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel],
+    AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: 8_000_000, AVVideoProfileLevelKey: AVVideoProfileLevelH264HighAutoLevel,
+                                      AVVideoMaxKeyFrameIntervalKey: FPS, AVVideoExpectedSourceFrameRateKey: FPS],
 ])
 input.expectsMediaDataInRealTime = false
 let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [
@@ -50,22 +53,20 @@ func buffer(for path: String) -> CVPixelBuffer? {
     return px
 }
 
-var t = 0.0
-var last: CVPixelBuffer?
+var n = 0, due = 0.0  // frames written; seconds of frames asked for so far
 for line in lines {
     let parts = line.split(separator: " ", maxSplits: 1)
     guard parts.count == 2, let secs = Double(parts[0]) else { continue }
     guard let px = buffer(for: String(parts[1])) else { print("can't read \(parts[1])"); continue }
-    while !input.isReadyForMoreMediaData { usleep(2000) }
-    adaptor.append(px, withPresentationTime: CMTime(seconds: t, preferredTimescale: 600))
-    last = px
-    t += secs
-}
-if let px = last {  // repeat the last frame at the end so the final hold lasts its full length
-    while !input.isReadyForMoreMediaData { usleep(2000) }
-    adaptor.append(px, withPresentationTime: CMTime(seconds: t - 0.001, preferredTimescale: 600))
+    due += secs
+    while Double(n) < (due * Double(FPS)).rounded() {
+        while !input.isReadyForMoreMediaData { usleep(2000) }
+        adaptor.append(px, withPresentationTime: CMTime(value: CMTimeValue(n), timescale: CMTimeScale(FPS)))
+        n += 1
+    }
 }
 input.markAsFinished()
+writer.endSession(atSourceTime: CMTime(value: CMTimeValue(n), timescale: CMTimeScale(FPS)))
 let done = DispatchSemaphore(value: 0)
 writer.finishWriting { done.signal() }
 done.wait()
@@ -87,4 +88,4 @@ if args.count == 6 {  // add the sound
     try? FileManager.default.removeItem(at: outURL)
     guard export.status == .completed else { print("failed to add the sound: \(String(describing: export.error))"); exit(1) }
 }
-print("wrote \(args[2]): \(String(format: "%.1f", t)) s")
+print("wrote \(args[2]): \(String(format: "%.1f", Double(n) / Double(FPS))) s")

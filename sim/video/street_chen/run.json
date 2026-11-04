@@ -1,0 +1,669 @@
+{
+ "sample": "real/storm_street",
+ "question": "Is the silver SUV at the far end, on the right side of the road, stuck in the sand?",
+ "size": [
+  4288,
+  2848
+ ],
+ "sketch": [
+  128,
+  85
+ ],
+ "views": [
+  {
+   "image": "1_closeup.png",
+   "box": [
+    0.0,
+    16.796875,
+    77.0,
+    50.40625
+   ],
+   "asked": [
+    0,
+    21,
+    70,
+    42
+   ],
+   "colour": false,
+   "high": false,
+   "full": false,
+   "bytes": 916,
+   "texts": 0,
+   "why": "the pickup behind the first two cars on the left to see how much snow is on and around it",
+   "object": "pickup",
+   "sam": null,
+   "known": true
+  },
+  {
+   "image": "2_closeup.png",
+   "box": [
+    0.0,
+    15.0,
+    63.796875,
+    24.0
+   ],
+   "asked": [
+    0,
+    17,
+    58,
+    20
+   ],
+   "colour": false,
+   "high": false,
+   "full": false,
+   "bytes": 570,
+   "texts": 0,
+   "why": "the vehicles behind the front cars on the left to see if the pickup is buried in snow",
+   "object": "pickup",
+   "sam": null,
+   "known": true
+  },
+  {
+   "image": "3_closeup.png",
+   "box": [
+    12.5,
+    17.59375,
+    42.0,
+    16.796875
+   ],
+   "asked": [
+    16,
+    19,
+    35,
+    14
+   ],
+   "colour": false,
+   "high": false,
+   "full": false,
+   "bytes": 584,
+   "texts": 0,
+   "why": "the dark vehicle behind the first cars to see how much snow is covering it",
+   "object": "pickup",
+   "sam": null,
+   "known": true
+  },
+  {
+   "image": "4_closeup.png",
+   "box": [
+    11.203125,
+    17.0,
+    45.59375,
+    12.0
+   ],
+   "asked": [
+    15,
+    18,
+    38,
+    10
+   ],
+   "colour": false,
+   "high": false,
+   "full": false,
+   "bytes": 460,
+   "texts": 0,
+   "why": "the dark pickup behind the cars to see how much snow is on and around it",
+   "object": "pickup",
+   "sam": null,
+   "known": true
+  },
+  {
+   "image": "5_closeup.png",
+   "box": [
+    22.0,
+    18.296875,
+    36.0,
+    8.40625
+   ],
+   "asked": [
+    25,
+    19,
+    30,
+    7
+   ],
+   "colour": false,
+   "high": true,
+   "full": false,
+   "bytes": 1486,
+   "texts": 0,
+   "why": "the dark pickup behind the cars to see how much snow is on and around it",
+   "object": "pickup",
+   "sam": null,
+   "known": true
+  },
+  {
+   "image": "6_closeup.png",
+   "box": [
+    53.5,
+    5.40625,
+    54.0,
+    31.203125
+   ],
+   "asked": [
+    58,
+    8,
+    45,
+    26
+   ],
+   "colour": true,
+   "high": false,
+   "full": false,
+   "bytes": 950,
+   "texts": 10,
+   "why": "silver SUV at far end on right to see whether sand is piled around its wheels",
+   "object": "SUV",
+   "sam": {
+    "box": [
+     0.7578125,
+     0.5135135135135135,
+     0.875,
+     0.6756756756756757
+    ],
+    "in_photo": [
+     0.7377,
+     0.2521,
+     0.7871,
+     0.3116
+    ],
+    "score": 0.61,
+    "phrase": "suv"
+   },
+   "known": false
+  },
+  {
+   "image": "7_closeup.png",
+   "box": [
+    92.0,
+    19.203125,
+    12.0,
+    9.59375
+   ],
+   "asked": [
+    93,
+    20,
+    10,
+    8
+   ],
+   "colour": true,
+   "high": false,
+   "full": false,
+   "bytes": 880,
+   "texts": 9,
+   "why": "the silver SUV at far end to see whether sand is piled around its wheels",
+   "object": "suv",
+   "sam": {
+    "box": [
+     0.1875,
+     0.21359223300970873,
+     0.6953125,
+     0.7864077669902912
+    ],
+    "in_photo": [
+     0.7363,
+     0.25,
+     0.7839,
+     0.3147
+    ],
+    "score": 0.8,
+    "phrase": "suv"
+   },
+   "known": false
+  },
+  {
+   "image": "8_closeup.png",
+   "box": [
+    93.203125,
+    23.59375,
+    9.59375,
+    4.796875
+   ],
+   "asked": [
+    94,
+    24,
+    8,
+    4
+   ],
+   "colour": true,
+   "high": true,
+   "full": false,
+   "bytes": 1064,
+   "texts": 11,
+   "why": "the bottom of the silver SUV to see whether its wheels are buried in sand",
+   "object": "suv",
+   "sam": {
+    "box": [
+     0.18359375,
+     0.0,
+     0.74609375,
+     0.6640625
+    ],
+    "in_photo": [
+     0.7419,
+     0.2776,
+     0.7841,
+     0.315
+    ],
+    "score": 0.84,
+    "phrase": "suv"
+   },
+   "known": false
+  },
+  {
+   "image": "9_closeup.png",
+   "box": [
+    94.296875,
+    25.796875,
+    8.40625,
+    2.40625
+   ],
+   "asked": [
+    95,
+    26,
+    7,
+    2
+   ],
+   "colour": true,
+   "high": true,
+   "full": false,
+   "bytes": 536,
+   "texts": 6,
+   "why": "the rear tires of the silver SUV to see whether sand is piled against the tires",
+   "object": "suv",
+   "sam": null,
+   "known": false
+  },
+  {
+   "image": "10_closeup.png",
+   "box": [
+    96.59375,
+    25.796875,
+    4.796875,
+    2.40625
+   ],
+   "asked": [
+    97,
+    26,
+    4,
+    2
+   ],
+   "colour": false,
+   "high": true,
+   "full": true,
+   "bytes": 522,
+   "texts": 6,
+   "why": "the rear wheels of the silver SUV to see whether sand is piled around the tires",
+   "object": "wheel",
+   "sam": null,
+   "known": false
+  },
+  {
+   "image": "11_closeup.png",
+   "box": [
+    97.59375,
+    25.796875,
+    4.796875,
+    2.40625
+   ],
+   "asked": [
+    98,
+    26,
+    4,
+    2
+   ],
+   "colour": true,
+   "high": true,
+   "full": true,
+   "bytes": 310,
+   "texts": 4,
+   "why": "the right rear wheel to see sand piled around the tire",
+   "object": "wheel",
+   "sam": null,
+   "known": false
+  },
+  {
+   "image": "12_closeup.png",
+   "box": [
+    98.796875,
+    24.796875,
+    2.40625,
+    2.40625
+   ],
+   "asked": [
+    99,
+    25,
+    2,
+    2
+   ],
+   "colour": true,
+   "high": true,
+   "full": true,
+   "bytes": 222,
+   "texts": 3,
+   "why": "the left rear wheel area to see sand piled around the tire",
+   "object": "wheel",
+   "sam": null,
+   "known": false
+  }
+ ],
+ "decisions": [
+  {
+   "answer": "",
+   "sure": "no",
+   "safety": "",
+   "need": {
+    "box": [
+     0.45,
+     0.1,
+     0.8,
+     0.4
+    ],
+    "in": 1,
+    "colour": true,
+    "high": false,
+    "object": "SUV",
+    "why": "silver SUV at far end on right to see whether sand is piled around its wheels"
+   },
+   "needs": [
+    {
+     "box": [
+      0.45,
+      0.1,
+      0.8,
+      0.4
+     ],
+     "in": 1,
+     "colour": true,
+     "high": false,
+     "object": "SUV",
+     "why": "silver SUV at far end on right to see whether sand is piled around its wheels"
+    }
+   ],
+   "at": 1793765143.898926
+  },
+  {
+   "answer": "",
+   "sure": "no",
+   "safety": "",
+   "need": {
+    "box": [
+     0.72283935546875,
+     0.23425278219395862,
+     0.80194091796875,
+     0.3294992050874404
+    ],
+    "in": 7,
+    "colour": true,
+    "high": false,
+    "object": "suv",
+    "why": "the silver SUV at far end to see whether sand is piled around its wheels",
+    "snapped": 0.61
+   },
+   "needs": [
+    {
+     "box": [
+      0.72283935546875,
+      0.23425278219395862,
+      0.80194091796875,
+      0.3294992050874404
+     ],
+     "in": 7,
+     "colour": true,
+     "high": false,
+     "object": "suv",
+     "why": "the silver SUV at far end to see whether sand is piled around its wheels",
+     "snapped": 0.61
+    }
+   ],
+   "at": 1793765149.716874
+  },
+  {
+   "answer": "",
+   "sure": "no",
+   "safety": "",
+   "need": {
+    "box": [
+     0.7328125,
+     0.2879963235294118,
+     0.79375,
+     0.33314338235294116
+    ],
+    "in": 8,
+    "colour": true,
+    "high": true,
+    "object": "suv",
+    "why": "the bottom of the silver SUV to see whether its wheels are buried in sand"
+   },
+   "needs": [
+    {
+     "box": [
+      0.7328125,
+      0.2879963235294118,
+      0.79375,
+      0.33314338235294116
+     ],
+     "in": 8,
+     "colour": true,
+     "high": true,
+     "object": "suv",
+     "why": "the bottom of the silver SUV to see whether its wheels are buried in sand"
+    }
+   ],
+   "at": 1793765155.264899
+  },
+  {
+   "answer": "",
+   "sure": "no",
+   "safety": "",
+   "need": {
+    "box": [
+     0.73939208984375,
+     0.30861213235294116,
+     0.79185791015625,
+     0.3328786764705883
+    ],
+    "in": 9,
+    "colour": true,
+    "high": true,
+    "object": "suv",
+    "why": "the rear tires of the silver SUV to see whether sand is piled against the tires"
+   },
+   "needs": [
+    {
+     "box": [
+      0.73939208984375,
+      0.30861213235294116,
+      0.79185791015625,
+      0.3328786764705883
+     ],
+     "in": 9,
+     "colour": true,
+     "high": true,
+     "object": "suv",
+     "why": "the rear tires of the silver SUV to see whether sand is piled against the tires"
+    }
+   ],
+   "at": 1793765167.030833
+  },
+  {
+   "answer": "",
+   "sure": "no",
+   "safety": "",
+   "need": {
+    "box": [
+     0.7581298828125,
+     0.3057904411764706,
+     0.79185791015625,
+     0.3311856617647059
+    ],
+    "in": 9,
+    "colour": false,
+    "high": true,
+    "object": "wheel",
+    "why": "the rear wheels of the silver SUV to see whether sand is piled around the tires"
+   },
+   "needs": [
+    {
+     "box": [
+      0.7581298828125,
+      0.3057904411764706,
+      0.79185791015625,
+      0.3311856617647059
+     ],
+     "in": 9,
+     "colour": false,
+     "high": true,
+     "object": "wheel",
+     "why": "the rear wheels of the silver SUV to see whether sand is piled around the tires"
+    }
+   ],
+   "at": 1793765176.671272
+  },
+  {
+   "answer": "",
+   "sure": "no",
+   "safety": "",
+   "need": {
+    "box": [
+     0.765625,
+     0.30861213235294116,
+     0.79560546875,
+     0.3311856617647059
+    ],
+    "in": 9,
+    "colour": true,
+    "high": true,
+    "object": "wheel",
+    "why": "the right rear wheel to see sand piled around the tire"
+   },
+   "needs": [
+    {
+     "box": [
+      0.765625,
+      0.30861213235294116,
+      0.79560546875,
+      0.3311856617647059
+     ],
+     "in": 9,
+     "colour": true,
+     "high": true,
+     "object": "wheel",
+     "why": "the right rear wheel to see sand piled around the tire"
+    },
+    {
+     "box": [
+      0.7718611717224121,
+      0.2960026999080882,
+      0.7854460716247559,
+      0.31998707490808825
+     ],
+     "in": 9,
+     "colour": true,
+     "high": true,
+     "object": "wheel",
+     "why": "the left rear wheel area to see sand piled around the tire",
+     "snapped": 0.84
+    }
+   ],
+   "at": 1793765188.579249
+  },
+  {
+   "answer": "No. The silver SUV is sitting on clear pavement, with a pile of sand beside it on the left.",
+   "sure": "yes",
+   "safety": "",
+   "need": null,
+   "needs": [],
+   "at": 1793765194.412837
+  }
+ ],
+ "messages": [
+  {
+   "from": "phone",
+   "text": "Is the silver SUV at the far end, on the right side of the road, stuck in the sand?",
+   "texts": 1,
+   "bytes": 0
+  },
+  {
+   "from": "muse",
+   "text": "Not sure yet: I need a closer look at silver SUV at far end on right to see whether sand is piled around its wheels, in colour. Your kit crops it from your photo and sends it back.\nZOOM k4 58 8 45 26 C",
+   "texts": 2
+  },
+  {
+   "from": "phone",
+   "text": "#Zkz.1/10:Ams0DWABWg2AB81SSUZGrgMAAFdFQlBWUDggogMAANAXAJ0BKoAASgA/EXyzUywnpKKoFN3ZgCIJZQDOA7fi8JsJgLZJqV6yLSQwN2pQc7ZyRPsyuS/hRTTigWni7jQ1dURKncxg:1182#\n#Zkz.2/10:0ZL5drLNWfRfLulYjXXTx2ySPOCUnLkz/IODZgEWSQQIQvU6MW6uQ8+wQLEz2XzRpmVIqKJa6ES7Y1Ks1nAeYwrQ4ZzIvs2g40xhp3Ni2FutD2sSHpNSrJcj+2m7+YoChMvs8OSJ:e5e3#\n#Zkz.3/10:p/sF48w3dNQX0uN+wBnuDsPm+0az/fDQAAAA/uFmMjZQCf7UV9divKb39I+C+nV8SMNbM8mgKOiJOvZu36DRQO12Gmk4Loyjt3d2EwdO+5mE3pUT50wEcOvTeNUnFTRKkuNPx9H6:acdd#\n#Zkz.4/10:IjTRBi5ViFuTvjOxiIl1BTOd/8SlrvltaWrAFkeA9HRaB9RqeDKIcLAes66ujTzjVWJJ0ewLucNYMQZlrw5p7A28e5Xy5zTB+qefw/rfcDbmnAGD4UltgKY/zlh13JkfSJWrjGAs:ea8f#\n#Zkz.5/10:r3x9NUzyvVcjDNkRqv/CMeEynK6aTYjgeYDiEp4/1Y6drzH+h2yl6Mg3oJg1R+yQzxb1oHNEuFgFt1Gfq9lUmr5tj8UehvwnA2Ccb7JccMvm6vR9AYHhNFdM8dKJPSURSTOp23U8:8fc8#\n#Zkz.6/10:zCyPEnSxQakGmI9nK5xvcGJJLpLYohZ9BQQ0BEOdvo4ahR/hGpd+jE2QMnKba03llyDiGyFeX7kUAbLTmLm4XNwZZ0cC/55ddjcUNAAHoIBtVQVupVSWqjbdJ4CH3MfjZ46I8Au2:dd75#\n#Zkz.7/10:Dvew/aHQ6JsfN2OYGQYlKbQHRvW/hCs7aH8wxOQc6pWeemTguYNysD2vXBD03GxL8nK7zUYdv1I0OQB8C0nqktd53XgiMq4HJh23Ulk+rXIt17foM/9R61c1JC1aggxvfdXf025L:e092#\n#Zkz.8/10:8PfeY5oBgrxnHT/7J6WOZQoGPFqCGETBT2BifEYyJciaM/JnFZ7wRHYMlk69y/C3U/Pyvh1Y5GMzaQ/mutL+m99kGxQuvrP4RITZZtDClLAdU/pqk8iCybaKNitJSGb1+BOsTTDq:aa49#\n#Zkz.9/10:NvJ9gYNg3UhSgLczgfLKU94WGsbt2MgYX+fIsqXpK6vv74+WNCEqxHuU9FlsA7LlrpvDGODsSTE399S6Ge9OhfFYA4nWQ5pGdeum1RFESrnubsMOSLmYYWHE2RDymw2b9WzRykmt:639d#\n#Zkz.10/10:xaj3FgvocqI73VLJwNEZWSAN/2oqInrFzpsDXIl7dEXnLs7+ySVuUAAAAA==:ea62#",
+   "texts": 10,
+   "bytes": 961
+  },
+  {
+   "from": "muse",
+   "text": "Not sure yet: I need a closer look at the silver SUV at far end to see whether sand is piled around its wheels, in colour. Your kit crops it from your photo and sends it back.\nZOOM k4 93 20 10 8 C",
+   "texts": 2
+  },
+  {
+   "from": "phone",
+   "text": "#Zkz.1/9:Ams0FwAEzQMAAmZSSUZGaAMAAFdFQlBWUDggXAMAABAaAJ0BKoAAZwA/EXqyUiwnpKOrcm1RgCIJZ2yNyBCkguH1wDXdmlAbwpUUUl/bwYzCxXfofxHSbptL0Iwkx4ZWD5BES6p6:769c#\n#Zkz.2/9:lLzDKL3VJOzNflsJnzkC8MUzaT+0VObXZ3VhOyKIkhMbjor0MjV6280IMUHbuY/GurRCoWNBFKueG/O8aYUGdIvyxfPUOMr++WUoNnT14WxNiDCJzDMUh7tWBgdMUiOxRMIcGWRR:f9b5#\n#Zkz.3/9:2BfKfYBXhjhRqWzT3aYhAxJ1oO8jrhUQhpC3/p9b51G7D/Poib/7gyCl4AAA/qP53xfWr7qmQ4FWbGgSo3/RF/fvwG1cai9++sAvUtpkziil7szy6bw2chgxsGxftfmnnQJthXp0:15cc#\n#Zkz.4/9:CDMb98GMaE7JplbKcEYh/I+i9FnuzOZQn6OV7XPuBi82KTCcSXrVszuulQJTO/qCxoOlaPfbBYuTgL5b2/sRGW/6JPZ7+6dJAeV8OK0b1Z37VFoAk8UyrCIQUaREABuSNCY6OFa7:a152#\n#Zkz.5/9:iIeIIHNfJ5jrS6OiGVQcKVH0iBoHYtartLjx7GSAIsFX33dIlxL3F6UWyx9xRJkcGIucBjV5Bz34iob6DKbCsFe3I5uktcTkVkHeEcENFOOM4mJ0S1JulVg8GMVB7VlW+I8+YDR3:2d01#\n#Zkz.6/9:LQ61fJvNCcpyrHwEPGI7Z5wHlT1/imivCKr8XxJc3AIFn7Yl/XWNsKfVP7B8tvpipXvlEpCpPJwNCPCCCwn5eEwcgCj0ikbAEbJF4/OF7TPLrihuZ3EgJuLXvBLdJ+GwxwhYyfmO:c69b#\n#Zkz.7/9:oMIKkKd//2DTrk+nFn5WWiPeLslWjyDnD9AXXfJ2q2t9X/dXSQmWql71/9mhDgvTV4zK53AS/pEjVxAHF8PB5SI/ZpMTZSjl5DA6JAZcGeIac4OKKvrAqyYmig1YbQlChgZoP3PL:dc41#\n#Zkz.8/9:MZCUX1bVgORsxWYkFElceySaDBMcl5rY7W3Vdu4jqaVYl0wG3J+sy1AIslEA9+U9MspfINkCXVcC1TEIig2FRlHpT/+U7/UgCuVRguP62bFWY8N76ulEkNMFf6oE7GR/sA9VVeNl:e0b0#\n#Zkz.9/9:+GK6rSpyn4/G4UpO9thr/DIZjHwaRcXgaUTdftCkIVbN76ri1C3x5U29I/S+r/1h2QaHjVGV5/bemW7kag7YuGMFMmzmOxAAAAAA:6f1c#",
+   "texts": 9,
+   "bytes": 891
+  },
+  {
+   "from": "muse",
+   "text": "Not sure yet: I need a closer look at the bottom of the silver SUV to see whether its wheels are buried in sand, in colour, in high detail. Your kit crops it from your photo and sends it back.\nZOOM k4 94 24 8 4 C H",
+   "texts": 2
+  },
+  {
+   "from": "phone",
+   "text": "#Zkz.1/11:Ams0F00F5gJmATNSSUZGIAQAAFdFQlBWUDggFAQAAFArAJ0BKgABgAA/EXqxUqwtpSeu0jsBsCIJZ23gUKkCuGuIEESewTfX7BgqNkXfZzWJFz3aIKsx2P8QJqRBbhCqLfVg2uGv:bca3#\n#Zkz.2/11:oaOZTy6S049y7P9H8/0db4xyQo5RicfjQ7Z9oODvlmVyzjihSUsAKf7S69vUfEnahPVqXSPJ3CHlXXELixJH8/jZsvopwGR0BUWdCUIy3U+oS5+OYoKvDeeuEhsCefye+yL0BLLG:62c9#\n#Zkz.3/11:0GtSO6FXjlGuaPHvwd/VZrz0wYuA/7QwN+tiglBDyuvAf994d2ILX5yr6uOmIN+88OwUouUtFbReM4Cftda90zhuOoBYchKDly4CHEYxyaPY5i7DduMEZHsJhsyDhRta3v07ijwp:d01d#\n#Zkz.4/11:2yhMvFboupqKovDYqR3ngVNkGgv52w4rfZ5xIo0FsxxGxvAs90YU08VoSREuHJAXiy0iXMvPLYKA4YRUrNtnoSiMW0ibyufAJqIQMS8Lxk4A/hU0jovOGhXj1yFxRj5iVjYsYM4S:76ae#\n#Zkz.5/11:I3ZbDZW0VUMytE2osP4uqRVAVtBD1s7RA9nvf2tL7v6A4TYJezm2+BljLPW/dY2Wk33aydryvCGm2UNZzsQz8cBzg4nDFB3wkpHCt33QnlBW+brow/QXMfAII56plcjpOpyENbij:2364#\n#Zkz.6/11:0OVquplWK4jsSyZrPFFxXsDvEDhUMEfrXugVTbW+fyH8oIWqoYRLydoOMmr2VUIvNchq67j1RKfxKkZOeh/jTpEP+P4ZbluiUsu9TV5ZjqMwLLK60bixTOpVVqOvQNX89snl1CZS:3123#\n#Zkz.7/11:y9Z8PJ9v94r88Y6OBaBKT0Aqipc8Zmj9sdNjxQHAijAGA4NlKHq1p9O5rQQYnFMGcLcrcgeewepaQtEl+H9AXhTzHK6syysRuvclTiAHW0ej+ZGVbRhycZ5npfJLn1IWhupjbkTB:3b81#\n#Zkz.8/11:ffdUUh/On7ikMmZKercIuTcpC20ZHqRxpC2L5dIF6k+Pbn9Lso/HfsCaa8OunWlChygVfyRqSOVKdAcLBE0444zWuEU6wLsoPlSntH1v2NHwS3XzhbpnmWFJ2o0FmlBSgdLUldEb:494b#\n#Zkz.9/11:S1MWyKwrEOQDgb8UviEw/Do+SpaW2Fos579/xUW/oFDZHpoV2cToItoADjNjf2DsHWZvW+s58CDQIlxZ2lEaAKL/rFpneWf5er32zN/O+ls35NOvFFetIERbgcc91CZKsWSJpGfS:809d#\n#Zkz.10/11:+ypdKAp63ytKsimOr5F8k3C6BuYJVtqp7nKWnMS3wJRLy8ET1DUpolLXENs3ISNEjVLK3aki5yAsxCJsdKhPZ0efIHKpfmkiARSJ+/SjECP2kPO5shWFDOF7JGlJcwqini1I/tU2:5f7b#\n#Zkz.11/11:9Yf4p5j7t6igX23cQfSIdennclfNoubKNLH/QNgoFK0MPDCEPo5Nj7P1HATWGtkvJxHrtsZAAA==:bcba#",
+   "texts": 11,
+   "bytes": 1075
+  },
+  {
+   "from": "muse",
+   "text": "Not sure yet: I need a closer look at the rear tires of the silver SUV to see whether sand is piled against the tires, in colour, in high detail. Your kit crops it from your photo and sends it back.\nZOOM k4 95 26 7 2 C H",
+   "texts": 2
+  },
+  {
+   "from": "phone",
+   "text": "#Zkz.1/6:Ams0F5MGcwIaAJpSSUZGEAIAAFdFQlBWUDggBAIAAFAVAJ0BKgABSgA/EXq0UjitpTcsdzrzECIJaW3rMDwa5/dXMtpqsrnM9mdSFvriDqgMEogq9WwKlTS56tQJVjCh7JPJWsvU:2a6d#\n#Zkz.2/6:cu03W6vTeA6+k807hpIoc9+QPk8gNwHqpThZ5ycRKKbAjpIkYpagd7yMRz2QACmtSWrlQ1xdz+l22VRcEUbJjh1ucR6XsAQM2V4cf+789AYMGRMGJCs4BlQ5IwZC1iRElff74eB3:aafc#\n#Zkz.3/6:mvlQspkAAP7BFhv0Yumo3xTJgPRpELlEaQbD9vra79VVbPx9ktih/HIXVNQT21TUvwCrZZMwq6QlA9lJRfkwHy6YB9tZH63bapSOgpXDEDirzBdSb4bscY91ZpD09KH1ZLfjw0Gz:6c02#\n#Zkz.4/6:qX0dXt/zMwEkZFuCMyQRRAN2qovxBtjt9Rhpbl7r9jy9q+4dI/AlSPa/d16vMCux0yUzDS1aggjHtVDsRsQmnpgJ3dMasf6FZ6nV+RvwNcue4i6x8FgCin28kvmVHO3nSOkcOTI6:b1a6#\n#Zkz.5/6:GRxwASDY3KOQQ00XjJkE8iqYSEnhqo/QQl3QxvxBv14aDIXgZAaMfoMKRmwwcmGkT5nptn3fknaCdyVc1fVnCL3TLZzmuStg1IVeGgmN3aI0J/kJq1JKN+sWT/pYB4y0nQgf/Dqp:8216#\n#Zkz.6/6:2/Dh8V+KR3lyqA/srw1fyUYO1sUr3d4q/LfTvC+PGrvwlHAAAA==:6bbb#",
+   "texts": 6,
+   "bytes": 547
+  },
+  {
+   "from": "muse",
+   "text": "Not sure yet: I need a closer look at the rear wheels of the silver SUV to see whether sand is piled around the tires, in high detail. Your kit crops it from your photo and sends it back.\nZOOM k4 97 26 4 2 H",
+   "texts": 2
+  },
+  {
+   "from": "phone",
+   "text": "#Zkz.1/6:Ams0GCYGcwEzAJpSSUZGAgIAAFdFQlBWUDgg9gEAAFAUAJ0BKqEAUQA/OY64VK8xsiivGEq6QCcJaWz2yE4AMd018uLy+5YYxwDXeYesYXen3+Yxs6UaW6CaqfOmTG9kNrmzjV/d:53fa#\n#Zkz.2/6:YX/eiLTdLCMNOChXDrp9O8nST81p+H6oqtCmjOWxgU4qD2VdiFKQDtLflMaO7feer1oaoXNYuR87CCbBKbrjSyt1tQqEAgV3ghrzRhRslL7k0RmuQeAovZw6eLFFAznzuUdngAD+:0b51#\n#Zkz.3/6:7nOP8XYC8OKDk1ia5cAO6lKq6NTwwQqiIpZE3vlR1Xja5glKnUY8e+FRe81vMc9GnZybZMzg1MTQRPYwI+b+hctus37hD6y5Oo0Bi1XYodVDo/wyWUKfeMIujfky88Ok8vr7H22l:41a8#\n#Zkz.4/6:pRTRQ1gVWNYNY3o2dNM5dKpT+deeClIe4aCIHC0O6bteOTa0S0cCZEBXeftDhsq1Y2i+pov1qMsfslU3HL9H5h5w7W3SdEwFrS6QWqP3yskes1L+v1onA8JqZSbR7Y8KyYZJBy2o:8ba6#\n#Zkz.5/6:w6yLBfM8tMtBMmzPKA84uJTdvQkdaLe1S2W3NGrrxp47rec0m+BxjsqXed9YB8OnIImkwdAUJh0U1OeZ0puicAGpWp1MKTqhZUhcPhCpREcSsumQpV5Sz/CEa7TF3IfllsCUGOSH:cdf7#\n#Zkz.6/6:myl0DRR3R4xtykeYd4qjYQkaZCAAAAA=:18a2#",
+   "texts": 6,
+   "bytes": 533
+  },
+  {
+   "from": "muse",
+   "text": "Not sure yet: I need closer looks at the right rear wheel to see sand piled around the tire, in colour, in high detail; and the left rear wheel area to see sand piled around the tire, in colour, in high detail. Your kit crops them from your photo and sends them back.\nZOOM k4 98 26 4 2 C H\nZOOM k4 99 25 2 2 C H",
+   "texts": 3
+  },
+  {
+   "from": "phone",
+   "text": "#Zkz.1/4:Ams0GGYGcwEzAJpSSUZGLgEAAFdFQlBWUDggIgEAAJANAJ0BKqAAUQA/EXy0VCw/qqipHSnb8CIJaQDWoxqLfBDvbG9Mujh2YjLlk22Re+nF9UtInWJ4O7oiPU7NxwtCIpBSrF92:6761#\n#Zkz.2/4:TsAaH4eiGOMsHD8kLolY4tAAdqMVGmLIioGha4Mu0WgOp7Lkvo68IaQYZ3rqAAD+6+mHhj0Fr1gji5InQMWUna2WZQ4rfVyXelwElVFAfc1htfxTlxEWZMJG8mEvF7J4j55llJho:fb8e#\n#Zkz.3/4:/drHw5IZW/GXHv/CM2sesVBNN4abb+HfxigKZ0gHnf4Zh6wl7wvLcsNReWqFtHRT2grctimJk/MxIC1Rlw5CXy3fAqP3JmlwDlW3WF18oCIl4k6LowDOUmIgnDwFx53JAsffrUJA:d233#\n#Zkz.4/4:JrIYLnsNtebOrHPZmaAA:9718#\n#Zky.1/3:Ams0GLMGMwCaAJpSSUZG1gAAAFdFQlBWUDggygAAALAIAJ0BKlAAUAA/DXKsUCw/pKKx+Suj8CGJaQDVCt/5gskqYbjCciDYyHAGRDoSOtw5Y2fuLs4FB96M/jMm1UvjW/fcxUEb:5c4a#\n#Zky.2/3:1SEW/+nQAAD+6t5hWG1LNoCNDoiqDCjtxoX3w/ogoALO6+Tnxc315qeWM//4X3KVDXG7cEMYeh56V4R1/0H3o7L/vMWoNCZcPZohZLP8sTTkFvPp4eL3l0MQPLyeNFoU/UzDsgEo:c624#\n#Zky.3/3:QQsrYAV02CtdHv7MEp6cNk9QOhQwkeZiWXI+SAA=:4080#",
+   "texts": 6,
+   "bytes": 554
+  },
+  {
+   "from": "muse",
+   "text": "No. The silver SUV is sitting on clear pavement, with a pile of sand beside it on the left.",
+   "texts": 1
+  }
+ ],
+ "answer": "No. The silver SUV is sitting on clear pavement, with a pile of sand beside it on the left.",
+ "phone_bytes": 4561,
+ "photo_bytes": 6610352,
+ "target": {
+  "in_photo": [
+   0.7363,
+   0.25,
+   0.7871,
+   0.315
+  ],
+  "score": 0.84,
+  "from": "SAM 3.1's SUV outlines in the run, together"
+ }
+}
