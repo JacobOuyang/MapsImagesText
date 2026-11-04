@@ -378,3 +378,9 @@ of 3. Four other poison ivy photos were dropped: in a dense patch Muse couldn't 
 each), and a wide marsh view went wrong every time.
 
 Voice-overs and finished videos stay in `private/`, which git ignores.
+
+## Tests on GitHub
+
+`.github/workflows/tests.yml` runs `python -m unittest discover tests` on Python 3.12 for every push and pull request.
+The 40 tests are offline (codes, the store, the loop with scripted Muse replies, the WhatsApp bridge with no Twilio
+credentials), so no secret is set. Run in a fresh copy of the repo with no `.env`: `Ran 40 tests in 3.422s`, `OK`.
