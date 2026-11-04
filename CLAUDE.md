@@ -124,7 +124,8 @@ Voice-overs and finished videos live in `private/` (git-ignored); `demo/video/vo
 
 **Simulator (`sim/server.py`).** `/closer` (`closer.html` + `closer_demo.py`: a simulated phone, `sim/phones.py`, asks
 about a sample photo through the real router; samples from `sim/samples/real|hard|spiders`), `/compare`
-(`compare.html`: `out/eval/three_ways/results.json`), `/kit.js`, `/store/<id>.jpg`.
+(`compare.html`: `out/eval/three_ways/results.json`), `/kit.js`, `/store/<id>.jpg`. `demo/static/build.py` copies `/compare` with its saved runs into `docs/compare/`
+(GitHub Pages, no model calls).
 
 **Evals (`evals/`, see its README).** `loop/run.py` and `kit/three_ways.py` share `three_ways.muzip_run` (a phone per run,
 unique numbers since an inquiry is found by number) and `verdict` (a text-only Muse call judging against a reference);
