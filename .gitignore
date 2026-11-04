@@ -7,3 +7,6 @@ cache/
 !.env.example
 .venv/
 private/
+
+# Instructions for coding agents live on the dev branch
+CLAUDE.md
