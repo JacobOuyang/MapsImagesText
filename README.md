@@ -206,7 +206,7 @@ The three-way comparison behind `/compare` (slow; it asks every question five ti
 | Simulator | `sim/server.py`, `sim/closer.html`, `sim/compare.html`, `sim/closer_demo.py`, `sim/phones.py` |
 | Evals | `evals/kit/three_ways.py` (three ways), `evals/loop/` (the loop's eval), `evals/kit/webp_vs_normal.py` (sizes), `evals/closer/` (SAM on small pictures) |
 
-[HOW_IT_WORKS.md](HOW_IT_WORKS.md) has the details with real runs; `CLAUDE.md` describes how the pieces connect.
+[HOW_IT_WORKS.md](HOW_IT_WORKS.md) has the details with real runs.
 
 **The demo:** `.venv/bin/python sim/server.py`, then http://127.0.0.1:8765/demo: four scenes (three
 ways, look closer, a simulated WhatsApp group with Muse in it, a drone), live with the models. See
