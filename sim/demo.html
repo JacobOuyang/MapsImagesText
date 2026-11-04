@@ -43,12 +43,12 @@ const Q = s => encodeURIComponent(s);
 const LIGHTS = 'Two warning lights came on on my dashboard. Which ones are they, and what do they mean?';
 const SIGN = 'There are people on a roof. What does the sign next to them say?';
 const SCENES = [
-  {name: 'Three ways', src: '/compare?photo=dashboard', steps: [
+  {name: 'Three ways', src: '/compare?photo=dashboard&demo=1', steps: [
     {say: 'Two warning lights came on. Which ones, and what do they mean? Sent the normal way, the photo is 214 KB.',
      note: 'Every answer on this page is Muse Spark\'s, judged against the truth, five runs each.'},
-    {say: 'Squeezed under 4 KB with classical compression, Muse can\'t even tell which lights they are.',
+    {say: 'Squeezed to 3 KB with classical compression, Muse can\'t tell which lights they are.',
      note: 'WebP got its best shot: every size and quality that fits, in colour and grey.'},
-    {say: 'MuZip sends the same 4 KB, 55 times smaller: the battery light and the check-engine light. Five times out of five.',
+    {say: 'MuZip sends the same 3 KB, 74 times smaller: the battery light and the check-engine light. Five times out of five.',
      note: 'Classical compression keeps what you\'d notice. MuZip keeps what the question needs.'},
     {photo: 'medicine_headache', say: 'A cabinet of look-alike bottles: which one is for a headache? Classical compression says take the Tylenol. There is no Tylenol.'},
     {photo: 'almond_milk', say: 'On a real photo of a supermarket aisle: is there almond milk? Which brand?'},

@@ -74,13 +74,13 @@ def run(conv, img, question):
         message = question + "\n" + codes.text(codes.parts("P", sent, pic))
         for _ in range(closer.MAX_VIEWS + 1):  # Muse answers by then (closer.BUDGET may end it sooner)
             out = _exchange(conv, message, who)
-            ask = next((codes.ZOOM.search(r) for r in reversed(out) if codes.ZOOM.search(r)), None)
-            if not ask or ask.group(1) != pic:
+            ask = next((r for r in reversed(out) if codes.zooms(r, pic)), None)  # Muse's request: one ZOOM, or a few at once
+            if not ask:
                 return
-            message, data = codes.answer_zoom(img, ask, pic)
-            box = codes.read_zoom(codes.decode(message)["complete"][0]["data"])[1]
-            conv["views"].append({"box": box, "colour": codes.zoom_options(ask)["colour"], "bytes": len(data),
-                                  "image": "data:image/webp;base64," + base64.b64encode(data).decode()})
+            message, datas, ms = codes.answer_zooms(img, ask, pic)
+            for c, data, m in zip(codes.decode(message)["complete"], datas, ms):
+                conv["views"].append({"box": codes.read_zoom(c["data"])[1], "colour": codes.zoom_options(m)["colour"], "bytes": len(data),
+                                      "image": "data:image/webp;base64," + base64.b64encode(data).decode()})
     except Exception as ex:
         conv["error"] = str(ex)
     finally:

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MuZip Parts</title>
+<style>
+  /* Section 4 of the video (what it's made of): one workflow chart, each part lit as the voice-over names it, drawn as
+     a function of time like the other scenes (?t=6 is the frame at 6 s, ?play=1 plays it). Generic on purpose: drawn
+     icons, no example photo, so the workflow reads on its own. The times are where the lines fall in
+     private/voice/04_any_photo.mp3, from its pauses. */
+  :root { --bg:#0f1419; --panel:#161d24; --line:#2a3540; --fg:#e8edf2; --quiet:#8b98a5; --blue:#1a8cff; --sam:#e64980; }
+  html, body { margin:0; width:1920px; height:1080px; background:var(--bg); color:var(--fg); font-family:system-ui, -apple-system, "Segoe UI", sans-serif; overflow:hidden; }
+  body { position:relative; }
+  .logo { position:absolute; left:0; right:0; top:22px; display:flex; justify-content:center; align-items:center; gap:10px; }
+  .logo svg { overflow:visible; } .tooth { fill:var(--fg); }
+  h1 { position:absolute; left:0; right:0; top:130px; margin:0; text-align:center; font-size:48px; font-weight:700; }
+  .node { position:absolute; top:250px; width:350px; height:430px; background:var(--panel); border:2px solid var(--line); border-radius:22px;
+          transition:none; }
+  .node h2 { margin:22px 24px 4px; font-size:30px; } .node .sub { margin:0 24px; color:var(--quiet); font-size:21px; }
+  .node .pic { position:absolute; left:24px; right:24px; top:120px; height:190px; border-radius:12px; overflow:hidden; background:#0b1015; }
+  .node .pic svg { width:100%; height:100%; display:block; }
+  .node .foot { position:absolute; left:24px; right:24px; top:326px; font-size:22px; line-height:1.4; }
+  .node .foot b { color:var(--blue); }
+  .node.lit { border-color:var(--blue); box-shadow:0 0 0 3px var(--blue), 0 0 60px rgba(26,140,255,.45); }
+  .node.dim { opacity:.28; }
+  .does { position:absolute; left:24px; right:24px; top:110px; display:flex; flex-direction:column; gap:12px; }
+  .does div { font-size:28px; font-weight:650; padding:14px 18px; background:#1f2b38; border-radius:14px; }
+  .does div.on { background:#123a66; box-shadow:inset 4px 0 0 var(--blue); }
+  .does div small { display:block; font-size:19px; color:var(--quiet); font-weight:500; margin-top:4px; }
+  svg.arrows { position:absolute; left:0; top:0; width:1920px; height:1080px; overflow:visible; pointer-events:none; }
+  .arrow { stroke:#3a4a5a; stroke-width:5; fill:none; } .arrow.lit { stroke:var(--blue); }
+  .head { fill:#3a4a5a; } .head.lit { fill:var(--blue); }
+  .looplabel { position:absolute; left:0; right:0; top:860px; text-align:center; font-size:30px; color:var(--quiet); }
+  .looplabel.lit { color:var(--fg); }
+</style>
+</head>
+<body>
+<div class="logo">
+  <svg viewBox="0 0 200 240" style="height:76px" aria-hidden="true">
+    <defs><linearGradient id="blue" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0050e6"/><stop offset="1" stop-color="#1a8cff"/></linearGradient></defs>
+    <path d="M74 42 L36 224 M74 42 L57 150 Q52 182 74 172 L152 42 L136 150 Q131 182 162 168" fill="none" stroke="url(#blue)" stroke-width="28" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+  <svg id="zip" viewBox="0 0 60 200" style="height:66px; transform:skewX(-12deg)" aria-hidden="true"></svg>
+</div>
+<h1 id="title">Under the hood</h1>
+<section class="node" id="n0" style="left:80px"><h2>The photo</h2><div class="sub">stays on the phone</div>
+  <div class="pic"><svg viewBox="0 0 300 190" aria-hidden="true"><rect x="105" y="8" width="90" height="174" rx="16" fill="#0b1015" stroke="#8b98a5" stroke-width="5"/>
+      <rect x="115" y="28" width="70" height="120" rx="4" fill="#1f2b38"/><circle cx="165" cy="52" r="10" fill="#f59f00"/>
+      <path d="M115 148 L140 100 L155 120 L168 104 L185 132 L185 148 Z" fill="#40c057"/><rect x="138" y="160" width="24" height="5" rx="2.5" fill="#8b98a5"/></svg></div><div class="foot">The full photo is never sent.</div></section>
+<section class="node" id="n1" style="left:540px"><h2>Image compression</h2><div class="sub">the standard kind (WebP)</div>
+  <div class="pic"><svg viewBox="0 0 300 190" aria-hidden="true" id="pixels"></svg></div><div class="foot">Every piece it sends is a tiny, heavily compressed image.</div></section>
+<section class="node" id="n2" style="left:1000px"><h2>Muse Spark</h2><div class="sub">the agent</div>
+  <div class="does"><div>Understands<small>the question and every piece so far</small></div><div>Decides<small>what to look at next</small></div><div>Answers<small>once it's sure</small></div></div></section>
+<section class="node" id="n3" style="left:1460px"><h2>SAM 3.1</h2><div class="sub">finds exactly where</div>
+  <div class="pic"><svg viewBox="0 0 300 190" aria-hidden="true"><rect x="40" y="10" width="220" height="170" rx="8" fill="#1f2b38"/>
+      <path d="M150 52 C186 48 205 78 196 110 C188 140 150 152 122 138 C96 125 92 92 108 72 C118 59 132 54 150 52 Z" fill="#3a4a5a"/>
+      <path d="M150 52 C186 48 205 78 196 110 C188 140 150 152 122 138 C96 125 92 92 108 72 C118 59 132 54 150 52 Z" fill="none" stroke="#e64980" stroke-width="6"/>
+      <rect x="86" y="38" width="128" height="120" fill="none" stroke="#1a8cff" stroke-width="4" stroke-dasharray="12 8"/></svg></div><div class="foot">Outlines what Muse wants next, so each close-up is cut tight around it.</div></section>
+<svg class="arrows" id="arrows"></svg>
+<div class="looplabel" id="looplabel">Muse asks for the next piece, and round again until it's sure</div>
+<script>
+// Where the lines fall in the voice-over (seconds): "Built on existing image compression, the same loop works for any
+// photo and any question. Muse Spark decides, SAM three point one finds, and the device keeps the rest."
+const T = {decides: 6.3, sam: 7.35, samEnd: 9.0, end: 11.4};  // "decides" is the second half of "Muse Spark decides" (5.85-7.12)
+const $ = id => document.getElementById(id);
+(function () {  // the zipper (as in sim/title.html)
+  const NS = 'http://www.w3.org/2000/svg', SLIDER = 62, svg = $('zip');
+  const el = (tag, attrs) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); svg.appendChild(e); };
+  for (let y = 0; y < 200; y += 10) [[-1, 0], [1, 5]].forEach(([side, dy]) => {
+    const ty = y + dy, open = Math.max(0, SLIDER - ty) * 0.22;
+    el('rect', {class: 'tooth', x: side < 0 ? 17 - open : 29 + open, y: ty, width: 14, height: 6, rx: 1.5});
+  });
+  el('path', {fill: 'url(#blue)', d: `M16 ${SLIDER - 8} H44 L40 ${SLIDER + 14} H20 Z`});
+  el('rect', {fill: 'url(#blue)', x: 24, y: SLIDER + 12, width: 12, height: 32, rx: 4});
+  el('rect', {x: 27.5, y: SLIDER + 30, width: 5, height: 9, rx: 2, fill: 'var(--bg)'});
+})();
+// The arrows: photo -> compression -> Muse -> SAM along the top, and SAM back to the photo underneath (the loop).
+const NS = 'http://www.w3.org/2000/svg';
+function arrow(d, head, id) {
+  const g = document.createElementNS(NS, 'g'); g.id = id;
+  const p = document.createElementNS(NS, 'path'); p.setAttribute('d', d); p.setAttribute('class', 'arrow');
+  const h = document.createElementNS(NS, 'path'); h.setAttribute('d', head); h.setAttribute('class', 'head');
+  g.append(p, h); $('arrows').appendChild(g);
+}
+arrow('M430 465 H526', 'M526 451 L546 465 L526 479 Z', 'a0');
+arrow('M890 465 H986', 'M986 451 L1006 465 L986 479 Z', 'a1');
+arrow('M1350 465 H1446', 'M1446 451 L1466 465 L1446 479 Z', 'a2');
+arrow('M1635 680 V800 H255 V700', 'M241 700 L255 680 L269 700 Z', 'a3');
+// The compression icon: a small picture as coarse grey blocks, the way a tiny WebP looks enlarged.
+(function () {
+  const svg = $('pixels'), cols = 10, rows = 6, cell = 18, x0 = 150 - cols * cell / 2, y0 = 95 - rows * cell / 2;
+  const shade = (c, r) => { const sky = r < 2, hill = r >= 3 + ((c * 7) % 3 === 0 ? 0 : 1); return sky ? 70 + 12 * ((c + r) % 3) : hill ? 120 + 18 * ((c * 3 + r) % 3) : 95 + 10 * ((c + 2 * r) % 3); };
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const v = shade(c, r), e = document.createElementNS(NS, 'rect');
+    e.setAttribute('x', x0 + c * cell); e.setAttribute('y', y0 + r * cell); e.setAttribute('width', cell); e.setAttribute('height', cell);
+    e.setAttribute('fill', `rgb(${v},${v + 6},${v + 12})`); svg.appendChild(e);
+  }
+})();
+async function load() {}
+function render(t) {
+  // Everything stays lit; only "decides" and SAM 3.1 light up as they're said.
+  [0, 1, 2, 3].forEach(i => { $('n' + i).classList.remove('dim'); $('n' + i).classList.toggle('lit', i === 3 && t >= T.sam && t < T.samEnd); });
+  ['a0', 'a1', 'a2', 'a3'].forEach(id => $(id).querySelectorAll('path').forEach(p => p.classList.add('lit')));
+  $('a3').style.opacity = 1; $('looplabel').classList.add('lit'); $('looplabel').style.opacity = 1;
+  [...document.querySelectorAll('.does div')].forEach((d, i) => d.classList.toggle('on', i === 1 && t >= T.decides && t < T.sam));
+}
+
+const q = new URLSearchParams(location.search);
+load().then(() => {
+  if (q.get('play') === '1') { const t0 = performance.now(); const tick = () => { const t = (performance.now() - t0) / 1000; render(t); if (t < T.end) requestAnimationFrame(tick); }; tick(); }
+  else render(+(q.get('t') || 0));
+  document.title = 'ready';
+});
+</script>
+</body>
+</html>

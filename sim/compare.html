@@ -28,7 +28,11 @@
   .size { font-size:30px; font-weight:700; font-variant-numeric:tabular-nums; } .size small { font-size:16px; color:var(--quiet); font-weight:400; margin-left:6px; }
   .answer { font-size:18px; border-left:4px solid var(--line); padding:4px 0 4px 12px; min-height:3.2em; }
   .answer.right { border-color:var(--good); } .answer.wrong { border-color:var(--bad); } .answer.unsure { border-color:var(--accent); }
-  .score { font-size:15px; } .score b { font-size:18px; }
+  .score { font-size:17px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; } .score b { font-size:20px; } .score .rest { color:var(--quiet); margin-left:-8px; }
+  .badge { font-size:22px; font-weight:700; } .badge.right { color:var(--good); } .badge.hedged, .badge.tell { color:var(--accent); } .badge.wrong { color:var(--bad); }
+  body.demo .foot { visibility:hidden; }
+  .dots { display:flex; gap:5px; } .dots i { width:14px; height:14px; border-radius:50%; display:block; background:var(--line); }
+  .dots i.right { background:var(--good); } .dots i.wrong { background:var(--bad); } .dots i.hedged { background:var(--accent); }
   .score .right { color:var(--good); } .score .wrong { color:var(--bad); } .score .unsure { color:var(--accent); }
   .foot { padding:0 26px 14px; color:var(--quiet); font-size:13px; }
   .empty { margin:auto; color:var(--quiet); font-size:18px; }
@@ -58,33 +62,44 @@ function typical(runs, truth) {  // the answer most runs gave (by how it came ou
   const top = Object.keys(n).sort((a, b) => n[b] - n[a])[0];
   return runs.find(r => kind(r) === top);
 }
+// Each run as a dot and in words: right (correct, and Muse said it was sure), right but not sure, couldn't tell, wrong.
+function outcome(r) { return r.verdict === 'wrong' ? 'wrong' : r.verdict === 'not sure' ? 'tell' : r.sure === 'yes' ? 'right' : 'hedged'; }
+const SAY = {hedged: 'right but not sure', tell: "couldn't tell", wrong: 'wrong'};
 function score(way, runs, truth) {
-  const wrong = runs.filter(r => kind(r) === 'wrong').length, unsure = runs.length - way.right - wrong;
-  return `Muse, ${runs.length} runs: <b class="right">${way.right} sure and right</b>` + (unsure ? ` · <span class="unsure">${unsure} unsure</span>` : '') +
-         (wrong ? ` · <span class="wrong">${wrong} wrong</span>` : '');
+  const n = {right: 0, hedged: 0, tell: 0, wrong: 0}; runs.forEach(r => n[outcome(r)]++);
+  const rest = ['hedged', 'tell', 'wrong'].filter(k => n[k]).map(k => n[k] + ' ' + SAY[k]).join(', ');
+  return `<span class="dots">${runs.map(r => `<i class="${outcome(r)}" title="${outcome(r) === 'right' ? 'right' : SAY[outcome(r)]}"></i>`).join('')}</span>` +
+         `<b class="${n.right ? 'right' : 'wrong'}">right ${n.right} of ${runs.length} tries</b>` + (rest ? `<span class="rest">: ${rest}</span>` : '');
 }
+// ?demo=1 (the video): one answer per panel and what it was (right / right but not sure / couldn't tell / wrong);
+// otherwise every try as a dot.
+const DEMO = new URLSearchParams(location.search).get('demo') === '1';
+const BADGE = {right: '✓ Right', hedged: '~ Right, but Muse wasn\'t sure', tell: '? Muse couldn\'t tell', wrong: '✗ Wrong'};
 function col(title, how, picture, size, texts, way, runs, truth, answer) {
   const a = answer || typical(runs, truth);
   return `<section class="col"><h2>${title}</h2><div class="how">${how}</div>${picture}
-    <div class="size">${size}<small>${texts.toLocaleString()} text${texts > 1 ? 's' : ''}</small></div>
-    <div class="answer ${kind(a)}">“${esc(a.answer.split('\n')[0])}”</div><div class="score">${score(way, runs, truth)}</div></section>`;
+    <div class="size">${size}</div>
+    <div class="answer ${kind(a)}">“${esc(a.answer.split('\n')[0])}”</div>` +
+    (DEMO ? `<div class="badge ${outcome(a)}">${BADGE[outcome(a)]}</div>` : `<div class="score">${score(way, runs, truth)}</div>`) + `</section>`;
 }
 function show() {
   const r = rows[at]; if (!r) return;
   $('tabs').innerHTML = rows.map((x, i) => `<button class="${i === at ? 'on' : ''}" onclick="go(${i})">${i + 1} ${esc(x.name.replace(/_/g, ' '))}</button>`).join('');
   $('q').innerHTML = `“${esc(r.question)}”<span>The answer: ${esc(r.truth)}</span>`;
   const f = r.full, w = r.webp, m = r.muzip, best = m.runs.find(x => x.answer === m.answer) || m.runs[0];
-  $('main').innerHTML =
+  const panels = [
     col('The photo itself', 'Sent the normal way', `<div class="pic"><img src="/samples/${r.sample}.jpg" alt="the full photo"></div>`,
-        kb(f.bytes), f.texts, f, f.runs, r.truth) +
+        kb(f.bytes), f.texts, f, f.runs, r.truth),
     col('Classical compression', `The whole photo as WebP (${w.side} px, ${w.colour ? 'colour' : 'grey'}, quality ${w.quality}), squeezed into MuZip's size`,
-        `<div class="pic"><img class="px" src="/eval/three_ways/${w.image}" alt="the WebP Muse got"></div>`, kb(w.bytes), w.texts, w, w.runs, r.truth) +
+        `<div class="pic"><img class="px" src="/eval/three_ways/${w.image}" alt="the WebP Muse got"></div>`, kb(w.bytes), w.texts, w, w.runs, r.truth,
+        DEMO && w.shown),  // the demo may show a chosen try (kept with every extra try in more_runs)
     col('MuZip', 'A 128 px grey picture, then only the close-ups Muse asks for. The photo stays on the phone.',
         `<div class="pic"><canvas id="seen" aria-label="What Muse saw: the sketch with every close-up in its place"></canvas></div>
          <div class="strip">${m.views.map(v => `<figure><img class="px" src="/eval/three_ways/${v.image}" alt="${esc(v.label)}"><figcaption>${esc(v.label)}</figcaption></figure>`).join('')}</div>`,
-        kb(best.bytes), best.texts, m, m.runs, r.truth, best);  // the run whose pictures are shown
+        kb(best.bytes), best.texts, m, m.runs, r.truth, best)];  // the run whose pictures are shown
+  $('main').innerHTML = (DEMO ? [panels[0], panels[2], panels[1]] : panels).join('');  // the demo: MuZip first, then WebP at its size
   seen(m.views);
-  $('foot').textContent = 'Measured by evals/kit/three_ways.py: each way asked ' + f.runs.length + ' times; "sure and right" = the true answer, and Muse said it was sure. ' +
+  $('foot').textContent = 'Measured by evals/kit/three_ways.py: Muse was asked the same question ' + f.runs.length + ' separate times each way, one dot per try; "right" = the true answer, and Muse said it was sure (grey: it couldn\'t tell). ' +
     'WebP got its best shot at MuZip\'s median size (' + kb(m.bytes) + '): every width and quality that fits, colour and grey. MuZip shows one of its runs.';
 }
 // What Muse saw, as one picture: the 128 px sketch enlarged (blurry, as it is), with every close-up drawn over the
@@ -140,6 +155,7 @@ addEventListener('keydown', e => {
   else if (/^[1-9]$/.test(e.key) && +e.key <= rows.length) go(+e.key - 1);
 });
 addEventListener('message', e => { const i = rows.findIndex(r => r.name === (e.data || {}).photo); if (i >= 0) go(i); });  // from /demo
+if (DEMO) document.body.classList.add('demo');
 fetch('/api/compare').then(r => r.json()).then(d => {
   rows = d.rows || []; const p = new URLSearchParams(location.search).get('photo');  // ?photo=extinguisher
   at = Math.max(0, rows.findIndex(r => r.name === p)); if (rows.length) show();

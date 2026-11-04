@@ -1,5 +1,5 @@
 {
- "loop": "6e3d7989b3",
+ "loop": "ae09787af2",
  "runs": 3,
  "rows": [
   {
@@ -9,13 +9,13 @@
    "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 68,
+   "texts": 72,
    "looks": 1,
-   "seconds": 12.2,
+   "seconds": 15.8,
    "answers": [
-    "You can take the Ibuprofen 200 mg pain reliever on the bottom right shelf of the medicine cabinet.",
-    "You can take the Ibuprofen 200 mg on the bottom right shelf of the open medicine cabinet.",
-    "You can take the Ibuprofen 200 mg Pain Reliever on the bottom right shelf of the medicine cabinet ab"
+    "You can take the Ibuprofen 200 mg pain reliever on the bottom right shelf of the medicine cabinet ab",
+    "You can take the Ibuprofen 200 mg pain reliever on the bottom shelf on the right side.",
+    "You can take the Ibuprofen 200 mg on the bottom right shelf of the cabinet."
    ]
   },
   {
@@ -25,13 +25,13 @@
    "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 93,
+   "texts": 90,
    "looks": 2,
-   "seconds": 19.7,
+   "seconds": 20.2,
    "answers": [
-    "Yes, Loratadine Allergy Relief on the middle shelf of the medicine cabinet above the sink.",
-    "Yes, Loratadine Allergy Relief on the middle shelf, center bottle.",
-    "Yes, Loratadine Allergy Relief on the middle shelf of the cabinet."
+    "Yes, Loratadine Allergy Relief on the middle shelf of the cabinet above the sink.",
+    "Yes, there is Allergy Relief on the middle shelf, left of the Antacid box.",
+    "Yes, Loratadine Allergy Relief on the middle shelf of the cabinet, left of center."
    ]
   },
   {
@@ -41,13 +41,13 @@
    "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 35,
+   "texts": 36,
    "looks": 2,
-   "seconds": 18.9,
+   "seconds": 20.1,
    "answers": [
-    "That's a tick on your leg.",
-    "That looks like a tick attached to your leg.",
-    "That's a tick on your leg."
+    "That's a tick on your ankle.",
+    "That's a tick attached to your leg.",
+    "That's a tick on your leg just above your sock."
    ]
   },
   {
@@ -57,29 +57,29 @@
    "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 53,
+   "texts": 49,
    "looks": 1,
-   "seconds": 12.2,
+   "seconds": 13.1,
    "answers": [
-    "No, you cannot use it. It is marked empty and needs recharging.",
-    "No - it is marked EMPTY / RECHARGE and says do not use. It needs recharging first.",
-    "No, do not use it. It is marked EMPTY / RECHARGE."
+    "No, do not use it. It is marked EMPTY / RECHARGE.",
+    "No, do not use it. It is marked EMPTY/RECHARGE on the front.",
+    "No, do not use it. It is marked EMPTY and RECHARGE."
    ]
   },
   {
    "id": "bus_timetable",
    "kind": "real",
    "runs": 3,
-   "right": 0,
-   "hedged": 1,
+   "right": 1,
+   "hedged": 0,
    "wrong": 0,
-   "texts": 186,
-   "looks": 3,
-   "seconds": 28.4,
+   "texts": 184,
+   "looks": 4,
+   "seconds": 39.6,
    "answers": [
     "I can't tell from what I can see. (not sure)",
-    "I can't tell from what I can see. (not sure)",
-    "The Saturday timetable shows no 9 am bus, so the next bus after 9 am is at 10:06 am. (fairly sure)"
+    "It's Saturday 9 am, and the 9 am Saturday slot is blank. The next bus is at 10:06.",
+    "I can't tell from what I can see. (not sure)"
    ]
   },
   {
@@ -89,13 +89,13 @@
    "right": 1,
    "hedged": 0,
    "wrong": 0,
-   "texts": 160,
+   "texts": 130,
    "looks": 5,
-   "seconds": 44.5,
+   "seconds": 42.3,
    "answers": [
     "I can't tell from what I can see. (not sure)",
     "I can't tell from what I can see. (not sure)",
-    "A gallon of whole milk is $3.69 on special."
+    "A gallon of whole milk is $3.69."
    ]
   },
   {
@@ -105,12 +105,12 @@
    "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 143,
-   "looks": 3,
-   "seconds": 26.6,
+   "texts": 111,
+   "looks": 2,
+   "seconds": 26.1,
    "answers": [
-    "Yes, there is almond milk - Blue Diamond Almond Breeze.",
-    "Yes, there is almond milk here. It is Almond Breeze.",
+    "Yes, there is Almond Breeze almond milk.",
+    "Yes, there is almond milk. The brand is Almond Breeze.",
     "Yes, there is almond milk - Blue Diamond Almond Breeze."
    ]
   },
@@ -120,14 +120,14 @@
    "runs": 3,
    "right": 1,
    "hedged": 0,
-   "wrong": 0,
-   "texts": 164,
-   "looks": 4,
-   "seconds": 43.3,
+   "wrong": 1,
+   "texts": 138,
+   "looks": 3,
+   "seconds": 31.0,
    "answers": [
-    "I can't tell from what I can see. (not sure)",
-    "I can't tell from what I can see. (not sure)",
-    "Yes, there is a jar labeled SIR. CINNAMOMI."
+    "Yes, a jar on the middle shelf is labeled SIL. CINNAMOMI.",
+    "Yes, there is a jar for cinnamon. Its label says SIR. CINNAMOMI.",
+    "I can't tell from what I can see. (not sure)"
    ]
   },
   {
@@ -137,29 +137,29 @@
    "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 39,
+   "texts": 38,
    "looks": 1,
-   "seconds": 8.1,
+   "seconds": 10.5,
    "answers": [
-    "The box is Propranolol 40mg, expiring 02/2020. It is expired and not good to use in November 2026.",
-    "The box is Propranolol 40mg with expiry 02/2020. It is expired and not good to use in November 2026.",
-    "The box is labeled Propranolol 40mg with expiry 02/2020. It is expired and not good to use in Novemb"
+    "The box is Propranolol 40mg with exp 02/2020. It is expired and not good in November 2026.",
+    "The box is labeled Propranolol 40mg with expiry 02/2020. It is expired and not good to use in Novemb",
+    "The box is Propranolol 40mg, expiring 02/2020. It is expired and not good in November 2026."
    ]
   },
   {
    "id": "parking",
    "kind": "easy",
    "runs": 3,
-   "right": 3,
+   "right": 2,
    "hedged": 0,
    "wrong": 0,
-   "texts": 56,
+   "texts": 47,
    "looks": 2,
-   "seconds": 16.5,
+   "seconds": 22.2,
    "answers": [
-    "No. It's No Parking 7-9 AM on Fridays in June for street cleaning, tow zone.",
-    "No. It's street cleaning no parking 7-9am on Fridays in June.",
-    "No, you cannot. It's street cleaning no parking 7 to 9 am on Fridays in June."
+    "No. It's no parking 7 to 9 am on Fridays in June for street cleaning, tow zone.",
+    "I can't tell from what I can see. (not sure)",
+    "No, you cannot. It is no parking 7 to 9 am on Fridays from April to October for street cleaning."
    ]
   },
   {
@@ -169,13 +169,13 @@
    "right": 3,
    "hedged": 0,
    "wrong": 0,
-   "texts": 77,
+   "texts": 103,
    "looks": 2,
-   "seconds": 19.6,
+   "seconds": 16.1,
    "answers": [
     "The sign says NEED INSULIN 2 PEOPLE.",
     "The sign says NEED INSULIN 2 PEOPLE.",
-    "The sign on the roof says \"NEED INSULIN 2 PEOPLE\"."
+    "The sign says NEED INSULIN 2 PEOPLE."
    ]
   },
   {
@@ -185,13 +185,13 @@
    "right": 2,
    "hedged": 0,
    "wrong": 1,
-   "texts": 185,
-   "looks": 3,
-   "seconds": 21.6,
+   "texts": 61,
+   "looks": 1,
+   "seconds": 9.7,
    "answers": [
-    "This camera is watching Pump Station Line 3.",
-    "This camera is watching the control cabinet for Pump Station Line 3.",
-    "This camera is watching Pump Station Line 1."
+    "This is CAM-07 watching Pump Station Line 3, as labeled on the control cabinet.",
+    "This is CAM-07 watching Pump Station Line 3.",
+    "This camera is watching Pump Station Line 1. The control cabinet label says so."
    ]
   }
  ]

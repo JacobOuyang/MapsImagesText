@@ -179,7 +179,7 @@ def measure(k, name, rel, question, truth, pool):
     print("%s: MuZip x%d" % (name, RUNS), flush=True)
     muzip = list(pool.map(lambda n: muzip_run(img, question, truth, 100 * k + n), range(RUNS)))
     budget = int(statistics.median(r["bytes"] for r in muzip))
-    best = max(muzip, key=lambda r: (score([r]), -r["bytes"]))  # the run the page shows: right, and smallest
+    best = max(muzip, key=lambda r: (score([r]), -abs(r["bytes"] - budget)))  # the run the page shows: right, at WebP's size
     inq = store.get(best["inquiry"])
     views = [{"image": "%s/muzip_0.png" % name, "label": "128 px, grey"}]
     store.image(inq["id"]).save(os.path.join(OUT, name, "muzip_0.png"))

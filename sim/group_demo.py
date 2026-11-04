@@ -49,9 +49,10 @@ def _from_phone(c, text):
     """The sharer's kit answering a ZOOM by itself: the close-up goes to Muse, and Muse's reply to the group."""
     q = c["questions"][-1]
     q["texts"] += codes.sms_parts(text)
-    webp = codes.read_zoom(codes.decode(text)["complete"][0]["data"])[2]
-    _say(c, c["sharer"] + "'s phone", "", texts=codes.sms_parts(text), image="data:image/webp;base64," + base64.b64encode(webp).decode(),
-         note="sent a close-up by itself")
+    for i, z in enumerate(codes.decode(text)["complete"]):  # one Z code per close-up Muse asked for
+        webp = codes.read_zoom(z["data"])[2]
+        _say(c, c["sharer"] + "'s phone", "", texts=codes.sms_parts(text) if i == 0 else 0,
+             image="data:image/webp;base64," + base64.b64encode(webp).decode(), note="sent a close-up by itself")
     out = router.handle(text, (0.0, 0.0), who=MEMBERS[c["sharer"]])
     _muse(c, q, out["text"])
     return out
@@ -61,7 +62,7 @@ def _muse(c, q, text):
     """Muse's reply in the group; a request for a close-up goes on to the sharer's phone."""
     m = codes.ZOOM.search(text)
     words = text[:m.start()].strip() if m else text
-    words = words.replace(" Your kit crops it from your photo and sends it back.", "")
+    words = words.replace(" Your kit crops it from your photo and sends it back.", "").replace(" Your kit crops them from your photo and sends them back.", "")
     q["texts"] += codes.sms_parts(text)
     if m:
         _say(c, "Muse", words.replace("Not sure yet: I need", "Asking %s's phone for" % c["sharer"]), texts=codes.sms_parts(text))

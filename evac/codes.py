@@ -158,13 +158,27 @@ def zoom_options(m):
     return {"colour": "C" in flags, "side": HIGH if "H" in flags else None}
 
 
-def answer_zoom(img, m, ident):
+def answer_zoom(img, m, ident, code=None):
     """What a phone's kit does with a ZOOM for its own photo `img` (sent as the 128 px picture `ident`): crop the
-    original and make the Z code. -> (the message to send back, the WebP bytes)."""
+    original and make the Z code (`code`: its id; each close-up in one message needs its own). -> (the message to send
+    back, the WebP bytes)."""
     nums = [int(x) for x in m.group(2).split()]
     from . import smsimage
     data, region, box, size = crop_zoom(img, (0, 0, img.width, img.height), smsimage.fit(img).size, nums, **zoom_options(m))
-    return text(parts("Z", zoom_head(ident, box) + data, ident[0] + "z")), data
+    return text(parts("Z", zoom_head(ident, box) + data, code or ident[0] + "z")), data
+
+
+def zooms(message, ident=None):
+    """Every ZOOM for a box in `message` (Muse may ask for a few at once), for picture `ident` if given."""
+    return [m for m in ZOOM.finditer(message or "") if (ident is None or m.group(1).lower() == ident) and len(m.group(2).split()) == 4]
+
+
+def answer_zooms(img, message, ident):
+    """A phone's kit answering every ZOOM for its photo `img` in one message. -> (the message: one Z code per close-up,
+    in the order asked, [WebP bytes], [the ZOOM matches])."""
+    ms = zooms(message, ident)
+    outs = [answer_zoom(img, m, ident, ident[0] + "zyxwv"[i]) for i, m in enumerate(ms[:5])]
+    return "\n".join(o[0] for o in outs), [o[1] for o in outs], ms[:5]
 
 
 def zoom(message):
@@ -200,7 +214,8 @@ def zoom(message):
 def crop_zoom(img, region, size, box, colour=False, side=None):
     """A closer look at `box` (x, y, w, h in the pixels of a picture that showed `region` of `img` at `size`) ->
     (WebP bytes, the crop's region in img, the crop as a box in the picture's pixels, the size it is sent at). The
-    crop has a little margin, is square-ish, and is never smaller than MIN_CROP of the original's pixels; a crop
+    crop has a little margin and the box's own shape (a square crop of a wide box, such as a dashboard's cluster or a
+    row of signs, took in the whole side of the photo), and no side is smaller than MIN_CROP of the original's pixels; a crop
     smaller than the picture it is sent as goes at its own size, never enlarged (past the original's resolution a zoom
     shows nothing new), so one small icon can be looked at by itself. The server crops its kept originals this way; a
     phone, its own photos.
@@ -211,9 +226,9 @@ def crop_zoom(img, region, size, box, colour=False, side=None):
     (x0, y0, x1, y1), (w, h), (bx, by, bw, bh) = region, size, box
     sx, sy = (x1 - x0) / w, (y1 - y0) / h
     cx, cy = x0 + (bx + bw / 2) * sx, y0 + (by + bh / 2) * sy
-    half = max(max(bw * sx, bh * sy) * 0.6, MIN_CROP / 2)
-    rx0, ry0 = max(0, cx - half), max(0, cy - half)
-    rx1, ry1 = min(img.width, cx + half), min(img.height, cy + half)
+    hw, hh = max(bw * sx * 0.6, MIN_CROP / 2), max(bh * sy * 0.6, MIN_CROP / 2)
+    rx0, ry0 = max(0, cx - hw), max(0, cy - hh)
+    rx1, ry1 = min(img.width, cx + hw), min(img.height, cy + hh)
     crop = img.crop((round(rx0), round(ry0), round(rx1), round(ry1)))
     box = [(rx0 - x0) / sx, (ry0 - y0) / sy, (rx1 - rx0) / sx, (ry1 - ry0) / sy]
     quality = 20 if side > smsimage.SIDE else 5  # high detail is asked for to read small text: q5 blurs a 6 into an 8

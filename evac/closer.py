@@ -4,9 +4,9 @@ it that decide the answer.
 The loop is general: the phone holds the original, the server holds the model, and the channel between them is narrow.
   1. The phone sends the question and the cheapest useful view: the whole photo at 128 px, in grey (a few texts).
   2. Muse looks at every view so far (enlarged, each labelled with where it sits in the photo, what it cost and
-     whether it already shows that part at full resolution) and either answers, saying how sure it is, or asks for ONE
-     more view: a box inside any view so far (the whole photo, or a closer look to zoom in step by step), whether
-     colour matters, and why.
+     whether it already shows that part at full resolution) and either answers, saying how sure it is, or asks for
+     one more view (or a few at once, for two or three separate small things such as warning lights): a box inside any
+     view so far (the whole photo, or a closer look to zoom in step by step), whether colour matters, and why.
   3. The phone's kit crops that box from its original and sends it back as a Z code, in colour if asked. Boxes go out
      in the 128 px picture's pixels whatever view they were drawn on: a crop is never smaller than 128 of the
      original's pixels, so even the deepest useful zoom is several of those pixels wide.
@@ -36,8 +36,12 @@ BUDGET = 160    # or texts the phone may send in all (the photo and every closer
 FULL = 1.3      # a close-up came back this much wider than asked for: the photo has no finer detail there
 SHOWN = 512     # pictures are enlarged to this size for Muse: at 128 px a detail is a few pixels
 SAM_MIN = 0.5   # SAM's outline of the thing on a close-up counts from this confidence,
-SAM_SIZE = 0.15  # and when it is at least this share of the close-up's side (a speck is something else)
+SAM_SIZE = 0.08  # and when it is at least this share of the close-up's side (a speck is something else; a warning
+                 # light on a close-up of the whole cluster is about 11-14%)
 SAME = 0.6      # a box overlapping a view it has already got this much (IoU), at no more detail, shows nothing new
+AT_ONCE = 3     # closer looks Muse may ask for in one reply (two warning lights: one round trip, not two)
+SNAP = 0.4      # a box Muse draws inside a close-up narrower than this share of it is placed by SAM 3.1 (see _snap)
+SNAP_MARGIN = 0.3  # around SAM's outline, on each side, as a share of its size
 
 ASK = """Someone texted you a question about a photo. Their phone has the full photo, but over text you only get small
 pieces of it. {views}
@@ -54,17 +58,19 @@ colour or colour would help find or identify the thing (in grey an amber bottle 
 tight: the detail and a little margin (a box much bigger than the detail costs texts and shows it no sharper). Don't
 ask for a closer look inside an image that already shows its part at full resolution. To identify a few separate
 small symbols (two or three warning lights or icons), look at each one by itself: a tight box around just that one
-symbol, nothing else in it, one per closer look. Closer looks come back at up to 128 pixels (a small thing at the photo's full
+symbol, nothing else in it, and ask for all of them in the same reply (need as a list, one request each), so they
+come back together. Closer looks come back at up to 128 pixels (a small thing at the photo's full
 resolution, as many pixels as it has there); to read small text or tell many small things apart (a timetable, price tags, a shelf of labels), ask for high
 detail: 256 pixels, about 3 to 4 times the texts. Each image says how much closer it is than the whole photo: asking
 again for about the same part at the same detail shows nothing new, so draw a smaller box or ask for high detail.
 {budget}
 
 Reply with JSON: {{"answer": your answer in one or two short plain sentences, or "" if you ask for a closer look,
-"sure": "yes" | "fairly" | "no", "need": null or {{"in": the image's number, "box": [left, top, right, bottom], "colour": true or false,
+"sure": "yes" | "fairly" | "no", "need": null, or a request, or a list of up to 3 requests; a request is {{"in": the image's number, "box": [left, top, right, bottom], "colour": true or false,
 "detail": "normal" or "high",
 "look_at": a short noun phrase such as "the dark spot under the shelf", "to_see": a short phrase such as "the markings
-under its body", "object": what that thing most likely is, in one or two plain words such as "spider"}},
+under its body", "object": the one thing whose detail decides the answer, in one or two plain words such as "spider" or "warning light" (the
+thing itself, not the area around it such as "dashboard": a segmentation model outlines what you name)}},
 "safety": one short line of safety advice if the thing could hurt someone, else ""}}"""
 
 
@@ -119,15 +125,19 @@ def _decide(inq):
             d = llm.chat_json([{"role": "user", "content": content}])
         except Exception as ex:
             d = {"answer": "", "sure": "no", "need": None, "error": str(ex)[:120]}
-        need = d.get("need") if left > 0 else None
-        box = isinstance(need, dict) and in_photo(rec, need.get("in"), box_fractions(need.get("box")))
-        high = isinstance(need, dict) and str(need.get("detail") or "").lower() == "high"
+        asked = d.get("need") if left > 0 else None
+        asked = [n for n in (asked if isinstance(asked, list) else [asked]) if isinstance(n, dict)][:max(1, min(AT_ONCE, left))]
+        needs = []
+        for n in asked:
+            box = in_photo(rec, n.get("in"), box_fractions(n.get("box")))
+            if box:
+                needs.append((n, box, str(n.get("detail") or "").lower() == "high"))
         note = None
-        if box and attempt < 2:
+        if needs and attempt < 2:
             # Asking again for a view it has: on a bus timetable runs asked eight times for the same 128 px view
             # of the whole table, which never got sharper.
-            note = repeated(rec, box, high)
-        elif not box and attempt == 0 and left > 0 and d.get("sure") != "yes" and not d.get("error"):
+            note = next((r for r in (repeated(rec, box, high) for _, box, high in needs) if r), None)
+        elif not needs and attempt == 0 and left > 0 and d.get("sure") != "yes" and not d.get("error"):
             # It answered without being sure while it could still look (the prompt says not to; runs that gave up
             # early missed a bottle on the next shelf).
             note = ("You answered without being sure, but you can still ask for %d closer look%s. Ask for the one most "
@@ -135,14 +145,57 @@ def _decide(inq):
         if not note:
             break
         content[0] = dict(content[0], text=content[0]["text"] + "\n\n" + note)
-    if not box:
-        need = None
-    if not need and not d.get("answer"):
+    needs = [{"box": box, "in": n.get("in") or 1, "colour": bool(n.get("colour")), "high": high, "object": str(n.get("object") or ""),
+              "why": _why(n.get("look_at"), n.get("to_see") or n.get("why"))} for n, box, high in needs]
+    for need in needs:
+        _snap(rec, need)
+    if not needs and not d.get("answer"):
         d["answer"] = "I can't tell from what I can see."
         d["sure"] = "no"
     return {"answer": str(d.get("answer") or ""), "sure": str(d.get("sure") or "no"), "safety": str(d.get("safety") or ""),
-            "need": need and {"box": box, "in": need.get("in") or 1, "colour": bool(need.get("colour")), "high": high,
-                              "object": str(need.get("object") or ""), "why": _why(need.get("look_at"), need.get("to_see") or need.get("why"))}}
+            "need": needs[0] if needs else None, "needs": needs}
+
+
+def _snap(rec, need):
+    """Muse draws boxes by eye, and on small things it misses: on a dashboard both warning-light boxes were 2-3 sketch
+    pixels (25-40 of the photo's) left of the lights, cutting the red one off. When it asks for a small named thing
+    inside a close-up, SAM 3.1 finds that thing on the close-up, and the box moves to the outline nearest the one Muse
+    drew, with a margin. Muse still decides what to look at and roughly where; SAM says exactly where. Sets
+    need["snapped"] (SAM's confidence) when it moved the box."""
+    image, thing = need.get("in"), need.get("object")
+    views = got(rec)
+    try:
+        image = int(image or 1)
+    except (TypeError, ValueError):
+        return
+    if image < 2 or image > len(views) + 1 or not thing or not sam.available():
+        return  # on the 128 px sketch SAM finds nothing small (evals/closer/RESULTS.md)
+    w, h = rec["meta"]["pic"]["size"]
+    x, y, bw, bh = views[image - 2]["got_box"]
+    l, t, r, b = need["box"]
+    if (r - l) * w > SNAP * bw:
+        return  # a wide box (the whole cluster): Muse's own framing is what it wants
+    closeup = store.image(views[image - 2]["zoom"])
+    cw, ch = closeup.size
+    phrase = thing.lower().removeprefix("the ").removeprefix("a ").strip()
+    try:
+        found = [f for f in sam.segment(closeup, phrase) if f["score"] >= SAM_MIN]
+    except Exception:
+        return
+    to_photo = lambda fx, fy: ((x + fx * bw) / w, (y + fy * bh) / h)
+    cands = []
+    for f in found:
+        (fl, ft), (fr, fb) = to_photo(f["box"][0] / cw, f["box"][1] / ch), to_photo(f["box"][2] / cw, f["box"][3] / ch)
+        d = ((fl + fr - l - r) / 2) ** 2 + ((ft + fb - t - b) / 2) ** 2
+        cands.append((d, (fl, ft, fr, fb), f["score"]))
+    if not cands:
+        return
+    d, (fl, ft, fr, fb), score = min(cands)
+    if d ** 0.5 > max(r - l, b - t) * 1.5:
+        return  # nothing of that name near where Muse looked
+    mx, my = (fr - fl) * SNAP_MARGIN, (fb - ft) * SNAP_MARGIN
+    need["box"] = [max(0.0, fl - mx), max(0.0, ft - my), min(1.0, fr + mx), min(1.0, fb + my)]
+    need["snapped"] = round(score, 2)
 
 
 def repeated(rec, box, high):
@@ -214,17 +267,22 @@ def _reply(inq, d):
     rec = store.get(inq)
     meta = rec["meta"]
     decisions = meta.get("decisions", []) + [dict(d, at=time.time())]
-    if d["need"]:
+    if d.get("needs") or d["need"]:
         w, h = meta["pic"]["size"]
-        l, t, r, b = d["need"]["box"]
-        box = [round(l * w), round(t * h), max(1, round((r - l) * w)), max(1, round((b - t) * h))]
-        need = d["need"]
-        views = meta.get("views", []) + [{"box": box, "colour": need["colour"], "high": need.get("high", False), "why": need["why"],
-                                          "object": need.get("object", ""), "asked": time.time()}]
+        views, lines, words = meta.get("views", []), [], []
+        for need in d.get("needs") or [d["need"]]:
+            l, t, r, b = need["box"]
+            box = [round(l * w), round(t * h), max(1, round((r - l) * w)), max(1, round((b - t) * h))]
+            views = views + [{"box": box, "colour": need["colour"], "high": need.get("high", False), "why": need["why"],
+                              "object": need.get("object", ""), "asked": time.time()}]
+            how = ", ".join(x for x, on in (("in colour", need["colour"]), ("in high detail", need.get("high"))) if on)
+            words.append(need["why"] + (", " + how if how else ""))
+            lines.append("ZOOM %s %d %d %d %d%s%s" % (meta["pic"]["id"], *box, " C" if need["colour"] else "", " H" if need.get("high") else ""))
         store.update(inq, meta={"views": views, "decisions": decisions, "status": "asking"})
-        how = ", ".join(x for x, on in (("in colour", need["colour"]), ("in high detail", need.get("high"))) if on)
-        return ("Not sure yet: I need a closer look at %s%s. Your kit crops it from your photo and sends it back.\nZOOM %s %d %d %d %d%s%s"
-                % (need["why"], ", " + how if how else "", meta["pic"]["id"], *box, " C" if need["colour"] else "", " H" if need.get("high") else ""))
+        if len(words) == 1:
+            return "Not sure yet: I need a closer look at %s. Your kit crops it from your photo and sends it back.\n%s" % (words[0], lines[0])
+        return ("Not sure yet: I need closer looks at %s. Your kit crops them from your photo and sends them back.\n%s"
+                % ("; and ".join(words), "\n".join(lines)))
     store.update(inq, meta={"decisions": decisions, "status": "answered", "answer": d["answer"], "sure": d["sure"]})
     sure = {"yes": "", "fairly": " (fairly sure)", "no": " (not sure)"}.get(d["sure"], "")
     return d["answer"].rstrip() + sure + ("\n" + d["safety"] if d["safety"] else "")
@@ -274,13 +332,19 @@ def receive(who, parent, box, data):
     if rec is None:
         return None
     views = rec["meta"]["views"]
+    waiting = [v for v in views if not v.get("zoom")]  # asked for, in order; the phone answers them in that order
+    if not waiting:
+        return None
+    v = waiting[0]
     z = store.new("zoom", image=Image.open(io.BytesIO(data)), parent=rec["id"], box=box, who=who,
-                  meta={"bytes": len(data), "colour": views[-1]["colour"]})
-    asked, side = views[-1]["box"], max(box[2], box[3])
-    small = max(store.image(z).size) < (codes.HIGH if views[-1].get("high") else 128)  # sent at its own size: full resolution
-    views[-1].update(zoom=z, got_box=box, bytes=len(data), got=time.time(), full=small or side > FULL * 1.2 * max(asked[2], asked[3]),
-                     texts=codes.sms_parts(codes.text(codes.parts("Z", codes.zoom_head(parent, box) + data, parent[0] + "z"))))
-    views[-1]["sam"] = _outline(store.image(z), views[-1].get("object"), box, rec["meta"]["pic"]["size"])
-    views[-1]["sam_tried"] = bool(views[-1].get("object") and sam.available())
+                  meta={"bytes": len(data), "colour": v["colour"]})
+    asked, side = v["box"], max(box[2], box[3])
+    small = max(store.image(z).size) < (codes.HIGH if v.get("high") else 128)  # sent at its own size: full resolution
+    v.update(zoom=z, got_box=box, bytes=len(data), got=time.time(), full=small or side > FULL * 1.2 * max(asked[2], asked[3]),
+             texts=codes.sms_parts(codes.text(codes.parts("Z", codes.zoom_head(parent, box) + data, parent[0] + "z"))))
+    v["sam"] = _outline(store.image(z), v.get("object"), box, rec["meta"]["pic"]["size"])
+    v["sam_tried"] = bool(v.get("object") and sam.available())
     store.update(rec["id"], meta={"views": views})
+    if len(waiting) > 1:  # more close-ups of this request are on their way, in the same message
+        return rec["id"], ""
     return rec["id"], _reply(rec["id"], _decide(rec["id"]))

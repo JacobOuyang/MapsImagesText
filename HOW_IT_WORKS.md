@@ -10,10 +10,12 @@ answer is a few pixels, or it's a colour. So the server doesn't guess: it asks t
 (`evac/closer.py`).
 
 1. **The phone sends the question and the cheapest useful view:** the whole photo at 128 px, grey (about 10 texts).
-2. **Muse Spark looks** (every view enlarged to 512 px) and either answers, saying how sure it is, or asks for **one
-   closer look**: a tight box around the detail, drawn on any view so far (the whole photo, or an earlier close-up to
-   zoom in further), whether it needs colour, at what detail, and what it wants to see there.
-3. **The phone crops that box from its original**, in colour if asked, and sends it back by itself.
+2. **Muse Spark looks** (every view enlarged to 512 px) and either answers, saying how sure it is, or asks for **a
+   closer look** (or up to three at once, for a few separate small things): a tight box around the detail, drawn on
+   any view so far (the whole photo, or an earlier close-up to zoom in further), whether it needs colour, at what
+   detail, what it wants to see there and what the thing is.
+3. **The phone crops each box from its original**, in its own shape plus a margin, in colour if asked, and sends them
+   back by itself, all in one message (one Z code each).
 4. **SAM 3.1 outlines the thing** Muse named ("spider", "fire extinguisher") on the close-up, and Muse gets its exact
    place in the whole photo before deciding again.
 5. **Again, with every view so far,** each labelled with where it sits in the photo, its colour and detail, how many
@@ -37,11 +39,23 @@ answer is a few pixels, or it's a colour. So the server doesn't guess: it asks t
   told why. On a bus timetable runs had asked eight times for the same 128 px view of the whole table, which never got
   sharper.
 - **Tight boxes.** A box much bigger than the detail costs texts and shows it no sharper.
-- **One symbol at a time.** To tell apart two or three small symbols (warning lights, icons), Muse closes in on each
-  one by itself. A close-up used to be at least 128 of the photo's pixels, so on a dashboard where each light is about
-  40 px wide, every close-up held both lights; now a crop can be as small as 48 px and goes at that size. The first
-  wording also named labels, and Muse then read a pharmacy shelf one jar at a time and ran out of texts (cinnamon 0/3,
-  87 more texts); naming only symbols brought it back to its baseline.
+- **One symbol at a time, all asked for at once.** To tell apart two or three small symbols (warning lights, icons),
+  Muse closes in on each one by itself, and asks for all of them in one reply: one `ZOOM` line each, and the phone
+  answers them in one message, so two lights cost one round trip, not two. A close-up used to be at least 128 of the
+  photo's pixels, so on a dashboard where each light is about 40 px wide, every close-up held both lights; now a crop
+  can be as small as 48 px and goes at that size. The first wording also named labels, and Muse then read a pharmacy
+  shelf one jar at a time and ran out of texts (cinnamon 0/3, 87 more texts); naming only symbols brought it back to
+  its baseline.
+- **Crops in the box's own shape.** A close-up used to be square: a wide box (a dashboard's cluster, two street signs)
+  became a square that took in half the photo, 2.9 KB for the cluster. Now it keeps the box's shape plus a 20% margin
+  (0.8–2 KB); the parking signs went from 62 texts to 28.
+- **Name the thing that decides the answer.** Muse names what it is looking for ("warning light"), not the area around
+  it ("dashboard dials"): SAM outlines what is named, and it outlined a speedometer dial.
+- **SAM places small boxes.** Muse draws boxes by eye, and on small things it misses: both warning-light boxes were
+  2-3 sketch pixels (25-40 of the photo's) left of the lights, cutting the red one off. When Muse asks for a small
+  named thing inside a close-up, SAM 3.1 finds it on that close-up and the box moves onto the outline nearest the one
+  Muse drew, with a 30% margin (`closer._snap`). Muse decides what to look at and roughly where; SAM says exactly
+  where. The loop eval: generated 12/12, real 6/12 (one more each than before), easy and field within noise.
 
 **A real run** on an office corridor (`/closer`, `hard/extinguisher`, a 1600 px photo made with Muse Image), zooming in
 three times, each close-up inside the last:
@@ -64,31 +78,35 @@ Muse (1 SMS)   No, it is not ready to use. It is marked EMPTY / RECHARGE.
 
 59 texts both ways, for a 476 KB photo.
 
-**A second real run,** on a car at night (`hard/dashboard`, a 1600×980 photo made with Muse Image), one warning light
-per close-up:
+**A second real run,** on a car at night (`hard/dashboard`, a 1600×980 photo made with Muse Image; recorded with
+`demo/video/record_run.py`, kept in `sim/video/dashboard/run.json` on the demo branch): the cluster, then both lights
+in one request, each box placed by SAM:
 
 ```
 You (7 SMS)    Two warning lights came on on my dashboard. Which ones are they, and what do they mean?  + the sketch
-Muse           Not sure yet: I need a closer look at the instrument cluster behind the steering wheel to see the
-               two lit warning symbols, in colour.
-You (12 SMS)   the closer look, in colour, 128 px (1.2 KB)
-Muse           ... the red dashboard light to see the shape and symbol inside it, in colour, in high detail.
-You (6 SMS)    the red light alone, 121 px: the photo's full resolution (528 B)   [SAM 3.1 "warning light", 0.83]
-Muse           ... the amber symbol right of the red light to see its shape to identify it, in colour, in high detail.
-You (8 SMS)    the amber light alone, 120 px (770 B)                              [0.93]
-Muse           The red battery light and the amber check-engine light. The red one means the battery is not
-               charging, the amber one means an engine fault that needs checking.
-               Stop somewhere safe soon and get the car checked, a charging fault can stall you.
+Muse (2 SMS)   Not sure yet: I need a closer look at the instrument cluster behind the steering wheel to see the
+               shapes and colours of the warning lights in it, in colour, in high detail. ...
+               ZOOM mx 6 31 51 23 C H
+You (20 SMS)   the cluster, in colour, a 256x116 strip (1.9 KB)                  [SAM 3.1 "warning light", 0.91]
+Muse (3 SMS)   Not sure yet: I need closer looks at the left red warning light to see its symbol shape clearly, in
+               colour, in high detail; and the right amber warning light to see its symbol shape clearly, ...
+               ZOOM mx 34 41 5 4 C H                                               [box placed by SAM, 0.91]
+               ZOOM mx 40 42 4 3 C H                                               [0.89]
+You (7 SMS)    both lights, one message: 75x60 and 60x48 px, the photo's own pixels (338 + 266 B)   [0.66, 0.80]
+Muse (2 SMS)   They are the red battery / charging-system light, meaning the battery is not charging, and the amber
+               check-engine light, meaning an engine or emissions fault.
+               Stop somewhere safe and get help soon - a charging fault can stall the car.
 ```
 
-33 texts from the phone (3.1 KB) for a 214 KB photo.
+34 texts from the phone (3.2 KB) for a 214 KB photo.
 
 **Where SAM 3.1 fits.** SAM outlines things by name, but it needs enough pixels. In the 128 px sketch a spider is
 about 14 pixels, and no enlarging (4×, 8× sharpened, tiled) made SAM find it. Neither did asking Muse Image to restore
 the picture, which erased the spider altogether. It found things from about 25 px up (`evals/closer/RESULTS.md`). So
 Muse aims the first close-up from context ("the dark spot under the shelf"), and SAM works on the close-ups, where the
 thing fills the frame: on the black widow it scored 0.82–0.89, its box within 1% of SAM's on the full original. A
-match counts from confidence 0.5 and when it is at least 15% of the close-up's side.
+match counts from confidence 0.5 and when it is at least 8% of the close-up's side (15% threw away a warning light on
+a close-up of the whole cluster, about 11-14% of its width).
 
 ## A photo as text
 
@@ -143,13 +161,13 @@ full photo, never from a 3–5 KB WebP. Four were made with Muse Image at 1600 p
 | Medicine cabinet (generated) | Anything here for allergies? Which, and where? (loratadine, middle shelf) | 412 KB: 5/5 | 102 texts: 0/5 | 103 texts: **5/5** |
 | Leg after a hike (generated) | What's that on my leg? (a tick) | 581 KB: 0/5 (5 hedged) | 83 texts: 0/5 (5 hedged) | 85 texts: **5/5** |
 | Office corridor (generated) | Can I use this fire extinguisher? (no: EMPTY / RECHARGE) | 476 KB: 5/5 | 52 texts: 0/5 | 53 texts: **5/5** |
-| Car at night (generated) | Two warning lights came on. Which ones, and what do they mean? (battery and check-engine) | 214 KB: 5/5 | 38 texts: 0/5 | 41 texts: **5/5** |
+| Car at night (generated) | Two warning lights came on. Which ones, and what do they mean? (battery and check-engine) | 214 KB: 4/5 | 29 texts: 0/5 (5 hedged) | 31 texts: **5/5** |
 | Bus stop timetable (real) | Saturday, 9 am: when's the next bus? (10:06) | 4.7 MB: 1/5 | 181 texts: 0/5 | 183 texts: 1/5 |
 | Milk aisle (real) | How much is a gallon of whole milk? ($3.69) | 1.0 MB: 5/5 | 166 texts: 0/5 | 169 texts: 0/5 |
 | Milk aisle (real) | Any almond milk? Which brand? (Almond Breeze) | 3.3 MB: 5/5 | 91 texts: 0/5 (5 hedged) | 93 texts: **5/5** |
 | Old pharmacy (real) | Anything with cinnamon? What does its label say? (SIR. CINNAMOMI) | 5.8 MB: 5/5 | 86 texts: 0/5 | 87 texts: **4/5** |
 
-MuZip 35/45, WebP 0/45, the photo itself 36/45 (the dashboard was measured with the one-symbol rule, the others
+MuZip 35/45, WebP 0/45, the photo itself 35/45 (the dashboard was measured with the one-symbol rule, the others
 before it). From WebP Muse made answers up: "take the aspirin", "there's
 Benadryl", "Paracetamol 500 mg" (it was propranolol), "no almond milk visible". Before high detail and the no-repeat
 rule, MuZip scored 17/20 on the generated photos and 7/20 on the real ones; after, 20/20 and 10/20.
@@ -157,7 +175,9 @@ rule, MuZip scored 17/20 on the generated photos and 7/20 on the real ones; afte
 On `/compare` MuZip's panel is what Muse saw, put back together: the 128 px sketch enlarged (as blurry as Muse got
 it), each close-up pasted over the part of the photo it came from at its own detail and colour, one per second, with a
 camera that follows them in (into a close-up that holds the next one; around small ones together) and back out. The
-picture is drawn on a hidden canvas sized so the sharpest close-up keeps its own pixels.
+picture is drawn on a hidden canvas sized so the sharpest close-up keeps its own pixels. The run shown is the right
+run closest to WebP's size (the median of the five), so the two panels' sizes match; under each panel its five runs are
+five dots: green right (and sure), amber right but not sure, grey couldn't tell, red wrong.
 
 **How a photo is normally sent.** An iPhone photo sent on WhatsApp arrived at the bridge as a 2160×3840 JPEG of 543 KB
 and 811 KB (Twilio keeps the media; measured, not estimated). The report's own estimates (a 1,600 px JPEG for WhatsApp,
@@ -230,3 +250,25 @@ through files in `/tmp/muzip-<uid>/`, so it never touches ~/Documents (macOS's p
 earlier version). A real exchange from a WhatsApp account took about 34 s for a spider photo with two close-ups.
 
 To set it up (Twilio, the bridge, a tunnel, MuZip and the test phone), see [README.md](README.md#over-whatsapp).
+
+## The demo video (demo branch)
+
+Every section of the video is a page in `sim/video/` drawn as a function of time, so each frame is exact and the voice
+decides the timing: the times in each page are where its lines fall in the voice-over, found from the pauses in the
+audio. Every picture, size and answer on screen comes from a measured run: the comparison's dashboard row
+(`/api/compare`), and one recorded dashboard run (`demo/video/record_run.py` keeps the first of several runs with the
+shape the voice-over describes, and every message, ZOOM line, box and SAM outline of it in
+`sim/video/dashboard/run.json`).
+
+`demo/video/render.py` keeps one headless Chrome per worker and drives it over its DevTools pipe: the viewport is set to
+exactly 1920x1080, then for each frame the page's `render(t)` runs and a screenshot is taken. A 38-second section takes
+about a minute (a Chrome started per frame took 15 minutes, and sometimes shot with its window 63 px short: a flicker
+along the bottom). Identical frames in a row become one held frame, and `demo/video/encode.swift` (AVFoundation, no
+ffmpeg) encodes them and adds the voice-over.
+
+```
+.venv/bin/python demo/video/render.py /video/side.html 38.0 private/voice/02_the_side_by_side.mp3 private/video/02_the_side_by_side.mp4
+1140 frames, 114 distinct, captured in 73 s
+```
+
+Voice-overs and finished videos stay in `private/`, which git ignores.
