@@ -244,6 +244,24 @@ directions, weather radar, photo drawings, an offline kit page and a neighbourho
 - **Muse aims the first close-up from context alone,** because SAM can't find small things in the sketch.
 - **The test set is small:** nine questions in the comparison, twelve in the loop's eval, half on generated photos.
 
+## What's next
+
+1. **Measure it on public benchmarks.** Accuracy against bytes, beside JPEG, WebP and the full photo:
+   [VizWiz](https://vizwiz.org/) (phone photos taken by blind and low-vision people, with the questions they asked),
+   [V\* Bench](https://github.com/penghao-wu/vstar) and HR-Bench (one small detail in a high-resolution photo),
+   TextVQA (signs and labels). A curve instead of picked examples.
+2. **Teach Muse to look.** Today the looking is Muse Spark following prompt rules, each one fixing a failure we
+   measured. Next, fine-tune Muse Spark Open's weights with reinforcement learning: reward a right, sure answer and
+   take away for every text asked for, with Muse Spark judging answers against the benchmarks' references and SAM 3.1
+   still outlining what it asks to see. The model learns how little it needs to see.
+3. **Live video.** A search-and-rescue drone over a radio link of a few kilobits a second sends a sketch a second;
+   Muse sees an orange shape on a hillside and asks for that patch: a person or a tarp? SAM 3.1 tracks the shape from
+   frame to frame, so the next look costs only what changed. The same for a trail camera ("a wolf or a dog?").
+4. **Links where a photo can't go.** The same loop over a different transport: a hiker with no signal asks "is this
+   poison ivy?" through satellite texting (an iPhone's Messages via satellite, or a Garmin inReach at about 160
+   characters a message); a flood volunteer on a [Meshtastic](https://meshtastic.org/) LoRa mesh, a couple of hundred
+   bytes a packet, asks "which of these roads is under water?". Every code already fits in plain SMS characters.
+
 ## Licence
 
 The code is MIT ([LICENSE](LICENSE)). The sample photos in `sim/samples/real/` keep their own licences, listed in

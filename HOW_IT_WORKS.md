@@ -384,3 +384,11 @@ Voice-overs and finished videos stay in `private/`, which git ignores.
 `.github/workflows/tests.yml` runs `python -m unittest discover tests` on Python 3.12 for every push and pull request.
 The 40 tests are offline (codes, the store, the loop with scripted Muse replies, the WhatsApp bridge with no Twilio
 credentials), so no secret is set. Run in a fresh copy of the repo with no `.env`: `Ran 40 tests in 3.422s`, `OK`.
+
+## What's next, and what each step needs
+
+The README's list, with what's missing for each: the benchmark curve needs only API calls (thousands of questions,
+several runs each way, through `three_ways.muzip_run` and `verdict` as they are); teaching Muse to look needs Muse
+Spark Open's weights, GPU time and those benchmark runs as rewards; live video needs SAM 3.1's tracking between frames
+and a sender that keeps a short buffer of frames instead of one photo; satellite texting and LoRa need only a new
+transport, since every code is already in the basic SMS alphabet and at most 153 characters a part.
