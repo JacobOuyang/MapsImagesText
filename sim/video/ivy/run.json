@@ -1,0 +1,230 @@
+{
+ "sample": "real/leaf_ivy",
+ "question": "I'm on a hike and about to step off the trail through this. Is this poison ivy?",
+ "size": [
+  3072,
+  2304
+ ],
+ "sketch": [
+  128,
+  96
+ ],
+ "views": [
+  {
+   "image": "1_closeup.png",
+   "box": [
+    23.59375,
+    0.0,
+    88.796875,
+    86.703125
+   ],
+   "asked": [
+    31,
+    2,
+    74,
+    77
+   ],
+   "colour": false,
+   "high": true,
+   "full": false,
+   "bytes": 4528,
+   "texts": 45,
+   "why": "the two pale leaves in the center to see stem join and leaf edges to check for three leaflets",
+   "object": "leaves",
+   "sam": {
+    "box": [
+     0.0,
+     0.24,
+     0.3984375,
+     0.884
+    ],
+    "in_photo": [
+     0.1843,
+     0.2168,
+     0.4607,
+     0.7984
+    ],
+    "score": 0.75,
+    "phrase": "leaves",
+    "all": [
+     {
+      "box": [
+       0.0,
+       0.24,
+       0.3984375,
+       0.884
+      ],
+      "in_photo": [
+       0.1843,
+       0.2168,
+       0.4607,
+       0.7984
+      ],
+      "score": 0.75
+     },
+     {
+      "box": [
+       0.3671875,
+       0.044,
+       0.94140625,
+       0.904
+      ],
+      "in_photo": [
+       0.4391,
+       0.0397,
+       0.8374,
+       0.8165
+      ],
+      "score": 0.71
+     },
+     {
+      "box": [
+       0.11328125,
+       0.068,
+       0.43359375,
+       0.264
+      ],
+      "in_photo": [
+       0.2629,
+       0.0614,
+       0.4851,
+       0.2384
+      ],
+      "score": 0.64
+     },
+     {
+      "box": [
+       0.0,
+       0.0,
+       0.09765625,
+       0.14
+      ],
+      "in_photo": [
+       0.1843,
+       0.0,
+       0.2521,
+       0.1264
+      ],
+      "score": 0.63
+     },
+     {
+      "box": [
+       0.0,
+       0.936,
+       0.14453125,
+       1.0
+      ],
+      "in_photo": [
+       0.1843,
+       0.8454,
+       0.2846,
+       0.9032
+      ],
+      "score": 0.6
+     },
+     {
+      "box": [
+       0.58203125,
+       0.0,
+       1.0,
+       0.36
+      ],
+      "in_photo": [
+       0.5881,
+       0.0,
+       0.8781,
+       0.3251
+      ],
+      "score": 0.55
+     },
+     {
+      "box": [
+       0.0,
+       0.228,
+       0.06640625,
+       0.424
+      ],
+      "in_photo": [
+       0.1843,
+       0.2059,
+       0.2304,
+       0.3829
+      ],
+      "score": 0.53
+     }
+    ]
+   }
+  }
+ ],
+ "decisions": [
+  {
+   "answer": "",
+   "sure": "no",
+   "safety": "Stay on the trail and don't touch it until you know.",
+   "need": {
+    "box": [
+     0.24,
+     0.02,
+     0.82,
+     0.82
+    ],
+    "in": 1,
+    "colour": false,
+    "high": true,
+    "object": "leaves",
+    "why": "the two pale leaves in the center to see stem join and leaf edges to check for three leaflets"
+   },
+   "needs": [
+    {
+     "box": [
+      0.24,
+      0.02,
+      0.82,
+      0.82
+     ],
+     "in": 1,
+     "colour": false,
+     "high": true,
+     "object": "leaves",
+     "why": "the two pale leaves in the center to see stem join and leaf edges to check for three leaflets"
+    }
+   ],
+   "at": 1793772672.617406
+  },
+  {
+   "answer": "Yes, that is poison ivy \u2014 three leaflets meeting at one point. Do not step through it.",
+   "sure": "yes",
+   "safety": "Stay on the trail and do not touch it; wash skin and clothes if you do.",
+   "need": null,
+   "needs": [],
+   "at": 1793772679.3945322
+  }
+ ],
+ "messages": [
+  {
+   "from": "phone",
+   "text": "I'm on a hike and about to step off the trail through this. Is this poison ivy?\n#Pmc.1/8:UklGRvACAABXRUJQVlA4IOQCAABQGQCdASqAAGAAP5m2zV65LqitrrgNOyAzCWkAFo4y6jBqT5VnCLBHqK5RKtQyWY47/iQxn2P80rqtMRRhvvc6yIERsFvIsKZBOmV01OLGfmFT:5e7c#\n#Pmc.2/8:fMjkYgbDPuFnTg5qAB9P0CmWrmcjvxoID0rO2Y2SSfqKJFWRroOOspTYNuA0IkGBLNv8ML6zIf0zSjSuX9ucKvt/A8I0aYJ+Y69lU9IhARnGl/Jb/ISsFzOE+Y3WcW52kzCIFIAD:1bf6#\n#Pmc.3/8:ljA4zG451r3GTviFSGJ6Y5qLQ3R0HM3wvlcgAOhqazwC2kG2xbBpurh1i/2MNSBqh4CCUVIfj2ylkICtVIhCCZIKwIyqrrSZNOge2CRl8vVfsMX786gSPP14wt/AY58fNy5+pkpU:bd86#\n#Pmc.4/8:ewtsra2lmfsIe1oPQvTyz40j+czp4KOKkmmvuA669frT1OpnlNrBvXJE/uX40/Ld2A7SrIWogJzB53vl5E/iz6v9MJYLHVWsRfzDKvGAdKEFYyjj6g9oTRQYHLGGcTLYW8gECwAt:2c81#\n#Pmc.5/8:/ql1c+2iDnfa5GjGaUGAeofFq/cODjvo36xxCrUe/gp3HIaflGrGbCBMac4+cwHTkSst/kDQsxhjXzMfZnXul7nd12TXL8srkQUzfNQyfU7gkrJ4a5NXzodgOzCgm25muZrLO2fn:f381#\n#Pmc.6/8:OIUMjp2Ks7Qd3JMPyW+uNm9tcypvcV69F+95M7pagpb64HJChvGaKZlyh56LHFwjX0CY9UDGPysNc2st9afkCQlAjD8e//twIP/F8LNzUcTHMNxDdGY8HGpJHtQh17PO2e7G8r72:680f#\n#Pmc.7/8:AQDVAgESujThrLdYM++vb7rnl3jGFJkClxNhXFg901YbfsYDzE0r63UTbGxpmV0Mf7ksFqRhyF+7CtD1ndV8+Vcjz+wHAhGa47FcDdrQt0WWpMjUtb5dO4zfjMY+s7m4GC9QhFgD:d5f7#\n#Pmc.8/8:9IS8zVUyLpdIvC6jMU7x7HwQ04T6KDA+VlMyA/4RpKivbzFiduBYJ6wn9+gAAA==:eb64#",
+   "texts": 8,
+   "bytes": 760
+  },
+  {
+   "from": "muse",
+   "text": "Not sure yet: I need a closer look at the two pale leaves in the center to see stem join and leaf edges to check for three leaflets, in high detail. Your kit crops it from your photo and sends it back.\nZOOM mc 31 2 74 77 H",
+   "texts": 2
+  },
+  {
+   "from": "phone",
+   "text": "#Zmz.1/45:Am1jBeYAABYzFa1SSUZGqBEAAFdFQlBWUDggnBEAANCNAJ0BKgAB+gA/OYS4U68opSKwFh254CcJaWZdiV0DyoEb8OeWW4I4mf38mNx+/cnxT149HOjas0flYs8093ss4Uhp/m0I:1a9f#\n#Zmz.2/45:U6c+gJlpGLABNgK1T/y3TkX/4ZSUby6sAEG4qFEkdKyh6YzIGhpfaZUoS/cu4mzSr9Jpst59plJTJlxQCwUBQGNmbD2l7hAVwR91vEsYWu0XHNedBJbvdOpGdL4TTLjm05tjRmPn:2b0d#\n#Zmz.3/45:JmLwYyhEoEJuaBlqvDqgtG1aAayVpaMEPRhMPTDJfdfGPYFIVe1cjiBDrzrfFbJmlAAr/cH6Ca8EP/6W5AquuyO3bxs2aXgjJ8GLf0BurkhmAe0uJvfRZBVA8MuuEnLUXmSHYtY1:e6e4#\n#Zmz.4/45:CA9xNOjuW6xD8Y+8gORbR7tf4RFS8voGgN+RhYYkHar1HwcqyDWL52RW57rI06FpeRB92EQDaUU7+QAGqSIAkX+PqZqzNoiFwWw8mKFwRATakHRh8aFVF9njhZTQGmxSS1vA0AI0:2d68#\n#Zmz.5/45:+gSAEjB90ZlRmyCXIOUgNkTZQ5UjZV+QyAUCXsqEv83Uvvd7csWEzBywWhT7EE2M0bPX3RDCa0iHdQmRcW8809lK2ernvJK9L0Q3sW3KQbuO6V511gF3HRXLuNtritRE5lFjZKZ/:fded#\n#Zmz.6/45:nRLxHtX9+8aicyWsTGOlnLwzTTAOddLZhM4TkwF+cwWIW9GsePVNr4OH85lB8Tr1hrHMuLnMVtxyN42cjiEXlhN8PM8zv8TLh9Kal89w70H2TvSSq1Z9fy0kH0TZ/OgKt7ffhuaW:bfbd#\n#Zmz.7/45:q42/tIBB4zXp1al0qeRwKq4VubUvZIbpNKeRFr/aAR/Kr9oaF1tdBf4QxCox+wQ+ZI3dtVTSIshp7Sg6qH5XasovXim7WlhWyzdQqzIOY75cSWJO0sR7kf+RxFKsn0ffFNdkgBBX:1ae4#\n#Zmz.8/45:78BR6eR8VoRoPkowOw4BcXKuTO4Z7NZb51te/EjG+DTsQQW/1cvpNZRE/DObOynTIyP661R/OOED2aHxRgao92JQABVsqNvVZoz2KZGIkWl1t5dcfRruj6SuoFEihJ2SE/3NW144:8085#\n#Zmz.9/45:lx1c8ZCUIcSM5YMfDQlVqKMBtHwbmvyqh3mw/AIkH3uoCEtbQyPaMU27dJlIHpXZcf7z4WdermuHGQqh2TS4QnP+pOX+H/7irR7ureuFVnWWntnyeWPGS8Y50bacyZMuEn9MgpSK:800b#\n#Zmz.10/45:9DImKzjY4Udbzcbo/14p8tCIRYtFmOnt0e4c88ltf9+LKau1x7dHc1JwtoTHTsk07l47BtZ1QBnZRh1QUXWoi9gFC9JQJC6/RxvKGUHr0npHpoCoeLNN492VrPvQLHZ24ZmHpVbO:694f#\n#Zmz.11/45:ehEmHRYo8G7wlne8Vuy/XrxuDSxFlS1vZ/CUyJBpebRHUBqta7Q16KwC+69fICYGintkt/03h11L/QuPnE4azmnLDPrsXVWTSOfeNsNqraO+E6D9a/0SiBhSpMCDfPzWQRRM5OH2:e8b3#\n#Zmz.12/45:UV7tKOGq12h0OsKFE8CfqiwVL/wOl6xUQGAnN7MQCsJvQwmSQNnkfxjYycQABjX9taIzwAD8o6N+TiyyxNDtz75k6lDhdzNb+6fy0864thtcUJvYoNDGCipFpFHmWbWHzL5X+Z+c:644f#\n#Zmz.13/45:tEvFzlPrKrmZvM0MM0F3Crf4RIwItjJ7YGSRnRui9Q2sndotQntJ0B2wmpSpun5sxtMsESO50cCsMvwDA3wJpvSnWPDNskBdQORpRe03ITVUb6YEbHqxeZLZEdDmqE7BFq5vk5eS:b1f3#\n#Zmz.14/45:Fp1xNJua9gPScHyFahO8O1NVDxQwy5Kr0fm/5j2HiGmGmPigFAox+gR7WiDfrHCCzMnLjOdvVnIry5Mv4/l5GuNRCBvLF1Dq7Epi+EnckVIFj+xKwNMKhuz+xgxpqnYk6uU0vizc:ddc8#\n#Zmz.15/45:EY91wXnQwwtHvOWSj/Ysa7HXoZBMw4M73UrqTvHK7g2bxFYwLXbeJMiVy55O0QfiwBHHZwVW0doYNLcVgIg3SsB5gHZWONeIMFR1Oc2UfvDxjHaIEYshes0h6G4sfJ0ppiFIxwxn:4a4e#\n#Zmz.16/45:khsdZGd3Lv4eXwRXYpb3Mh+ClkaRVoPFtEQMXnz3JD8zkvrZoF05tuKflUz7P1Re4Wge77K47pY4U36iocI/oEm1QJhUzBg/yMsMTBr1KMR0oeg4CDC2HeXbdq9hhM+PBgwQHBPm:1197#\n#Zmz.17/45:YfO/RicpVeQMvEPmihBcg7dx/VW6y7LwI0RFfnVEFdj6Yr1xS1AUv53w+Q9vVRqm7zB8TxqpMVkvVuSE1gIMbcJNlAJY4vyveBlClYrCOurHePAoI3EmxvlOgg5Jnv/Ft+Y5DcVV:01b9#\n#Zmz.18/45:wY1RL7SfX/1+ScT9VJUV1WXXbLh3mBaJoJo8snTKA9i8LDyH9sGaU9xj1uBcjs8/Puk4DNp3KG3GD+91ZPttNkyh3QJcMG9eLPfszU9LImJPw8ViYRJ4gfMStzD53YQebNirQlZh:fb4b#\n#Zmz.19/45:JwizkCz7c/yIFoiximLl4Zw4Nar1GlT7hPl50lVTQu7PTk5ZiohfBO0Eg83EuTMBjiBzm+NaH5z5CMj19AD5YJwTFmvDBpsoxhdPaZHPySnk28NlQE6TEtm4GbJz4xzXTFSLH1kK:5020#\n#Zmz.20/45:AESnl6sN9SsYT+dFHmThnhi2nKvJBE6A/oEsYC9PNOdG94QpQGtPnZSF/iR7EDKipflvA4GgVMIerHsUpGueIdco8+mHeNz2lIuquHx/UjtWhnxHDGFLXL7vTi/q6/D77TPmhsSQ:fc55#\n#Zmz.21/45:BwtqMVM2FHJeZkCvbmTvoDusK9+h08+7NWhSACGVGfyyl0JdyEbkCIKFI1YOk0PznKpr8RgP0SlDXTYoVELf5b2Xix512NENAjRiV/x5N6/TXEWYZjhhz3zxH0QJlhGhH7sysve4:6b8c#\n#Zmz.22/45:dUiPQvRenYxiooISdWurwWk5i77jEwzZSa7FQ7bWN220XWtAiK+FEMqAeF4tjp/VGnRTEndOIJErPjQPv99MH07MA5lD3e65rML+4SV5Ws+WEX0ndmNXzU2VGldK5JNYoXr2KaIj:bc4a#\n#Zmz.23/45:BrYUwCJ9KyM52LaRKL4TSE4+tIVWprpxgoBSJxCWwXE6qdsRWoGjCRqDZNd3pe4+2f/LvWsG8TY+CCfo7MxycxCAZSpaIibSciXUTJ4s+BuAPwk3mIyAlY0DmsWhNsN8NmUZfDwu:9f78#\n#Zmz.24/45:9Zu5oYJCmKW1/2ibDF29xWXjLbTaySBKZQi5pG9oOmEn9EB/YpT24SvMq5IO2jqFYuZd4ZYUpnrhpMzh6+mJrnhcLxIrXveBsFDeEDPSlXOj2uTsVAnBSWEAUpJSspbDRTKTyKk9:e35e#\n#Zmz.25/45:rqpdlCHZflwWK+0qQUBkxsKiaI+UDYLap6XDHbl1A0Cli3tkg8nDD6VX+qp5acU+1dTXwuRB3e3p5+wdCXxA6Ujhv/OON6eGaTZO/gopnWCSXDhMuSnMuFykuXK/e207IdRpDcJM:5343#\n#Zmz.26/45:PRTzT3S89M2COFJaiKN3cZ4QKZnbJOpbCAtOEZHj8blwz2K9h3jkRn5C5QWaZdZZndTH2UMozdJi4PsrzD++0vhZUepuxxSVNsPTNY6TRzJ32HsZvTD2lmtAomRShXyoCaczoUcd:b4fc#\n#Zmz.27/45:4SvAy6jMMcawl2yNbDV/VGtfOitCngLJp5wS3qIZI4xQQnMEi6ZXY9x9RCZOf5VX0dp5Fr7UFHlZgaLXHBSV+pWVEiV5susPGjTfG2jQPcTFrwjgfnXA1xEEvp4luslerWgvYPDa:69be#\n#Zmz.28/45:E4kdDdPmy4rrKM3HHwHjRKaiyDbbpOwJCXQQEZu24PgZO430s8VCgdq7opCktfDFjziCugSDjuu6pUDB+dJodrJghHFR03ZxJZhHcTIptBa8eKDx8bTO8SBKoKROf+WXWfwZbiZo:35fa#\n#Zmz.29/45:v0zAJ3IW1ArQWBQ3Hz3hFW6OCI9rQZXLzTY082ZC2MLPtDj5U92mog7gn+Hfx531lLL/f2GDlu1KVnNP76y4yfnA63cpMl5REBKxbss9HYLbkBl2lC6stE+xwLnUlUP53YDQtf7/:5546#\n#Zmz.30/45:cXqsowujt9jiZXPAaLzi9sVgiRKQYaylcDz477JMSbUclRxP+xf3g8t5Fc19GPQtbSenHGpo7pOJ97lxsJcexn0z4PLBGQA6jSZYEp4wula0MuqfOCl+oBmHztPxPNtcOXj+A11c:9410#\n#Zmz.31/45:g+f6dle+5HzBcdB2mI0zxXSPJtCvV/ZOdezFW7fxyi0JFfPMnfmEZU/e0BDsOv1eFxIlXmKtXaUe7dCta9kFjxdl7nYh579gGmPvVeSXon2fEw3pwZoY920dw3yC9WctmR+F8D3h:c4ac#\n#Zmz.32/45:AZCWwp2zL/EiLKsgclykJ4lsKYGITiYg14iRRlpiR3nMxKkIAVGMHTLRfnMGGxVA88WtFiruWpuN+KeGHeUOzqAHr6psm6Z98ZXRsFgEK6XkKwdFuYWVTjm4iGnP4zH8sGyUtVUJ:ae89#\n#Zmz.33/45:mqmNkyxSocNwPOzTncCSB7ZS9g5BDRoM3BL/4S3hhWegibFLVgKSqJxNGeQTfZOY3tujTH3z4F140R/lw3IHyy+XpD4P3jw6J2fqhk4Y8cdgCG5+PNhYo/bb7iBnLDKrc/ilVf20:71c3#\n#Zmz.34/45:8n66qjmpuZ4w+FQZ+CNhrHROUBTs6klfrBtywu8y/MZILPO7DUba3RJvwflhglnVb74mgYwzvksw5l4eeAjM8mb7gPM44FmIVJMauARqL1jra+q6pFZYyFOBsMnIJEAb7bxoTNU2:d744#\n#Zmz.35/45:Y1oM6FP5XB/AmXbRjXilpBHGz0hArY3nhvJ8wA62rjeMKz8qDoFm2sQdKc2sxw2PLsSjWq8OFxZyz6rY5ICFILUoNanPJh+jZJglkRAyx2pFeIMQkh5BnLgrhSJVT5xTpYSMHfWi:bf0a#\n#Zmz.36/45:faar8twTF487Gvgek9k+PBuuAF0HdNjpzDlITsRfYjhkUQHe+xNcMYfTeUTcTjLq9IU4gjyAlHidjrGCFXTfae4+h4u7uCtHFT209c3++kXi3nKWVP/d/ANL0jGeKOgKRY1H4cZj:a108#\n#Zmz.37/45:zDnXUs826UNW7a+9chkCwXLrtP8t4mYEhbdVhaD+5gLf9sxFTjBai7faA5fb50L4F1PIxAEGD5jDRPtB9ES5YgMjPAAfIFAQY2iv/FSvfcvDWJ4ObqjTw2+oHY3aEAw/s0y9AHqU:5fff#\n#Zmz.38/45:52hFJw0Eyuffw2fYyIog/oT6GO7bfTnQgowwqr+hBurzJAWquLXu0e7ipUaMEZ3hjjVgTP3DuVO6EU0h/R1zC41amIAEXX7IbMM2SvSqVd9urb4yIVFGnlL8/RL+CAG1xxyIo9Gn:6164#\n#Zmz.39/45:nhJhwKPaQbnbvOlqhTUB+PfrZkvMx78v6uQKK7xK2JaDzTWAqzLh8eJmqUwgxTtYCHEqwpFpSs4ShKGuPjbjLBG4gYRwrEtkmh8WJQ1Pi6AkxyL7VvZi3QAgGlv58m4l+msmEPbY:f44f#\n#Zmz.40/45:tmFXqHKLDIozl9G/Ghmmwn/rI7Mx7oUhzYR3aF22eMLuldZ8dy3J0fNDAjh/3vTTFuZ3ZmhF99HEvFhTFYBMzQmeBtl6ZIYrJBZ50VROynBqmCVKWxmjjHcR5yZBzy5k0dsqX3lN:3e04#\n#Zmz.41/45:9JS6SDLnLJxqByXfebuiMyYu2HGWgABo1wdJdCJrHIggFuQDj4C/phWE+QQXxirYqiG5QNpvRhBCox9kRhv8m0fS3vwtUOC/pej8QkrJCbeRRe+tU31jTPQaFlVo9NqVapOR1xqW:8f5e#\n#Zmz.42/45:xUhjoTANZMiXaGHppnonJovWmN/XSOQ1skVzS3rpyDUEH+hSRWt4T9joeMqRoEFEh/mwvagRn5P658CM8BK7KqWnnLXox24McbXJF9nDPcf5qjEUvZmd2ukEJ5QP4YZFtar1+AjS:e61f#\n#Zmz.43/45:OOU6R7mc/IR8xGO9iLe1kGjmaMfXw5t4TSdSkr/nbz4hywZ5rQ0L+xNXvoSfNG8uHZE0MMHMi3FRfdqv4fvjgzfuBjx0yOmZza2Q3V4Z24kWICRTJFqYMz8yEIcCkFtb8ZKlDY32:fced#\n#Zmz.44/45:uDT1IrE9BcJ9bR7KxIFta+uS/oJ925bw+bKI4WjqcMZ6GFf+jzXdeMEHqyKGFVG1Bplxqu2oo2TFZWjnupkZw12ycNCJjTh1IbxdQhvgl75d9+fTYYNR42VCx0eOSW/VoLB2FQ4u:3651#\n#Zmz.45/45:i4QCiLAwYpBQtCcKtbEu72aUY3fnq9VSzyhHixTLOtyYtcXqmb9a4OB+6+MRhwo5ZUAA:d02e#",
+   "texts": 45,
+   "bytes": 4539
+  },
+  {
+   "from": "muse",
+   "text": "Yes, that is poison ivy \u2014 three leaflets meeting at one point. Do not step through it.\nStay on the trail and do not touch it; wash skin and clothes if you do.",
+   "texts": 3
+  }
+ ],
+ "answer": "Yes, that is poison ivy \u2014 three leaflets meeting at one point. Do not step through it.\nStay on the trail and do not touch it; wash skin and clothes if you do.",
+ "phone_bytes": 5299,
+ "photo_bytes": 1737767
+}

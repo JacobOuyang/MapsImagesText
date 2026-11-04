@@ -1,4 +1,4 @@
-# MuZip
+<h1><picture><source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg"><img src="docs/logo-light.svg" alt="MuZip" height="110"></picture></h1>
 
 **Agentic compression for photos.** Instead of shrinking the whole photo and hoping the detail survives, MuZip sends
 a tiny sketch and lets the AI on the other end ask for exactly the parts it needs to answer your question. The photo

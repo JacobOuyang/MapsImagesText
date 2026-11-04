@@ -327,4 +327,20 @@ called by name, the way @Meta AI is: Maria shares a photo with "@Mew-zip" (the s
 the asker's car boxed. What WhatsApp would have sent for each photo was measured through the bridge
 (`sim/video/normal_sizes.json`).
 
+A third use case, a hiker, is recorded for the video (`sim/video/ivy`, a real photo, `real/leaf_ivy`, 3072×2304,
+1.7 MB): Muse asked for one close-up, grey at high detail, of the leaf group, and SAM 3.1 outlined "leaves" (0.75):
+
+```
+Phone (8 SMS)   I'm on a hike and about to step off the trail through this. Is this poison ivy?  + the sketch
+Muse (2 SMS)    Not sure yet: I need a closer look at the two pale leaves in the center to see stem join and leaf
+                edges to check for three leaflets, in high detail. ...
+Phone (45 SMS)  the close-up (4.5 KB)
+Muse (3 SMS)    Yes, that is poison ivy - three leaflets meeting at one point. Do not step through it.
+                Stay on the trail and do not touch it; wash skin and clothes if you do.
+```
+
+5.3 KB from the phone. Screened first: Muse was right and sure from the full photo 2 of 2 times, and through MuZip 3
+of 3. Four other poison ivy photos were dropped: in a dense patch Muse couldn't make out the groups of three (1 of 3
+each), and a wide marsh view went wrong every time.
+
 Voice-overs and finished videos stay in `private/`, which git ignores.
