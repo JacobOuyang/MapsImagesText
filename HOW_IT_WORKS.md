@@ -288,6 +288,17 @@ earlier version). A real exchange from a WhatsApp account took about 34 s for a 
 
 To set it up (Twilio, the bridge, a tunnel, MuZip and the test phone), see [README.md](README.md#over-whatsapp).
 
+## The side-by-side on the web
+
+`demo/static/build.py` copies `/compare` into `docs/compare/` with the saved runs (the comparison's results, every
+WebP and close-up as Muse got them, each photo shrunk for display), so GitHub Pages can serve it with no server, no
+model calls and no API key: https://jacobouyang.github.io/muzip/compare/.
+
+```
+.venv/bin/python demo/static/build.py
+wrote docs/compare/: 9 photos, 5.1 MB
+```
+
 ## The demo video
 
 Every section of the video is a page in `sim/video/` drawn as a function of time, so each frame is exact and the voice

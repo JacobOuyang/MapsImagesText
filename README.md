@@ -9,7 +9,8 @@ the test photos.
 
 [![The MuZip demo video (2:49)](https://img.youtube.com/vi/WLSNYIcfzSI/maxresdefault.jpg)](https://www.youtube.com/watch?v=WLSNYIcfzSI)
 
-**[Watch the demo video (2:49)](https://www.youtube.com/watch?v=WLSNYIcfzSI)**
+**[Watch the demo video (2:49)](https://www.youtube.com/watch?v=WLSNYIcfzSI)** ·
+**[See the side-by-side in your browser](https://jacobouyang.github.io/muzip/compare/)** (saved runs, nothing to install)
 
 ## How it works
 
