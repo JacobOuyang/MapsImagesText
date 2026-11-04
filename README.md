@@ -7,6 +7,10 @@ stays on your phone; what crosses the link is under a hundredth of it, as ordina
 Built on the Meta Model API: **Muse Spark** decides what to look at, **SAM 3.1** outlines it, **Muse Image** made
 the test photos.
 
+[![The MuZip demo video (2:49)](https://img.youtube.com/vi/WLSNYIcfzSI/maxresdefault.jpg)](https://www.youtube.com/watch?v=WLSNYIcfzSI)
+
+**[Watch the demo video (2:49)](https://www.youtube.com/watch?v=WLSNYIcfzSI)**
+
 ## How it works
 
 1. **The phone sends the question and a 128 px grey sketch of the photo** (a WebP, about 10 texts).
