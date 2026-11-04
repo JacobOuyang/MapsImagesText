@@ -12,7 +12,8 @@ is `evals/kit/three_ways.py` (`evals/kit/THREE_WAYS.md`), the scenes are live ru
 | 3 | 0:52–1:30 | How it works, on the same photo | `/demo` scene 2 (look closer, live): the dashboard round by round | to write |
 | 4 | 1:41–1:51 | Any photo, any question | the workflow chart as a recap | draft |
 | 5 | 1:58–2:40 | Real use cases: a tenant group chat, and a plane | title card, the tenant chat, then a friend's chat | draft |
-| 6 | about 2:17–2:42 | Try it yourself, and the end card | the repo, the one command, the simulator, WhatsApp; then μ and the tagline | draft |
+| 5b | about 2:17–2:27 | A hiker: is this poison ivy? | a phone on one bar, the photo, then what Mew-zip saw | draft |
+| 6 | about 2:27–2:52 | Try it yourself, and the end card | the repo, the one command, the simulator, WhatsApp; then μ and the tagline | draft |
 
 The sections below the agreed ones are drafts from the earlier outline, kept for their wording.
 
@@ -71,9 +72,21 @@ Photos: "Damaged car with tree on top", Wil540 art, CC BY 4.0; "Sand Covers Cars
 Let's walk through some real use cases of Mew-zip. <break time="0.5s" /> After a hurricane, the network slows to a crawl, but texts still get through. <break time="0.3s" /> A tenant shares a photo in the building's group chat, and tags Mew-zip. <break time="0.4s" /> Mew-zip sends the group just the part that matters: a grey SUV, under a fallen tree. <break time="0.5s" /> "That's mine!" <break time="0.6s" /> Then one photo of the street, and everyone asks about their own car. <break time="0.3s" /> Each neighbour gets their own close-ups, and the photo never leaves the phone that took it. <break time="0.7s" /> Or you're on a plane, with Wi-Fi for messages only. <break time="0.3s" /> A friend sends their new puppy, <break time="0.2s" /> and you still get to see it.
 ```
 
-## 6. Try it yourself, and the end card (about 2:17–2:42)
+## 5b. A hiker: is this poison ivy? (about 2:17–2:27)
 
-About 25 s at 1.1×, which leaves about 18 s under three minutes. No results screen: nine photos are a demonstration,
+Its own clip after section 5, so section 5 keeps its voice and timing. On screen (`/video/ivy.html`, to build): a chat
+on one bar of signal, texts only; the hiker's question with the sketch arriving as text; then what Mew-zip saw (the
+sketch with its one high-detail close-up of the leaf group in place) and the answer, "Yes, that is poison ivy: three
+leaflets meeting at one point. Do not step through it." (recorded run `sim/video/ivy`, 5.3 KB from the phone; photo
+"Poison Ivy P6300102.JPG", Chris Light, CC BY-SA 4.0). The answer is a warning, never a go-ahead.
+
+```text
+Or you're on a trail, with one bar of signal. <break time="0.3s" /> Is that poison ivy? <break time="0.3s" /> Mew-zip looks closer at the leaves, and tells you before you touch it.
+```
+
+## 6. Try it yourself, and the end card (about 2:27–2:52)
+
+About 25 s at 1.1×; with the hiker, the video comes to about 2:52. No results screen: nine photos are a demonstration,
 not a benchmark. No "open source" either: the repo has no licence yet, so it says "on GitHub".
 
 On screen (`/video/close.html`, to build):
