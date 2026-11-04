@@ -114,7 +114,7 @@ one at 0.91 and the amber one at 0.89, but the amber one is 7.8% of the close-up
 
 **A photo with no question is a share** (`closer.SHARE`, `share` in the inquiry): Muse asks for exactly one close-up,
 always in colour at high detail, of the part a group most needs to see, then says in one sentence what it shows. The
-group gets the sketch with that part sharp. "@Mew-zip show me Alex's photo" or "what's in it?" with a photo counts as
+group gets the sketch with that part sharp. "@MuZip show me Alex's photo" or "what's in it?" with a photo counts as
 no question (`router.SHOW`). A real run on a real photo (`real/tree_on_car`, 6.8 MB; WhatsApp sent it as 659 KB):
 
 ```
@@ -325,10 +325,10 @@ wrote private/video/05_real_use_cases_1.1x.mp4: 35.1 s
 wrote private/video/all_1.1x.mp4: 170.0 s
 ```
 
-Section 5 (`sim/video/tenants.html`) is a tenants' WhatsApp group after a hurricane, then a chat on a plane. Mew-zip is
-called by name, the way @Meta AI is: Maria shares a photo with "@Mew-zip" (the share above), Ben and Chen each ask
-"@Mew-zip ..." about her street photo, and on a plane "@Mew-zip can you show me Alex's photo?" gets the puppy
-(`hard/puppy_home`, 6.6 KB against 338 KB). Each answer shows what Mew-zip sent: the sketch with the close-ups in place,
+Section 5 (`sim/video/tenants.html`) is a tenants' WhatsApp group after a hurricane, then a chat on a plane. MuZip is
+called by name, the way @Meta AI is: Maria shares a photo with "@MuZip" (the share above), Ben and Chen each ask
+"@MuZip ..." about her street photo, and on a plane "@MuZip can you show me Alex's photo?" gets the puppy
+(`hard/puppy_home`, 6.6 KB against 338 KB). Each answer shows what MuZip sent: the sketch with the close-ups in place,
 the asker's car boxed. What WhatsApp would have sent for each photo is estimated the way the comparison does it (`evals/kit/three_ways.py`: `normally`, WhatsApp's standard quality, a 1600 px JPEG), in `sim/video/normal_sizes.json`: the poison ivy photo, 1.7 MB as a file, would go as 219 KB.
 
 A third use case, a hiker on one bar of signal (`sim/video/ivy.html`, section 5b), is the recorded run `sim/video/ivy` (a real photo, `real/leaf_ivy`, 3072×2304,
