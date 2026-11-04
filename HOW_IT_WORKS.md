@@ -303,7 +303,7 @@ cropping the photo on the Mac. WhatsApp Desktop is filled in with `whatsapp://se
 through files in `/tmp/muzip-<uid>/`, so it never touches ~/Documents (macOS's per-app Documents check stalled an
 earlier version). A real exchange from a WhatsApp account took about 34 s for a spider photo with two close-ups.
 
-To set it up (Twilio, the bridge, a tunnel, MuZip and the test phone), see [README.md](README.md#over-whatsapp).
+To set it up (Twilio, the bridge, a tunnel, MuZip and the test phone), see [README.md](README.md#3-over-whatsapp-from-your-phone).
 
 ## The side-by-side on the web
 
