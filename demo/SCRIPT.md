@@ -74,7 +74,7 @@ Let's walk through some real use cases of Mew-zip. <break time="0.5s" /> After a
 
 ## 5b. A hiker: is this poison ivy? (about 2:17–2:27)
 
-Its own clip after section 5, so section 5 keeps its voice and timing. On screen (`/video/ivy.html`, to build): a chat
+Its own clip after section 5, so section 5 keeps its voice and timing. On screen (`/video/ivy.html`): a chat
 on one bar of signal, texts only; the hiker's question with the sketch arriving as text; then what Mew-zip saw (the
 sketch with its one high-detail close-up of the leaf group in place) and the answer, "Yes, that is poison ivy: three
 leaflets meeting at one point. Do not step through it." (recorded run `sim/video/ivy`, 5.3 KB from the phone; photo
