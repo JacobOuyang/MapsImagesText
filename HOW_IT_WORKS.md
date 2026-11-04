@@ -308,7 +308,7 @@ ffmpeg) encodes them and adds the voice-over.
 1140 frames, 114 distinct, captured in 73 s
 ```
 
-`encode.swift` writes a frame every 1/30 s with a keyframe each second, however long a picture is held: frames held
+`encode.swift` adds the voice without compressing the picture again (`BITRATE` sets its rate, 8 Mbps by default; `SCALE=1.3333` makes `render.py` capture the same page at 2560x1440) and writes a frame every 1/30 s with a keyframe each second, however long a picture is held: frames held
 for seconds made players stall and lose sync with the voice, worst where sections were joined (section 2 opened on
 a 3.5 s frame). `demo/video/speed.swift` plays a section faster with the voice at its own pitch (every section runs at
 1.1×) and `demo/video/join.py` puts the sections one after another. It pads each section's voice with silence to
