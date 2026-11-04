@@ -12,6 +12,17 @@ the test photos.
 **[Watch the demo video (2:49)](https://www.youtube.com/watch?v=WLSNYIcfzSI)** ·
 **[See the side-by-side in your browser](https://jacobouyang.github.io/muzip/compare/)** (saved runs, nothing to install)
 
+**Trying it, quickest first:**
+
+1. **No install:** the [side-by-side](https://jacobouyang.github.io/muzip/compare/) shows real photos asked about three
+   ways (the photo itself, WebP squeezed to MuZip's size, MuZip), with what each way sent and answered. The buttons
+   along the top switch photos. These are saved runs, picked to show where MuZip wins; every question and result is in
+   [evals/kit/THREE_WAYS.md](evals/kit/THREE_WAYS.md).
+2. **Live, on your computer (about 2 minutes, a Meta Model API key):** [steps 1 and 2 below](#setup-and-installation), then open
+   http://127.0.0.1:8765/closer, pick `real/texas_highway`, ask "It's night. What's the speed limit on this road?" and
+   press **Ask by text**. You'll see each close-up Muse asks for and every text that crosses the network.
+3. **Live, from WhatsApp:** step 3 below (a free Twilio sandbox and `cloudflared`).
+
 ## How it works
 
 1. **The phone sends the question and a 128 px grey sketch of the photo** (a WebP, about 10 texts).
@@ -55,7 +66,7 @@ What we learned about them:
 - **Muse has to be told what it already has.** Without being told how much closer each view is, it asked eight times
   for the same view of a timetable. Without the rule against answering unsure, it gave up a shelf too early.
 
-## Try it
+## Setup and installation
 
 | To try | You need | Setup |
 | --- | --- | --- |
