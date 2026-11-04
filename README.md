@@ -1,5 +1,7 @@
 <h1><picture><source media="(prefers-color-scheme: dark)" srcset="docs/logo-dark.svg"><img src="docs/logo-light.svg" alt="MuZip" height="110"></picture></h1>
 
+[![tests](https://github.com/JacobOuyang/muzip/actions/workflows/tests.yml/badge.svg)](https://github.com/JacobOuyang/muzip/actions/workflows/tests.yml) [![MIT licence](https://img.shields.io/badge/licence-MIT-blue.svg)](LICENSE)
+
 **Agentic compression for photos.** Instead of shrinking the whole photo and hoping the detail survives, MuZip sends
 a tiny sketch and lets the AI on the other end ask for exactly the parts it needs to answer your question. The photo
 stays on your phone; what crosses the link is under a hundredth of it, as ordinary text messages.
@@ -198,6 +200,9 @@ the bridge instead of through WhatsApp Desktop (the replies still reach your Wha
 
 ### For developers
 
+GitHub Actions runs the offline tests on every push ([`.github/workflows/tests.yml`](.github/workflows/tests.yml): Python 3.12,
+`pip install -r requirements.txt`, `python -m unittest discover tests`; no API key needed).
+
 The loop's own eval, after any change to it (12 questions x 3 runs in parallel, about 2 minutes, compared with a saved
 baseline):
 
@@ -238,3 +243,9 @@ directions, weather radar, photo drawings, an offline kit page and a neighbourho
 - **WhatsApp through Twilio's sandbox** is the live channel; plain SMS works the same way but wasn't set up.
 - **Muse aims the first close-up from context alone,** because SAM can't find small things in the sketch.
 - **The test set is small:** nine questions in the comparison, twelve in the loop's eval, half on generated photos.
+
+## Licence
+
+The code is MIT ([LICENSE](LICENSE)). The sample photos in `sim/samples/real/` keep their own licences, listed in
+[CREDITS.md](sim/samples/real/CREDITS.md). Muse Spark and SAM 3.1 are used through the Meta Model API under Meta's
+terms; SAM's responses are parsed only with Meta's `meta-sam-parser`.
