@@ -136,7 +136,7 @@ function render(t) {
   const view = document.querySelector('.msgs').clientHeight, end = () => Math.max(0, $('stack').scrollHeight - view);
   const now = end();
   $('stack').innerHTML = msgs(last - 0.001); const before = end(); $('stack').innerHTML = msgs(t);  // where it stood before the newest
-  const k = Math.min(1, (t - last) / 0.7), e = 1 - (1 - k) ** 3;
+  const k = last === T.plane ? 1 : Math.min(1, (t - last) / 0.7), e = 1 - (1 - k) ** 3;  // a new chat starts at its own top: no scroll from the old one
   $('stack').style.transform = `translateY(${-(before + (now - before) * e)}px)`;
   const plane = t >= T.plane;
   document.querySelector('.head b').textContent = plane ? 'Alex' : 'Elm St tenants';

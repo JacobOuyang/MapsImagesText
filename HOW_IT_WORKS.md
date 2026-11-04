@@ -311,13 +311,18 @@ ffmpeg) encodes them and adds the voice-over.
 `encode.swift` writes a frame every 1/30 s with a keyframe each second, however long a picture is held: frames held
 for seconds made players stall and lose sync with the voice, worst where sections were joined (section 2 opened on
 a 3.5 s frame). `demo/video/speed.swift` plays a section faster with the voice at its own pitch (every section runs at
-1.1×) and `demo/video/join.swift` puts the sections one after another:
+1.1×) and `demo/video/join.py` puts the sections one after another. It pads each section's voice with silence to
+its picture's length and lays one continuous sound track under the joined picture, which `join.swift` re-encodes as
+one stream. Left as gaps in the track, the quiet stretches were skipped by some players, and by the hiker the voice ran
+about 4 s ahead of the picture:
 
 ```
 out/demo/speed private/video/05_real_use_cases.mp4 private/video/05_real_use_cases_1.1x.mp4 1.1
 wrote private/video/05_real_use_cases_1.1x.mp4: 35.1 s
-out/demo/join private/video/all_1.1x.mp4 private/video/0{1_intro,2_the_side_by_side,3_how_it_works,4_any_photo,5_real_use_cases}_1.1x.mp4
-wrote private/video/all_1.1x.mp4: 137.3 s
+.venv/bin/python demo/video/join.py
+...
+06_close_1.1x.mp4      picture  22.27 s, voice  20.19 s
+wrote private/video/all_1.1x.mp4: 170.0 s
 ```
 
 Section 5 (`sim/video/tenants.html`) is a tenants' WhatsApp group after a hurricane, then a chat on a plane. Mew-zip is
