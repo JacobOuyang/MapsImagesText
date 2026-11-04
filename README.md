@@ -29,9 +29,9 @@ the test photos.
    photo's own pixels, asking for all of them in one round trip.
 
 Classical compression keeps what your eye would notice, for anyone, for any question. MuZip keeps what this question
-needs. On a cabinet of thirty look-alike bottles ("which of these is for a headache?") one high-detail close-up of the
-shelves is enough; on an office corridor ("can I use this fire extinguisher?") it zooms in three times, each close-up
-inside the last, until it reads "EMPTY / RECHARGE".
+needs. On a photo of a highway taken from the car ("It's night. What's the speed limit?") it reads NIGHT 65 off a sign that
+is a few pixels tall in the sketch, in 2.6 KB; WebP squeezed to the same size was never sure. On a shop's door ("When
+is this store open on Saturday?") it reads one line of small print, "10am to 2pm", in 6.7 KB.
 
 **A photo with no question** is a share: Muse picks the one part that matters, asks for it once in colour at high
 detail, and sends the sketch with that part sharp, plus a sentence ("A fallen tree is lying on top of a grey SUV":

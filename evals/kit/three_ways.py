@@ -54,6 +54,24 @@ PHOTOS = [  # name, sample, question, the reference answer
     ("whole_milk", "real/whole_milk_aisle", "How much is a gallon of whole milk here?", "$3.69."),
     ("almond_milk", "real/milk_aisle", "Is there any almond milk here? Which brand?", "Yes: Almond Breeze (Blue Diamond)."),
     ("cinnamon", "real/pharmacy_shelves", "Is there anything with cinnamon on these shelves? What does its label say?", "Yes: a jar labelled SIR. CINNAMOMI (cinnamon syrup)."),
+    # Real photos added for the demo (the references checked by eye on the full photo): poison ivy on a trail
+    # (leaf_ivy, Chris Light, CC BY-SA 4.0), and two neighbours' questions about one street after a hurricane
+    # (storm_street, FEMA, public domain).
+    ("poison_ivy", "real/leaf_ivy", "I'm on a hike and about to step off the trail through this. Is this poison ivy?",
+     "Yes, it is poison ivy (leaves in groups of three leaflets)."),
+    ("street_pickup", "real/storm_street", "My pickup's on the left side, right behind the first two cars. Is it buried, or can I drive it out?",
+     "It isn't buried: the dark pickup behind the first cars is clear of sand, so it can be driven out."),
+    ("street_suv", "real/storm_street", "Is the silver SUV at the far end, on the right side of the road, stuck in the sand?",
+     "No: it is on clear pavement; the sand is piled beside it, not around its wheels."),
+    # More real photos where a small sign or icon decides the answer (Wikimedia Commons; CREDITS.md).
+    ("trail_closed", "real/banff_path", "Can I walk down this path?", "No: a small sign on the log barrier says TRAIL CLOSED, please use an alternate route."),
+    ("bike_path", "real/rail_trail", "Is this bike path open?", "No: signs on the barrier say SECTION CLOSED and BIKE PATH CLOSED."),
+    ("elevator", "real/station_elevator", "Is this elevator working?", "No: a paper sign says the elevator is out of service."),
+    ("door_light", "real/night_dash", "What is my car's display warning me about?", "A door is open: the car icon shows the front left door open."),
+    # The four above failed the demo's screen: WebP at the same size was right too (a barrier or a taped notice gives
+    # the answer away). These need a number nobody can guess from the scene.
+    ("night_speed", "real/texas_highway", "It's night. What's the speed limit on this road?", "65 mph at night (the sign says SPEED LIMIT 70, NIGHT 65)."),
+    ("store_hours", "real/ups_store", "When is this store open on Saturday?", "10 am to 2 pm (the notice says it may vary)."),
 ]
 SIDES = [128, 256, 384]  # the widths that were ever WebP's best (192 and 512 never were), in colour and grey
 WHATSAPP_SIDE, WHATSAPP_Q = 1600, 75  # WhatsApp's standard quality, roughly: long side 1600 px, JPEG (an estimate)
