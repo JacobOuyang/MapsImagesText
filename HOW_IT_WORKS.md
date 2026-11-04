@@ -327,7 +327,7 @@ called by name, the way @Meta AI is: Maria shares a photo with "@Mew-zip" (the s
 the asker's car boxed. What WhatsApp would have sent for each photo was measured through the bridge
 (`sim/video/normal_sizes.json`).
 
-A third use case, a hiker, is recorded for the video (`sim/video/ivy`, a real photo, `real/leaf_ivy`, 3072×2304,
+A third use case, a hiker on one bar of signal (`sim/video/ivy.html`, section 5b), is the recorded run `sim/video/ivy` ( a real photo, `real/leaf_ivy`, 3072×2304,
 1.7 MB): Muse asked for one close-up, grey at high detail, of the leaf group, and SAM 3.1 outlined "leaves" (0.75):
 
 ```
