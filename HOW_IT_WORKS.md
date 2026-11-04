@@ -204,6 +204,23 @@ full photo, never from a 3–5 KB WebP. Four were made with Muse Image at 1600 p
 | Milk aisle (real) | Any almond milk? Which brand? (Almond Breeze) | 3.3 MB: 5/5 | 91 texts: 0/5 (5 hedged) | 93 texts: **5/5** |
 | Old pharmacy (real) | Anything with cinnamon? What does its label say? (SIR. CINNAMOMI) | 5.8 MB: 5/5 | 86 texts: 0/5 | 87 texts: **4/5** |
 
+**More real photos, added for the demo** (Wikimedia Commons; the references read by eye on the full photo). These
+weren't screened first; all nine stay in the comparison, and `docs/compare/` shows only the ones where MuZip is
+right and WebP isn't. A barrier, a taped notice or big leaves give the answer away from the scene, so WebP got those
+too; a number on a distant sign or a line of small print it couldn't read.
+
+| Photo | Question | The photo itself | WebP, same size | MuZip |
+|---|---|---|---|---|
+| Poison ivy by a trail | I'm on a hike and about to step off the trail through this. Is this poison ivy? | 1.7 MB: 5/5 | 11.3 KB: 5/5 | 11.5 KB: 3/5 (1 hedged) |
+| A street after a hurricane | My pickup's on the left side, right behind the first two cars. Is it buried, or can I drive it out? | 6.6 MB: 5/5 | 5.2 KB: 0/5 | 5.2 KB: **3/5** |
+| The same street | Is the silver SUV at the far end, on the right side of the road, stuck in the sand? | 6.6 MB: 0/5 (5 hedged) | 12.3 KB: 5/5 | 12.4 KB: 1/5 (1 hedged) |
+| A footpath with a small sign | Can I walk down this path? | 1.3 MB: 5/5 | 7.8 KB: 5/5 | 7.9 KB: 5/5 |
+| A barrier across a bike path | Is this bike path open? | 1.1 MB: 5/5 | 4.8 KB: 5/5 | 5.1 KB: 5/5 |
+| A station elevator | Is this elevator working? | 2.7 MB: 5/5 | 6.0 KB: 5/5 | 6.1 KB: 5/5 |
+| A car display at night | What is my car's display warning me about? | 8.7 MB: 5/5 | 2.3 KB: 4/5 (1 hedged) | 2.3 KB: **5/5** |
+| A highway from the car | It's night. What's the speed limit on this road? | 1.3 MB: 5/5 | 2.6 KB: 0/5 (5 hedged) | 2.6 KB: **5/5** |
+| A shop's door | When is this store open on Saturday? | 6.5 MB: 5/5 | 6.6 KB: 0/5 (2 hedged) | 6.7 KB: **5/5** |
+
 MuZip 35/45, WebP 0/45, the photo itself 35/45 (the dashboard was measured with the one-symbol rule, the others
 before it). From WebP Muse made answers up: "take the aspirin", "there's
 Benadryl", "Paracetamol 500 mg" (it was propranolol), "no almond milk visible". Before high detail and the no-repeat

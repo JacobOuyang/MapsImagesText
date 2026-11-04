@@ -2271,5 +2271,2048 @@
    ],
    "answer": "Yes, one jar is labeled SIR. CINNAMOMI."
   }
+ },
+ {
+  "name": "poison_ivy",
+  "sample": "real/leaf_ivy",
+  "question": "I'm on a hike and about to step off the trail through this. Is this poison ivy?",
+  "truth": "Yes, it is poison ivy (leaves in groups of three leaflets).",
+  "size": [
+   3072,
+   2304
+  ],
+  "normally": {
+   "whatsapp": 219208,
+   "heic": 1012746
+  },
+  "full": {
+   "bytes": 1737767,
+   "texts": 17744,
+   "runs": [
+    {
+     "answer": "Yes, that is poison ivy with its leaves of three. Stay on the trail.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Yes, that is poison ivy with its leaves of three. Do not step through it.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Yes, that's poison ivy with its leaves of three. Stay on the trail.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Yes, that's poison ivy with its leaves of three. Stay on the trail.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Yes, that is poison ivy with its leaves of three. Stay on the trail and don't touch it.",
+     "sure": "yes",
+     "verdict": "right"
+    }
+   ],
+   "right": 5,
+   "guessed": 0
+  },
+  "webp": {
+   "side": 384,
+   "quality": 60,
+   "colour": true,
+   "bytes": 11348,
+   "runs": [
+    {
+     "answer": "Yes, that's poison ivy. Don't step through it.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Yes, that's poison ivy. Don't walk through it.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Yes, that's poison ivy \u2014 leaves of three. Stay on the trail and don't touch it.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Yes, that's poison ivy. Don't step through it.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Yes, that is poison ivy. Stay on the trail and don't touch it.",
+     "sure": "yes",
+     "verdict": "right"
+    }
+   ],
+   "right": 5,
+   "guessed": 0,
+   "texts": 113,
+   "image": "poison_ivy/webp.png",
+   "tried": [
+    {
+     "side": 128,
+     "quality": 95,
+     "colour": true,
+     "bytes": 7080,
+     "right": 5,
+     "guessed": 0
+    },
+    {
+     "side": 256,
+     "quality": 83,
+     "colour": true,
+     "bytes": 11282,
+     "right": 5,
+     "guessed": 0
+    },
+    {
+     "side": 384,
+     "quality": 60,
+     "colour": true,
+     "bytes": 11348,
+     "right": 5,
+     "guessed": 0
+    },
+    {
+     "side": 128,
+     "quality": 95,
+     "colour": false,
+     "bytes": 5486,
+     "right": 1,
+     "guessed": 4
+    },
+    {
+     "side": 256,
+     "quality": 87,
+     "colour": false,
+     "bytes": 11176,
+     "right": 5,
+     "guessed": 0
+    },
+    {
+     "side": 384,
+     "quality": 73,
+     "colour": false,
+     "bytes": 11444,
+     "right": 5,
+     "guessed": 0
+    }
+   ]
+  },
+  "muzip": {
+   "runs": [
+    {
+     "answer": "I can't tell from these grey blurry views - I can see broad leaflets meeting at a stem but not enough to confirm poison ivy, I would need a clear colour close-up of the leaf cluster. (not sure)\nStay on the trail and don't step through it until you know.",
+     "sure": "no",
+     "verdict": "not sure",
+     "texts": 66,
+     "bytes": 6499,
+     "views": 3,
+     "inquiry": "101"
+    },
+    {
+     "answer": "Yes, this is poison ivy - it has the three smooth green leaflets meeting at one point.\nDo not step through it or touch it - stay on the trail and wash skin and clothes if you contact it.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 116,
+     "bytes": 11537,
+     "views": 3,
+     "inquiry": "104"
+    },
+    {
+     "answer": "Yes, this is poison ivy - it shows the classic three leaflets meeting at one point.\nDo not step off the trail through it - stay on the trail and wash skin and shoes if you touch it.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 69,
+     "bytes": 6708,
+     "views": 4,
+     "inquiry": "102"
+    },
+    {
+     "answer": "It looks like poison ivy with three pointed leaflets meeting at one point, but I can't be fully sure from these grey views. (fairly sure)\nDon't step through it - stay on the trail and avoid touching it.",
+     "sure": "fairly",
+     "verdict": "right",
+     "texts": 164,
+     "bytes": 16328,
+     "views": 8,
+     "inquiry": "103"
+    },
+    {
+     "answer": "Yes, that is poison ivy with its three leaflets together. Do not step through it.\nStay on the trail and do not touch it; wash skin and clothes if you do.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 116,
+     "bytes": 11458,
+     "views": 4,
+     "inquiry": "100"
+    }
+   ],
+   "right": 3,
+   "guessed": 1,
+   "bytes": 11458,
+   "texts": 116,
+   "views": [
+    {
+     "image": "poison_ivy/muzip_0.png",
+     "label": "128 px, grey"
+    },
+    {
+     "image": "poison_ivy/muzip_1.png",
+     "label": "closer look 1",
+     "box": [
+      15.09375,
+      0.0,
+      94.796875,
+      90.0
+     ],
+     "full": false
+    },
+    {
+     "image": "poison_ivy/muzip_2.png",
+     "label": "closer look 2",
+     "box": [
+      27.296875,
+      2.296875,
+      56.40625,
+      56.40625
+     ],
+     "full": false
+    },
+    {
+     "image": "poison_ivy/muzip_3.png",
+     "label": "closer look 3",
+     "box": [
+      38.5,
+      20.296875,
+      30.0,
+      20.40625
+     ],
+     "full": false
+    },
+    {
+     "image": "poison_ivy/muzip_4.png",
+     "label": "closer look 4",
+     "box": [
+      35.203125,
+      10.40625,
+      45.59375,
+      43.203125
+     ],
+     "full": false
+    }
+   ],
+   "answer": "Yes, that is poison ivy with its three leaflets together. Do not step through it.\nStay on the trail and do not touch it; wash skin and clothes if you do."
+  }
+ },
+ {
+  "name": "street_pickup",
+  "sample": "real/storm_street",
+  "question": "My pickup's on the left side, right behind the first two cars. Is it buried, or can I drive it out?",
+  "truth": "It isn't buried: the dark pickup behind the first cars is clear of sand, so it can be driven out.",
+  "size": [
+   4288,
+   2848
+  ],
+  "normally": {
+   "whatsapp": 234584,
+   "heic": 1451614
+  },
+  "full": {
+   "bytes": 6610352,
+   "texts": 67700,
+   "runs": [
+    {
+     "answer": "Your pickup looks clear and not buried, you should be able to drive it out.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Your pickup looks clear and not buried, you should be able to drive it out.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Your pickup looks clear, not buried in sand. You should be able to drive it out.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Your pickup looks clear and not buried, so you can drive it out.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Your pickup looks clear, not buried in sand. You should be able to drive it out.",
+     "sure": "yes",
+     "verdict": "right"
+    }
+   ],
+   "right": 5,
+   "guessed": 0
+  },
+  "webp": {
+   "side": 384,
+   "quality": 18,
+   "colour": true,
+   "bytes": 5168,
+   "runs": [
+    {
+     "answer": "It's buried under a big pile of snow. You can't drive it out without digging it out first.",
+     "sure": "fairly",
+     "verdict": "wrong"
+    },
+    {
+     "answer": "It's buried under deep plowed snow. You can't drive it out.",
+     "sure": "fairly",
+     "verdict": "wrong"
+    },
+    {
+     "answer": "It's buried under deep snow. You can't drive it out.",
+     "sure": "fairly",
+     "verdict": "wrong"
+    },
+    {
+     "answer": "It's buried under deep piles of snow. You can't drive it out.",
+     "sure": "fairly",
+     "verdict": "wrong"
+    },
+    {
+     "answer": "It's buried under a huge pile of snow. You can't drive it out.",
+     "sure": "fairly",
+     "verdict": "wrong"
+    }
+   ],
+   "right": 0,
+   "guessed": 0,
+   "texts": 51,
+   "image": "street_pickup/webp.png",
+   "tried": [
+    {
+     "side": 128,
+     "quality": 93,
+     "colour": true,
+     "bytes": 5072,
+     "right": 0,
+     "guessed": 0
+    },
+    {
+     "side": 256,
+     "quality": 55,
+     "colour": true,
+     "bytes": 5162,
+     "right": 0,
+     "guessed": 0
+    },
+    {
+     "side": 384,
+     "quality": 18,
+     "colour": true,
+     "bytes": 5168,
+     "right": 0,
+     "guessed": 0
+    },
+    {
+     "side": 128,
+     "quality": 95,
+     "colour": false,
+     "bytes": 4652,
+     "right": 0,
+     "guessed": 0
+    },
+    {
+     "side": 256,
+     "quality": 59,
+     "colour": false,
+     "bytes": 5110,
+     "right": 0,
+     "guessed": 0
+    },
+    {
+     "side": 384,
+     "quality": 20,
+     "colour": false,
+     "bytes": 5184,
+     "right": 0,
+     "guessed": 0
+    }
+   ]
+  },
+  "muzip": {
+   "runs": [
+    {
+     "answer": "It's not buried. Your pickup looks clear of snow and you can drive it out.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 71,
+     "bytes": 6784,
+     "views": 4,
+     "inquiry": "109"
+    },
+    {
+     "answer": "I can see the dark pickup behind the first cars but I can't tell how deep the snow is at its wheels. (not sure)",
+     "sure": "no",
+     "verdict": "not sure",
+     "texts": 58,
+     "bytes": 5194,
+     "views": 8,
+     "inquiry": "105"
+    },
+    {
+     "answer": "I can't tell if you can drive it out - the pickup is visible behind the cars but the snow depth around its wheels is too blurry to judge, I would need a sharp close view of the wheels and ground. (not sure)",
+     "sure": "no",
+     "verdict": "not sure",
+     "texts": 47,
+     "bytes": 4365,
+     "views": 7,
+     "inquiry": "10d"
+    },
+    {
+     "answer": "Your pickup is not buried. You can drive it out.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 88,
+     "bytes": 8392,
+     "views": 8,
+     "inquiry": "10c"
+    },
+    {
+     "answer": "It is not buried. You can drive it out.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 51,
+     "bytes": 4805,
+     "views": 5,
+     "inquiry": "106"
+    }
+   ],
+   "right": 3,
+   "guessed": 0,
+   "bytes": 5194,
+   "texts": 58,
+   "views": [
+    {
+     "image": "street_pickup/muzip_0.png",
+     "label": "128 px, grey"
+    },
+    {
+     "image": "street_pickup/muzip_1.png",
+     "label": "closer look 1",
+     "box": [
+      0.0,
+      20.0,
+      70.40625,
+      48.0
+     ],
+     "full": false
+    },
+    {
+     "image": "street_pickup/muzip_2.png",
+     "label": "closer look 2",
+     "box": [
+      0.0,
+      1.0,
+      56.09375,
+      36.0
+     ],
+     "full": false
+    },
+    {
+     "image": "street_pickup/muzip_3.png",
+     "label": "closer look 3",
+     "box": [
+      14.796875,
+      13.90625,
+      26.40625,
+      13.203125
+     ],
+     "full": false
+    },
+    {
+     "image": "street_pickup/muzip_4.png",
+     "label": "closer look 4",
+     "box": [
+      18.203125,
+      18.296875,
+      21.59375,
+      8.40625
+     ],
+     "full": false
+    },
+    {
+     "image": "street_pickup/muzip_5.png",
+     "label": "closer look 5",
+     "box": [
+      18.09375,
+      21.59375,
+      10.796875,
+      4.796875
+     ],
+     "full": false
+    }
+   ],
+   "answer": "It is not buried. You can drive it out."
+  }
+ },
+ {
+  "name": "street_suv",
+  "sample": "real/storm_street",
+  "question": "Is the silver SUV at the far end, on the right side of the road, stuck in the sand?",
+  "truth": "No: it is on clear pavement; the sand is piled beside it, not around its wheels.",
+  "size": [
+   4288,
+   2848
+  ],
+  "normally": {
+   "whatsapp": 234584,
+   "heic": 1451614
+  },
+  "full": {
+   "bytes": 6610352,
+   "texts": 67700,
+   "runs": [
+    {
+     "answer": "No, the silver SUV is on cleared pavement and does not look stuck.",
+     "sure": "fairly",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, it is sitting on the cleared part of the road.",
+     "sure": "fairly",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, the silver SUV is on the cleared road and does not look stuck.",
+     "sure": "fairly",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, it is sitting on the cleared road and not stuck.",
+     "sure": "fairly",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, the silver SUV is on a mostly clear part of the road, not stuck in the sand.",
+     "sure": "fairly",
+     "verdict": "right"
+    }
+   ],
+   "right": 0,
+   "guessed": 5
+  },
+  "webp": {
+   "side": 384,
+   "quality": 72,
+   "colour": false,
+   "bytes": 12294,
+   "runs": [
+    {
+     "answer": "No, that is snow, not sand. The street is lined with plowed snow piles.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, that's snow piled on the street, not sand.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, that is snow, not sand. The street is lined with big piles of plowed snow.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, that is snow, not sand. The cars are buried in piled snow.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, that's snow piled up on the street, not sand.",
+     "sure": "yes",
+     "verdict": "right"
+    }
+   ],
+   "right": 5,
+   "guessed": 0,
+   "texts": 123,
+   "image": "street_suv/webp.png",
+   "tried": [
+    {
+     "side": 128,
+     "quality": 95,
+     "colour": true,
+     "bytes": 5652,
+     "right": 0,
+     "guessed": 0
+    },
+    {
+     "side": 256,
+     "quality": 88,
+     "colour": true,
+     "bytes": 12346,
+     "right": 0,
+     "guessed": 5
+    },
+    {
+     "side": 384,
+     "quality": 67,
+     "colour": true,
+     "bytes": 12374,
+     "right": 0,
+     "guessed": 5
+    },
+    {
+     "side": 128,
+     "quality": 95,
+     "colour": false,
+     "bytes": 4652,
+     "right": 5,
+     "guessed": 0
+    },
+    {
+     "side": 256,
+     "quality": 90,
+     "colour": false,
+     "bytes": 12342,
+     "right": 5,
+     "guessed": 0
+    },
+    {
+     "side": 384,
+     "quality": 72,
+     "colour": false,
+     "bytes": 12294,
+     "right": 5,
+     "guessed": 0
+    }
+   ]
+  },
+  "muzip": {
+   "runs": [
+    {
+     "answer": "Yes, the silver SUV looks buried to the wheels in piled sand. (fairly sure)",
+     "sure": "fairly",
+     "verdict": "wrong",
+     "texts": 138,
+     "bytes": 13784,
+     "views": 8,
+     "inquiry": "107"
+    },
+    {
+     "answer": "I can't tell if the silver SUV is stuck - the far views are too blurry to see its wheels in the sand. (not sure)",
+     "sure": "no",
+     "verdict": "not sure",
+     "texts": 159,
+     "bytes": 15910,
+     "views": 6,
+     "inquiry": "10e"
+    },
+    {
+     "answer": "No. The silver SUV is sitting on cleared road next to a sand pile, not stuck in it.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 121,
+     "bytes": 11842,
+     "views": 8,
+     "inquiry": "10a"
+    },
+    {
+     "answer": "Yes, that far end on the right is deep in piled sand covering the cars there. (not sure)",
+     "sure": "no",
+     "verdict": "wrong",
+     "texts": 126,
+     "bytes": 12384,
+     "views": 8,
+     "inquiry": "108"
+    },
+    {
+     "answer": "No, the silver SUV looks parked on clear pavement next to a sand pile, not stuck in it. (fairly sure)",
+     "sure": "fairly",
+     "verdict": "right",
+     "texts": 60,
+     "bytes": 5686,
+     "views": 7,
+     "inquiry": "10b"
+    }
+   ],
+   "right": 1,
+   "guessed": 1,
+   "bytes": 12384,
+   "texts": 126,
+   "views": [
+    {
+     "image": "street_suv/muzip_0.png",
+     "label": "128 px, grey"
+    },
+    {
+     "image": "street_suv/muzip_1.png",
+     "label": "closer look 1, colour",
+     "box": [
+      35.90625,
+      1.203125,
+      61.203125,
+      33.59375
+     ],
+     "full": false
+    },
+    {
+     "image": "street_suv/muzip_2.png",
+     "label": "closer look 2, colour",
+     "box": [
+      25.203125,
+      22.59375,
+      45.59375,
+      16.796875
+     ],
+     "full": false
+    },
+    {
+     "image": "street_suv/muzip_3.png",
+     "label": "closer look 3, colour",
+     "box": [
+      25.203125,
+      22.59375,
+      45.59375,
+      16.796875
+     ],
+     "full": false
+    },
+    {
+     "image": "street_suv/muzip_4.png",
+     "label": "closer look 4, colour",
+     "box": [
+      25.203125,
+      22.59375,
+      45.59375,
+      16.796875
+     ],
+     "full": false
+    },
+    {
+     "image": "street_suv/muzip_5.png",
+     "label": "closer look 5, colour",
+     "box": [
+      70.59375,
+      9.296875,
+      28.796875,
+      20.40625
+     ],
+     "full": false
+    },
+    {
+     "image": "street_suv/muzip_6.png",
+     "label": "closer look 6, colour",
+     "box": [
+      91.09375,
+      19.296875,
+      10.796875,
+      8.40625
+     ],
+     "full": false
+    },
+    {
+     "image": "street_suv/muzip_7.png",
+     "label": "closer look 7, colour",
+     "box": [
+      93.296875,
+      23.703125,
+      8.40625,
+      3.59375
+     ],
+     "full": false
+    },
+    {
+     "image": "street_suv/muzip_8.png",
+     "label": "closer look 8, colour",
+     "box": [
+      93.40625,
+      24.703125,
+      7.203125,
+      3.59375
+     ],
+     "full": true
+    }
+   ],
+   "answer": "No. The silver SUV is sitting on cleared road next to a sand pile, not stuck in it."
+  }
+ },
+ {
+  "name": "trail_closed",
+  "sample": "real/banff_path",
+  "question": "Can I walk down this path?",
+  "truth": "No: a small sign on the log barrier says TRAIL CLOSED, please use an alternate route.",
+  "size": [
+   2560,
+   1920
+  ],
+  "normally": {
+   "whatsapp": 387213,
+   "heic": 1103864
+  },
+  "full": {
+   "bytes": 1262782,
+   "texts": 12875,
+   "runs": [
+    {
+     "answer": "No, this path is closed. Please use an alternate route.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, this path is closed. Please use an alternate route.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, this trail is closed. Please use an alternate route.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, this path is closed. Please use an alternate route.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, this trail is closed. Please use an alternate route.",
+     "sure": "yes",
+     "verdict": "right"
+    }
+   ],
+   "right": 5,
+   "guessed": 0
+  },
+  "webp": {
+   "side": 384,
+   "quality": 13,
+   "colour": true,
+   "bytes": 7800,
+   "runs": [
+    {
+     "answer": "No, the path is blocked by a wooden barrier.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, the path is blocked by a wooden barrier.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, the path is blocked by a wooden barrier.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, the path is blocked by a wooden barrier.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, the path is blocked by a wooden barrier.",
+     "sure": "yes",
+     "verdict": "right"
+    }
+   ],
+   "right": 5,
+   "guessed": 0,
+   "texts": 77,
+   "image": "trail_closed/webp.png",
+   "tried": [
+    {
+     "side": 128,
+     "quality": 95,
+     "colour": true,
+     "bytes": 7700,
+     "right": 1,
+     "guessed": 4
+    },
+    {
+     "side": 256,
+     "quality": 46,
+     "colour": true,
+     "bytes": 7932,
+     "right": 4,
+     "guessed": 1
+    },
+    {
+     "side": 384,
+     "quality": 13,
+     "colour": true,
+     "bytes": 7800,
+     "right": 5,
+     "guessed": 0
+    },
+    {
+     "side": 128,
+     "quality": 95,
+     "colour": false,
+     "bytes": 6302,
+     "right": 1,
+     "guessed": 4
+    },
+    {
+     "side": 256,
+     "quality": 52,
+     "colour": false,
+     "bytes": 7892,
+     "right": 2,
+     "guessed": 3
+    },
+    {
+     "side": 384,
+     "quality": 15,
+     "colour": false,
+     "bytes": 7856,
+     "right": 5,
+     "guessed": 0
+    }
+   ]
+  },
+  "muzip": {
+   "runs": [
+    {
+     "answer": "No, you can't walk down this path - the trail is closed and blocked by a barricade.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 81,
+     "bytes": 7936,
+     "views": 2,
+     "inquiry": "10d"
+    },
+    {
+     "answer": "No, the path is blocked by a wooden barrier and piled rocks.\nDo not climb over the barrier, the rubble beyond looks unstable.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 34,
+     "bytes": 3232,
+     "views": 2,
+     "inquiry": "10c"
+    },
+    {
+     "answer": "No, this trail is closed. Please use the alternate route.\nDo not enter the closed trail; use the alternate route.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 130,
+     "bytes": 12855,
+     "views": 3,
+     "inquiry": "103"
+    },
+    {
+     "answer": "No, you cannot. The trail is closed, please use an alternate route.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 132,
+     "bytes": 13071,
+     "views": 3,
+     "inquiry": "101"
+    },
+    {
+     "answer": "No, the trail is closed. Please use the alternate route.\nDo not enter closed trail area.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 66,
+     "bytes": 6425,
+     "views": 3,
+     "inquiry": "106"
+    }
+   ],
+   "right": 5,
+   "guessed": 0,
+   "bytes": 7936,
+   "texts": 81,
+   "views": [
+    {
+     "image": "trail_closed/muzip_0.png",
+     "label": "128 px, grey"
+    },
+    {
+     "image": "trail_closed/muzip_1.png",
+     "label": "closer look 1",
+     "box": [
+      24.296875,
+      17.296875,
+      92.40625,
+      78.703125
+     ],
+     "full": false
+    },
+    {
+     "image": "trail_closed/muzip_2.png",
+     "label": "closer look 2",
+     "box": [
+      26.5,
+      33.5,
+      66.0,
+      62.5
+     ],
+     "full": false
+    }
+   ],
+   "answer": "No, you can't walk down this path - the trail is closed and blocked by a barricade."
+  }
+ },
+ {
+  "name": "bike_path",
+  "sample": "real/rail_trail",
+  "question": "Is this bike path open?",
+  "truth": "No: signs on the barrier say SECTION CLOSED and BIKE PATH CLOSED.",
+  "size": [
+   2592,
+   1728
+  ],
+  "normally": {
+   "whatsapp": 350216,
+   "heic": 940058
+  },
+  "full": {
+   "bytes": 1053331,
+   "texts": 10727,
+   "runs": [
+    {
+     "answer": "No, the bike path is closed. A barricade blocks it with closed signs.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, it's closed. A barricade blocks the path with signs saying closed.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, it's closed. A barricade blocks the path with signs saying Bike Path Closed.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, it's closed. A barricade blocks the path with signs saying Bike Path Closed.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, it's closed. There's a barricade across the path that says Bike Path Closed.",
+     "sure": "yes",
+     "verdict": "right"
+    }
+   ],
+   "right": 5,
+   "guessed": 0
+  },
+  "webp": {
+   "side": 384,
+   "quality": 6,
+   "colour": true,
+   "bytes": 4824,
+   "runs": [
+    {
+     "answer": "No, the path is blocked by a barrier.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, the path is blocked by a barrier.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, the path is blocked by a barrier.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, the path is blocked by a barrier.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, the path is blocked by a barrier.",
+     "sure": "yes",
+     "verdict": "right"
+    }
+   ],
+   "right": 5,
+   "guessed": 0,
+   "texts": 48,
+   "image": "bike_path/webp.png",
+   "tried": [
+    {
+     "side": 128,
+     "quality": 90,
+     "colour": true,
+     "bytes": 5022,
+     "right": 5,
+     "guessed": 0
+    },
+    {
+     "side": 256,
+     "quality": 31,
+     "colour": true,
+     "bytes": 4998,
+     "right": 1,
+     "guessed": 4
+    },
+    {
+     "side": 384,
+     "quality": 6,
+     "colour": true,
+     "bytes": 4824,
+     "right": 5,
+     "guessed": 0
+    },
+    {
+     "side": 128,
+     "quality": 94,
+     "colour": false,
+     "bytes": 5056,
+     "right": 0,
+     "guessed": 5
+    },
+    {
+     "side": 256,
+     "quality": 37,
+     "colour": false,
+     "bytes": 5088,
+     "right": 5,
+     "guessed": 0
+    },
+    {
+     "side": 384,
+     "quality": 8,
+     "colour": false,
+     "bytes": 5032,
+     "right": 3,
+     "guessed": 2
+    }
+   ]
+  },
+  "muzip": {
+   "runs": [
+    {
+     "answer": "No, it is closed - the barrier sign says SECTION CLOSED.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 55,
+     "bytes": 5357,
+     "views": 3,
+     "inquiry": "107"
+    },
+    {
+     "answer": "No, the bike path is blocked by a barricade across it.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 25,
+     "bytes": 2428,
+     "views": 2,
+     "inquiry": "102"
+    },
+    {
+     "answer": "No, it is closed. A barricade blocks the path with a SECTION CLOSED sign.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 41,
+     "bytes": 4070,
+     "views": 2,
+     "inquiry": "10e"
+    },
+    {
+     "answer": "No, the bike path is closed. The barrier sign says SECTION CLOSED.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 52,
+     "bytes": 5112,
+     "views": 2,
+     "inquiry": "100"
+    },
+    {
+     "answer": "No, the bike path is closed. A barrier blocks it with a CLOSED sign on it.\nDo not go around the barrier.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 107,
+     "bytes": 10559,
+     "views": 5,
+     "inquiry": "108"
+    }
+   ],
+   "right": 5,
+   "guessed": 0,
+   "bytes": 5112,
+   "texts": 52,
+   "views": [
+    {
+     "image": "bike_path/muzip_0.png",
+     "label": "128 px, grey"
+    },
+    {
+     "image": "bike_path/muzip_1.png",
+     "label": "closer look 1",
+     "box": [
+      23.09375,
+      39.09375,
+      58.796875,
+      22.796875
+     ],
+     "full": false
+    },
+    {
+     "image": "bike_path/muzip_2.png",
+     "label": "closer look 2",
+     "box": [
+      35.203125,
+      46.90625,
+      21.59375,
+      13.203125
+     ],
+     "full": false
+    }
+   ],
+   "answer": "No, the bike path is closed. The barrier sign says SECTION CLOSED."
+  }
+ },
+ {
+  "name": "elevator",
+  "sample": "real/station_elevator",
+  "question": "Is this elevator working?",
+  "truth": "No: a paper sign says the elevator is out of service.",
+  "size": [
+   3264,
+   2176
+  ],
+  "normally": {
+   "whatsapp": 179511,
+   "heic": 918736
+  },
+  "full": {
+   "bytes": 2747155,
+   "texts": 28093,
+   "runs": [
+    {
+     "answer": "No, the elevator is out of service.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, the elevator is out of service.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, the elevator is out of service.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, the elevator is out of service and blocked off.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, the elevator is out of service and blocked off.",
+     "sure": "yes",
+     "verdict": "right"
+    }
+   ],
+   "right": 5,
+   "guessed": 0
+  },
+  "webp": {
+   "side": 384,
+   "quality": 19,
+   "colour": true,
+   "bytes": 6020,
+   "runs": [
+    {
+     "answer": "No, the elevator is blocked off by barriers and not in use.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, it's blocked off and closed.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, it's blocked off by a wooden barricade with a notice on it.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, it is blocked off by wooden barriers. It looks out of service.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "No, the elevator is blocked off by a wooden barricade and looks closed.",
+     "sure": "yes",
+     "verdict": "right"
+    }
+   ],
+   "right": 5,
+   "guessed": 0,
+   "texts": 60,
+   "image": "elevator/webp.png",
+   "tried": [
+    {
+     "side": 128,
+     "quality": 94,
+     "colour": true,
+     "bytes": 5994,
+     "right": 5,
+     "guessed": 0
+    },
+    {
+     "side": 256,
+     "quality": 56,
+     "colour": true,
+     "bytes": 6078,
+     "right": 5,
+     "guessed": 0
+    },
+    {
+     "side": 384,
+     "quality": 19,
+     "colour": true,
+     "bytes": 6020,
+     "right": 5,
+     "guessed": 0
+    },
+    {
+     "side": 128,
+     "quality": 95,
+     "colour": false,
+     "bytes": 4860,
+     "right": 1,
+     "guessed": 4
+    },
+    {
+     "side": 256,
+     "quality": 70,
+     "colour": false,
+     "bytes": 6056,
+     "right": 5,
+     "guessed": 0
+    },
+    {
+     "side": 384,
+     "quality": 26,
+     "colour": false,
+     "bytes": 6074,
+     "right": 2,
+     "guessed": 3
+    }
+   ]
+  },
+  "muzip": {
+   "runs": [
+    {
+     "answer": "No, the elevator is out of service.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 63,
+     "bytes": 6222,
+     "views": 2,
+     "inquiry": "10a"
+    },
+    {
+     "answer": "No, it is not working. The sign says the elevator is out of service.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 62,
+     "bytes": 6100,
+     "views": 2,
+     "inquiry": "105"
+    },
+    {
+     "answer": "No. The sign says the 92nd Ave Transit Station elevator is out of service.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 27,
+     "bytes": 2629,
+     "views": 1,
+     "inquiry": "10b"
+    },
+    {
+     "answer": "No, it is not working. The sign says the elevator is out of service.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 50,
+     "bytes": 4886,
+     "views": 2,
+     "inquiry": "104"
+    },
+    {
+     "answer": "No, the elevator is not working. The sign says it is out of service.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 62,
+     "bytes": 6118,
+     "views": 2,
+     "inquiry": "109"
+    }
+   ],
+   "right": 5,
+   "guessed": 0,
+   "bytes": 6100,
+   "texts": 62,
+   "views": [
+    {
+     "image": "elevator/muzip_0.png",
+     "label": "128 px, grey"
+    },
+    {
+     "image": "elevator/muzip_1.png",
+     "label": "closer look 1",
+     "box": [
+      10.0,
+      0.0,
+      108.0,
+      60.5
+     ],
+     "full": false
+    },
+    {
+     "image": "elevator/muzip_2.png",
+     "label": "closer look 2",
+     "box": [
+      32.09375,
+      26.90625,
+      34.796875,
+      25.203125
+     ],
+     "full": false
+    }
+   ],
+   "answer": "No, it is not working. The sign says the elevator is out of service."
+  }
+ },
+ {
+  "name": "door_light",
+  "sample": "real/night_dash",
+  "question": "What is my car's display warning me about?",
+  "truth": "A door is open: the car icon shows the front left door open.",
+  "size": [
+   4016,
+   6016
+  ],
+  "normally": {
+   "whatsapp": 55986,
+   "heic": 1916470
+  },
+  "full": {
+   "bytes": 8737512,
+   "texts": 89509,
+   "runs": [
+    {
+     "answer": "Your driver's side front door is open.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Your front driver-side door is open.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Your driver's side front door is open.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Your front left door is open.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Your front driver-side door is open.",
+     "sure": "yes",
+     "verdict": "right"
+    }
+   ],
+   "right": 5,
+   "guessed": 0
+  },
+  "webp": {
+   "side": 256,
+   "quality": 79,
+   "colour": true,
+   "bytes": 2294,
+   "runs": [
+    {
+     "answer": "Your front left door is open.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Your front driver-side door is open. Your windshield washer fluid is also low.",
+     "sure": "fairly",
+     "verdict": "right"
+    },
+    {
+     "answer": "Your front left door is open.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Your front left door is open.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "Your front driver-side door is open.",
+     "sure": "yes",
+     "verdict": "right"
+    }
+   ],
+   "right": 4,
+   "guessed": 1,
+   "texts": 23,
+   "image": "door_light/webp.png",
+   "tried": [
+    {
+     "side": 128,
+     "quality": 94,
+     "colour": true,
+     "bytes": 2262,
+     "right": 0,
+     "guessed": 5
+    },
+    {
+     "side": 256,
+     "quality": 79,
+     "colour": true,
+     "bytes": 2294,
+     "right": 4,
+     "guessed": 1
+    },
+    {
+     "side": 384,
+     "quality": 43,
+     "colour": true,
+     "bytes": 2330,
+     "right": 1,
+     "guessed": 4
+    },
+    {
+     "side": 128,
+     "quality": 95,
+     "colour": false,
+     "bytes": 1506,
+     "right": 0,
+     "guessed": 5
+    },
+    {
+     "side": 256,
+     "quality": 88,
+     "colour": false,
+     "bytes": 2324,
+     "right": 3,
+     "guessed": 2
+    },
+    {
+     "side": 384,
+     "quality": 73,
+     "colour": false,
+     "bytes": 2328,
+     "right": 2,
+     "guessed": 3
+    }
+   ]
+  },
+  "muzip": {
+   "runs": [
+    {
+     "answer": "Your front driver-side door is open.\nDon't drive until the door is fully closed.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 24,
+     "bytes": 2345,
+     "views": 1,
+     "inquiry": "10f"
+    },
+    {
+     "answer": "Your display is showing a door-open warning. The front left door is open.\nClose all doors fully before driving.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 24,
+     "bytes": 2337,
+     "views": 1,
+     "inquiry": "10x"
+    },
+    {
+     "answer": "Your front left door is open. Shut all doors before driving.\nStop safely and close the door fully before driving.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 24,
+     "bytes": 2337,
+     "views": 1,
+     "inquiry": "115"
+    },
+    {
+     "answer": "Your display is showing a door-open warning \u2014 the front door on the left side of the car is open.\nClose the door fully before driving.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 19,
+     "bytes": 1812,
+     "views": 2,
+     "inquiry": "118"
+    },
+    {
+     "answer": "Your display shows a door-open warning \u2013 the front left (driver's) door is open.\nMake sure all doors are fully closed before driving.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 14,
+     "bytes": 1325,
+     "views": 1,
+     "inquiry": "11a"
+    }
+   ],
+   "right": 5,
+   "guessed": 0,
+   "bytes": 2337,
+   "texts": 24,
+   "views": [
+    {
+     "image": "door_light/muzip_0.png",
+     "label": "128 px, grey"
+    },
+    {
+     "image": "door_light/muzip_1.png",
+     "label": "closer look 1",
+     "box": [
+      15.796875,
+      26.796875,
+      50.40625,
+      62.40625
+     ],
+     "full": false
+    }
+   ],
+   "answer": "Your display is showing a door-open warning. The front left door is open.\nClose all doors fully before driving."
+  }
+ },
+ {
+  "name": "night_speed",
+  "sample": "real/texas_highway",
+  "question": "It's night. What's the speed limit on this road?",
+  "truth": "65 mph at night (the sign says SPEED LIMIT 70, NIGHT 65).",
+  "size": [
+   2576,
+   1932
+  ],
+  "normally": {
+   "whatsapp": 174942,
+   "heic": 463816
+  },
+  "full": {
+   "bytes": 1339196,
+   "texts": 13658,
+   "runs": [
+    {
+     "answer": "The night speed limit is 65.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "At night the speed limit is 65.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "At night the speed limit is 65.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "At night the speed limit is 65.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "The night speed limit is 65.",
+     "sure": "yes",
+     "verdict": "right"
+    }
+   ],
+   "right": 5,
+   "guessed": 0
+  },
+  "webp": {
+   "side": 384,
+   "quality": 11,
+   "colour": false,
+   "bytes": 2582,
+   "runs": [
+    {
+     "answer": "The night speed limit is 65 mph.",
+     "sure": "fairly",
+     "verdict": "right"
+    },
+    {
+     "answer": "The night speed limit is 65 mph.",
+     "sure": "fairly",
+     "verdict": "right"
+    },
+    {
+     "answer": "The night speed limit is 65 mph.",
+     "sure": "fairly",
+     "verdict": "right"
+    },
+    {
+     "answer": "The night speed limit is 65 mph.",
+     "sure": "fairly",
+     "verdict": "right"
+    },
+    {
+     "answer": "The nighttime speed limit is 65 mph.",
+     "sure": "fairly",
+     "verdict": "right"
+    }
+   ],
+   "right": 0,
+   "guessed": 5,
+   "texts": 26,
+   "image": "night_speed/webp.png",
+   "tried": [
+    {
+     "side": 128,
+     "quality": 85,
+     "colour": true,
+     "bytes": 2460,
+     "right": 0,
+     "guessed": 0
+    },
+    {
+     "side": 256,
+     "quality": 33,
+     "colour": true,
+     "bytes": 2578,
+     "right": 0,
+     "guessed": 5
+    },
+    {
+     "side": 384,
+     "quality": 7,
+     "colour": true,
+     "bytes": 2510,
+     "right": 0,
+     "guessed": 3
+    },
+    {
+     "side": 128,
+     "quality": 88,
+     "colour": false,
+     "bytes": 2484,
+     "right": 0,
+     "guessed": 0
+    },
+    {
+     "side": 256,
+     "quality": 39,
+     "colour": false,
+     "bytes": 2582,
+     "right": 0,
+     "guessed": 5
+    },
+    {
+     "side": 384,
+     "quality": 11,
+     "colour": false,
+     "bytes": 2582,
+     "right": 0,
+     "guessed": 5
+    }
+   ]
+  },
+  "muzip": {
+   "runs": [
+    {
+     "answer": "The night speed limit is 65. The sign shows 70 by day and 65 at night.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 23,
+     "bytes": 2269,
+     "views": 1,
+     "inquiry": "102"
+    },
+    {
+     "answer": "The night speed limit is 65.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 18,
+     "bytes": 1795,
+     "views": 1,
+     "inquiry": "104"
+    },
+    {
+     "answer": "At night the speed limit is 65. The daytime limit is 70.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 26,
+     "bytes": 2593,
+     "views": 1,
+     "inquiry": "100"
+    },
+    {
+     "answer": "65 at night. The sign shows 70 by day and 65 for night.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 28,
+     "bytes": 2735,
+     "views": 1,
+     "inquiry": "103"
+    },
+    {
+     "answer": "65 mph at night. The sign shows 70 day, 65 night.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 27,
+     "bytes": 2653,
+     "views": 1,
+     "inquiry": "101"
+    }
+   ],
+   "right": 5,
+   "guessed": 0,
+   "bytes": 2593,
+   "texts": 26,
+   "views": [
+    {
+     "image": "night_speed/muzip_0.png",
+     "label": "128 px, grey"
+    },
+    {
+     "image": "night_speed/muzip_1.png",
+     "label": "closer look 1",
+     "box": [
+      45.203125,
+      28.0,
+      9.59375,
+      24.0
+     ],
+     "full": false
+    }
+   ],
+   "answer": "At night the speed limit is 65. The daytime limit is 70."
+  }
+ },
+ {
+  "name": "store_hours",
+  "sample": "real/ups_store",
+  "question": "When is this store open on Saturday?",
+  "truth": "10 am to 2 pm (the notice says it may vary).",
+  "size": [
+   6000,
+   4000
+  ],
+  "normally": {
+   "whatsapp": 166509,
+   "heic": 1609499
+  },
+  "full": {
+   "bytes": 6462000,
+   "texts": 66179,
+   "runs": [
+    {
+     "answer": "On Saturday it's open from 10am to 2pm, but hours may vary.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "On Saturday the store is open from 10am to 2pm, but hours may vary.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "On Saturday it's open from 10am to 2pm, but hours may vary.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "The store is open 10am to 2pm on Saturday, but hours may vary.",
+     "sure": "yes",
+     "verdict": "right"
+    },
+    {
+     "answer": "It's open 10am to 2pm on Saturday, but hours may vary.",
+     "sure": "yes",
+     "verdict": "right"
+    }
+   ],
+   "right": 5,
+   "guessed": 0
+  },
+  "webp": {
+   "side": 256,
+   "quality": 80,
+   "colour": true,
+   "bytes": 6552,
+   "runs": [
+    {
+     "answer": "The store is open 10 a.m. to 2 p.m. on Saturday.",
+     "sure": "fairly",
+     "verdict": "right"
+    },
+    {
+     "answer": "The photo is too blurry to read the Saturday hours.",
+     "sure": "no",
+     "verdict": "not sure"
+    },
+    {
+     "answer": "The store is open 10am to 2pm on Saturday.",
+     "sure": "fairly",
+     "verdict": "right"
+    },
+    {
+     "answer": "The store is open 9am to 3pm on Saturday.",
+     "sure": "fairly",
+     "verdict": "wrong"
+    },
+    {
+     "answer": "The store is open 9 a.m. to 1 p.m. on Saturday.",
+     "sure": "fairly",
+     "verdict": "wrong"
+    }
+   ],
+   "right": 0,
+   "guessed": 2,
+   "texts": 65,
+   "image": "store_hours/webp.png",
+   "tried": [
+    {
+     "side": 128,
+     "quality": 95,
+     "colour": true,
+     "bytes": 4738,
+     "right": 0,
+     "guessed": 0
+    },
+    {
+     "side": 256,
+     "quality": 80,
+     "colour": true,
+     "bytes": 6552,
+     "right": 0,
+     "guessed": 2
+    },
+    {
+     "side": 384,
+     "quality": 39,
+     "colour": true,
+     "bytes": 6598,
+     "right": 0,
+     "guessed": 0
+    },
+    {
+     "side": 128,
+     "quality": 95,
+     "colour": false,
+     "bytes": 4000,
+     "right": 0,
+     "guessed": 0
+    },
+    {
+     "side": 256,
+     "quality": 83,
+     "colour": false,
+     "bytes": 6698,
+     "right": 0,
+     "guessed": 0
+    },
+    {
+     "side": 384,
+     "quality": 42,
+     "colour": false,
+     "bytes": 6592,
+     "right": 0,
+     "guessed": 0
+    }
+   ]
+  },
+  "muzip": {
+   "runs": [
+    {
+     "answer": "The store is open Saturday from 10am to 2pm.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 67,
+     "bytes": 6698,
+     "views": 2,
+     "inquiry": "107"
+    },
+    {
+     "answer": "The store is open Saturday from 10am to 2pm, though it may vary.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 106,
+     "bytes": 10424,
+     "views": 4,
+     "inquiry": "109"
+    },
+    {
+     "answer": "The store is open 10am to 2pm on Saturday, hours may vary.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 66,
+     "bytes": 6616,
+     "views": 1,
+     "inquiry": "108"
+    },
+    {
+     "answer": "The store is open Saturday from 10am to 2pm.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 73,
+     "bytes": 7307,
+     "views": 3,
+     "inquiry": "106"
+    },
+    {
+     "answer": "The store is open Saturday 10am to 2pm, hours may vary.",
+     "sure": "yes",
+     "verdict": "right",
+     "texts": 65,
+     "bytes": 6504,
+     "views": 1,
+     "inquiry": "105"
+    }
+   ],
+   "right": 5,
+   "guessed": 0,
+   "bytes": 6698,
+   "texts": 67,
+   "views": [
+    {
+     "image": "store_hours/muzip_0.png",
+     "label": "128 px, grey"
+    },
+    {
+     "image": "store_hours/muzip_1.png",
+     "label": "closer look 1",
+     "box": [
+      28.59375,
+      3.40625,
+      88.796875,
+      55.203125
+     ],
+     "full": false
+    },
+    {
+     "image": "store_hours/muzip_2.png",
+     "label": "closer look 2",
+     "box": [
+      33.40625,
+      17.40625,
+      43.203125,
+      31.203125
+     ],
+     "full": false
+    }
+   ],
+   "answer": "The store is open Saturday from 10am to 2pm."
+  }
  }
 ]
